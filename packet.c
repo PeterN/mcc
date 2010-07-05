@@ -13,6 +13,7 @@ void packet_init(struct packet_t *p)
 	p->pos = 0;
 }
 
+/* Low-level packet receiving */
 
 static uint8_t packet_recv_byte(struct packet_t *p)
 {
@@ -30,17 +31,23 @@ static char *packet_recv_string(struct packet_t *p)
 	/* Strings are spaced padded, so we need to count down to get the length */
 	int len;
 
-	for (len = sizeof (string_t); len > 0; len--)
+	for (len = sizeof (string_t) - 1; len > 0; len--)
 	{
-		if (p->buffer[len] != '\0') break;
+		if (p->loc[len] != ' ') break;
 	}
 
+	printf("Len = %d\n", len);
+
 	char *v = malloc(len + 1);
-	memcpy(v, p->buffer, len);
+	memcpy(v, p->loc, len);
 	v[len] = '\0';
+
+	p->loc += sizeof (string_t);
 
 	return v;
 }
+
+/* Low-level packet sending */
 
 static void packet_send_byte(struct packet_t *p, uint8_t data)
 {
@@ -105,6 +112,8 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	char *username = packet_recv_string(p);
 	char *key = packet_recv_string(p);
 	uint8_t unused = packet_recv_byte(p);
+
+	printf("Connection %s\n", username);
 
 	free(username);
 	free(key);

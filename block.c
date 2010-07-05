@@ -54,7 +54,7 @@ static const char *s_standard_blocks[] = {
 	"obsidian",
 };
 
-static const char *s_op_blocks[] = {
+/*static const char *s_op_blocks[] = {
 	"op_glass",
 	"opsidian",
 	"op_brick",
@@ -62,18 +62,18 @@ static const char *s_op_blocks[] = {
 	"op_cobblestone",
 	"op_air",
 	"op_water",
-};
+};*/
 
-static const char *s_phys_blocks[] = {
+/*static const char *s_phys_blocks[] = {
 	"wood_float",
 	"door",
 	"lava_fast",
 	"door2",
 	"door3",
-};
+};*/
 
 /* Physics blocks that are currently active */
-static const char *s_active_blocks[] = {
+/*static const char *s_active_blocks[] = {
 	"air_flood",
 	"door_air",
 	"air_flood_layer",
@@ -81,7 +81,7 @@ static const char *s_active_blocks[] = {
 	"air_flood_down",
 	"door2_air",
 	"door3_air",
-};
+};*/
 
 bool blocktype_is_placable(enum blocktype_t type)
 {
@@ -101,7 +101,7 @@ bool blocktype_is_placable(enum blocktype_t type)
 	}
 }
 
-bool blocktype_passes_light(enum blocktype_t type)
+/*bool blocktype_passes_light(enum blocktype_t type)
 {
 	switch (type)
 	{
@@ -202,4 +202,4 @@ enum blocktype_t blocktype_convert_to_save(enum blocktype_t type)
 		default:
 			return type;
 	}
-}
+}*/

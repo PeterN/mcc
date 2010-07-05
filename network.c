@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -9,6 +11,40 @@
 #include "client.h"
 #include "packet.h"
 
+void resolve(const char *hostname, int port, struct sockaddr_in *addr)
+{
+    struct addrinfo *ai;
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family   = AF_INET;
+    hints.ai_flags    = AI_ADDRCONFIG;
+    hints.ai_socktype = SOCK_STREAM;
+
+    char port_name[6];
+    snprintf(port_name, sizeof port_name, "%u", port);
+
+    int e = getaddrinfo(hostname, port_name, &hints, &ai);
+
+    if (e != 0)
+    {
+        perror("getaddrinfo");
+        return;
+    }
+
+    struct addrinfo *runp;
+    for (runp = ai; runp != NULL; runp = runp->ai_next)
+    {
+        struct sockaddr_in *ai_addr = (struct sockaddr_in *)runp->ai_addr;
+
+        /* Take the first address */
+        *addr = *ai_addr;
+        break;
+    }
+
+    freeaddrinfo(ai);
+}
+
+/* Client list functions */
 static bool client_t_compare(struct client_t *a, struct client_t *b)
 {
 	return a->sock == b->sock;
@@ -16,8 +52,13 @@ static bool client_t_compare(struct client_t *a, struct client_t *b)
 
 LIST(client_t, client_t_compare)
 static struct client_t_list_t s_clients;
+/* End */
 
+static struct sockaddr_in serv_addr;
+static struct sockaddr_in beat_addr;
 static int s_listenfd;
+static int s_heartbeatfd = -1;
+static int s_heartbeat_stage;
 
 static void net_set_nonblock(int fd)
 {
@@ -25,10 +66,92 @@ static void net_set_nonblock(int fd)
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
+void heartbeat_start()
+{
+    if (s_heartbeatfd != -1) return;
+
+    s_heartbeatfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (s_heartbeatfd < 0)
+    {
+        perror("socket");
+        return;
+    }
+
+    net_set_nonblock(s_heartbeatfd);
+
+    if (connect(s_heartbeatfd, (struct sockaddr *)&beat_addr, sizeof beat_addr) < 0)
+    {
+        if (errno != EINPROGRESS) {
+            perror("connect");
+            s_heartbeatfd = -1;
+        }
+    }
+
+    s_heartbeat_stage = 0;
+}
+
+void heartbeat_run(bool can_write, bool can_read)
+{
+    switch (s_heartbeat_stage)
+    {
+        case 0:
+        {
+            if (!can_write) return;
+
+            static const char url[] = "/heartbeat.jsp";
+            static const char host[] = "www.minecraft.net";
+            char postdata[1024];
+            snprintf(postdata, sizeof postdata, "port=%u&users=%u&max=%u&name=%s&public=false&version=7&salt=a7ebefb9bf1d4063\r\n", 25565, 15, 20, "TEST+TEST+TEST");
+
+            char request[2048];
+            snprintf(request, sizeof request,
+                        "POST %s HTTP/1.0\r\n"
+                        "Host: %s\r\n"
+                        //"Accept: */*\r\n"
+                        //"Connection: close"
+                        //"User-Agent: mcc/0.1\r\n"
+                        "Content-Length: %u\r\n"
+                        "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
+                        "%s",
+                        url, host, strlen(postdata), postdata);
+
+            int res = write(s_heartbeatfd, request, strlen(request));
+            if (res < 0)
+            {
+                perror("write");
+                break;
+            }
+
+            s_heartbeat_stage = 1;
+            break;
+        }
+
+        case 1:
+        {
+            if (!can_read) return;
+
+            char buf[2048];
+
+            int res = read(s_heartbeatfd, buf, sizeof buf);
+            if (res < 0)
+            {
+                perror("read");
+                break;
+            }
+
+            printf("res %u bytes: %s", res, buf);
+            /* Fall through */
+        }
+
+        default:
+            close(s_heartbeatfd);
+            s_heartbeatfd = -1;
+            break;
+    }
+}
+
 void net_init()
 {
-	static struct sockaddr_in serv_addr;
-
 	s_listenfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (s_listenfd < 0)
 	{
@@ -54,6 +177,9 @@ void net_init()
 	}
 
 	net_set_nonblock(s_listenfd);
+
+    resolve("www.minecraft.net", 80, &beat_addr);
+    heartbeat_start();
 }
 
 void net_close(struct client_t *c)
@@ -84,7 +210,7 @@ static void net_packetrecv(struct client_t *c)
 	while (p->pos < p->size)
 	{
 		res = recv(c->sock, p->buffer + p->pos, p->size - p->pos, 0);
-		printf("got %d bytes\n", res);
+		printf("got %lu bytes\n", res);
 		if (res == -1)
 		{
 			if (errno != EWOULDBLOCK)
@@ -108,7 +234,7 @@ static void net_packetrecv(struct client_t *c)
 				net_close(c);
 				return;
 			}
-			printf("Packet type 0x%02X, expecting %d bytes\n", p->buffer[0], p->size);
+			printf("Packet type 0x%02X, expecting %lu bytes\n", p->buffer[0], p->size);
 		}
 		p->pos += res;
 	}
@@ -142,6 +268,12 @@ void net_run()
 
 	/* Add listen socket */
 	FD_SET(s_listenfd, &read_fd);
+
+	if (s_heartbeatfd >= 0)
+	{
+	    FD_SET(s_heartbeatfd, &read_fd);
+	    FD_SET(s_heartbeatfd, &write_fd);
+	}
 
 	/* Add clients */
 	for (i = 0; i < clients; i++)
@@ -177,6 +309,17 @@ void net_run()
 				client_t_list_add(&s_clients, c);
 			}
 		}
+	}
+
+    if (s_heartbeatfd >= 0)
+	{
+	    bool can_write = FD_ISSET(s_heartbeatfd, &write_fd);
+	    bool can_read  = FD_ISSET(s_heartbeatfd, &read_fd);
+
+	    if (can_write || can_read)
+	    {
+	        heartbeat_run(can_write, can_read);
+	    }
 	}
 
 	for (i = 0; i < clients; i++)

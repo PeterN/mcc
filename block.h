@@ -59,7 +59,7 @@ enum blocktype_t
 	STONEVINE,
 	OBSIDIAN,
 
-	OP_GLASS = 100,
+	/*OP_GLASS = 100,
 	OPSIDIAN,
 	OP_BRICK,
 	OP_STONE,
@@ -79,10 +79,10 @@ enum blocktype_t
 	AIR_FLOOD_DOWN,
 	AIR_FLOOD_UP,
 	DOOR2_AIR,
-	DOOR3_AIR,
+	DOOR3_AIR,*/
 };
 
-bool blocktype_is_phys(enum blocktype_t type);
+/*bool blocktype_is_phys(enum blocktype_t type);*/
 
 struct block_t
 {
