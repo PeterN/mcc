@@ -7,11 +7,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "list.h"
 #include "client.h"
 #include "packet.h"
+#include "player.h"
 
-void resolve(const char *hostname, int port, struct sockaddr_in *addr)
+static void resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
     struct addrinfo *ai;
     struct addrinfo hints;
@@ -43,16 +43,6 @@ void resolve(const char *hostname, int port, struct sockaddr_in *addr)
 
     freeaddrinfo(ai);
 }
-
-/* Client list functions */
-static bool client_t_compare(struct client_t *a, struct client_t *b)
-{
-	return a->sock == b->sock;
-}
-
-LIST(client_t, client_t_compare)
-static struct client_t_list_t s_clients;
-/* End */
 
 static struct sockaddr_in serv_addr;
 static struct sockaddr_in beat_addr;
@@ -110,7 +100,7 @@ void heartbeat_run(bool can_write, bool can_read)
                         //"Accept: */*\r\n"
                         //"Connection: close"
                         //"User-Agent: mcc/0.1\r\n"
-                        "Content-Length: %u\r\n"
+                        "Content-Length: %lu\r\n"
                         "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
                         "%s",
                         url, host, strlen(postdata), postdata);
@@ -182,13 +172,15 @@ void net_init()
     heartbeat_start();
 }
 
-void net_close(struct client_t *c)
+void net_close(struct client_t *c, bool remove_player)
 {
 	printf("Closing connection\n");
 	close(c->sock);
 
 	/* Mark client for deletion */
 	c->close = true;
+
+	if (remove_player) player_del(c->player);
 }
 
 static void net_packetrecv(struct client_t *c)
@@ -221,7 +213,7 @@ static void net_packetrecv(struct client_t *c)
 		}
 		else if (res == 0)
 		{
-			net_close(c);
+			net_close(c, true);
 			return;
 		}
 
@@ -231,7 +223,7 @@ static void net_packetrecv(struct client_t *c)
 			if (p->size == -1)
 			{
 				printf("Unrecognised packet type 0x%02X!\n", p->buffer[0]);
-				net_close(c);
+				net_close(c, true);
 				return;
 			}
 			printf("Packet type 0x%02X, expecting %lu bytes\n", p->buffer[0], p->size);
@@ -256,7 +248,7 @@ void net_run()
 	{
 		if (s_clients.items[i].close)
 		{
-			client_t_list_del(&s_clients, s_clients.items[i]);
+			client_list_del(&s_clients, s_clients.items[i]);
 			/* Restart :/ */
 			i = -1;
 			clients = s_clients.used;
@@ -306,7 +298,7 @@ void net_run()
 				c.writable = false;
 				c.close = false;
 				c.packet_recv = NULL;
-				client_t_list_add(&s_clients, c);
+				client_list_add(&s_clients, c);
 			}
 		}
 	}

@@ -9,7 +9,7 @@ void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z)
 
 	level->blocks = calloc(x * y * z, sizeof *level->blocks);
 
-	physics_init(&level->physics);
+	physics_list_init(&level->physics);
 }
 
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index)
@@ -23,11 +23,11 @@ void level_set_block(struct level_t *level, struct block_t *block, unsigned inde
 	{
 		if (new_phys)
 		{
-			physics_add(&level->physics, index);
+			physics_list_add(&level->physics, index);
 		}
 		else
 		{
-			physics_del(&level->physics, index);
+			physics_list_del(&level->physics, index);
 		}
 	}
 }

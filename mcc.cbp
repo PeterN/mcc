@@ -31,6 +31,42 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="bitstuff.h" />
+		<Unit filename="block.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="block.h" />
+		<Unit filename="client.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="client.h" />
+		<Unit filename="colour.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="colour.h" />
+		<Unit filename="level.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="level.h" />
+		<Unit filename="list.h" />
+		<Unit filename="mcc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="mcc.h" />
+		<Unit filename="network.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="network.h" />
+		<Unit filename="packet.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="packet.h" />
+		<Unit filename="physics.h" />
+		<Unit filename="player.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="player.h" />
+		<Unit filename="vertex.h" />
 		<Extensions>
 			<envvars />
 			<code_completion />

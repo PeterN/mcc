@@ -23,10 +23,10 @@ static const char *s_colours[] = {
 enum colour_t str_to_colour(const char *s)
 {
 	int i;
-	for (i = 0; i <= WHITE; i++) {
+	for (i = 0; i <= COLOUR_WHITE; i++) {
 		if (!strcasecmp(s, s_colours[i])) return i;
 	}
-	
+
 	return -1;
 }
 

@@ -11,7 +11,7 @@ struct level_t
 	unsigned z;
 
 	struct block_t *blocks;
-	struct physics_t physics;
+	struct physics_list_t physics;
 };
 
 static inline unsigned level_get_index(struct level_t *level, unsigned x, unsigned y, unsigned z)

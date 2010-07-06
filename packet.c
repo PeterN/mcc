@@ -4,6 +4,8 @@
 #include <string.h>
 #include "packet.h"
 #include "network.h"
+#include "client.h"
+#include "player.h"
 
 void packet_init(struct packet_t *p)
 {
@@ -31,12 +33,10 @@ static char *packet_recv_string(struct packet_t *p)
 	/* Strings are spaced padded, so we need to count down to get the length */
 	int len;
 
-	for (len = sizeof (string_t) - 1; len > 0; len--)
+	for (len = sizeof (string_t); len > 0; len--)
 	{
-		if (p->loc[len] != ' ') break;
+		if (p->loc[len - 1] != ' ') break;
 	}
-
-	printf("Len = %d\n", len);
 
 	char *v = malloc(len + 1);
 	memcpy(v, p->loc, len);
@@ -66,12 +66,14 @@ static void packet_send_string(struct packet_t *p, const char *data)
 
 	size_t len = strlen(data);
 	if (len > sizeof (string_t)) len = sizeof (string_t);
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < len; i++)
+	{
 		*p->loc++ = data[i];
 	}
 
 	/* Pad with spaces */
-	for (; i < sizeof (string_t); i++) {
+	for (; i < sizeof (string_t); i++)
+	{
 		*p->loc++ = ' ';
 	}
 }
@@ -82,12 +84,14 @@ static void packet_send_byte_array(struct packet_t *p, const uint8_t *data, int1
 
 	size_t len = length;
 	if (len > sizeof (data_t)) len = sizeof (data_t);
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < len; i++)
+	{
 		*p->loc++ = data[i];
 	}
 
 	/* Pad with zeroes */
-	for (; i < sizeof (data_t); i++) {
+	for (; i < sizeof (data_t); i++)
+	{
 		*p->loc++ = 0x00;
 	}
 }
@@ -113,7 +117,19 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	char *key = packet_recv_string(p);
 	uint8_t unused = packet_recv_byte(p);
 
-	printf("Connection %s\n", username);
+    struct player_t *player = player_get_by_name(username);
+    if (player == NULL)
+    {
+        player = player_add(username);
+        //message_queue("%s connected", username);
+    }
+    else
+    {
+        net_close(client_get_by_player(player), false);
+        //message_queue("%s reconnected", username);
+    }
+
+    c->player = player;
 
 	free(username);
 	free(key);
@@ -129,7 +145,7 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 
 	if (m > 1)
 	{
-		net_close(c);
+		net_close(c, true);
 		return;
 	}
 }
@@ -145,7 +161,7 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 
 	if (player_id != 0xFF)
 	{
-		net_close(c);
+		net_close(c, true);
 		return;
 	}
 
