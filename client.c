@@ -1,4 +1,5 @@
 #include "client.h"
+#include "packet.h"
 
 struct client_list_t s_clients;
 
@@ -11,4 +12,15 @@ struct client_t *client_get_by_player(struct player_t *p)
     }
 
     return NULL;
+}
+
+void client_add_packet(struct client_t *c, struct packet_t *p)
+{
+    struct packet_t **ip = &c->packet_send;
+    while (*ip != NULL)
+    {
+        ip = &(*ip)->next;
+    }
+
+    *ip = p;
 }

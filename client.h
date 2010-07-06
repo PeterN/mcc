@@ -13,6 +13,7 @@ struct client_t
 	bool writable;
 	bool close;
 	struct packet_t *packet_recv;
+	struct packet_t *packet_send;
 	struct player_t *player;
 };
 
@@ -25,5 +26,7 @@ LIST(client, struct client_t, client_t_compare)
 extern struct client_list_t s_clients;
 
 struct client_t *client_get_by_player(struct player_t *p);
+
+void client_add_packet(struct client_t *c, struct packet_t *p);
 
 #endif /* CLIENT_H */

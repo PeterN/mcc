@@ -1,6 +1,13 @@
 #include <stdlib.h>
 #include "level.h"
 
+struct level_list_t s_levels;
+
+bool level_t_compare(struct level_t **a, struct level_t **b)
+{
+    return *a == *b;
+}
+
 void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z)
 {
 	level->x = x;

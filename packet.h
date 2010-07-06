@@ -14,11 +14,15 @@ struct packet_t
 	uint8_t *loc;
 	size_t size;
 	size_t pos;
+
+	struct packet_t *next;
 };
 
 void packet_init(struct packet_t *p);
 
 size_t packet_recv_size(uint8_t type);
 void packet_recv(struct client_t *c, struct packet_t *p);
+
+struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name, const char *server_motd, uint8_t user_type);
 
 #endif /* PACKET_H */

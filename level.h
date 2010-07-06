@@ -6,6 +6,7 @@
 
 struct level_t
 {
+    char *name;
 	unsigned x;
 	unsigned y;
 	unsigned z;
@@ -13,6 +14,11 @@ struct level_t
 	struct block_t *blocks;
 	struct physics_list_t physics;
 };
+
+bool level_t_compare(struct level_t **a, struct level_t **b);
+LIST(level, struct level_t *, level_t_compare)
+
+extern struct level_list_t s_levels;
 
 static inline unsigned level_get_index(struct level_t *level, unsigned x, unsigned y, unsigned z)
 {

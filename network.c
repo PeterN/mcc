@@ -183,6 +183,34 @@ void net_close(struct client_t *c, bool remove_player)
 	if (remove_player) player_del(c->player);
 }
 
+static void net_packetsend(struct client_t *c)
+{
+    size_t res;
+    struct packet_t *p = c->packet_send;
+
+    if (p == NULL) return;
+
+    while (true)
+    {
+        p = c->packet_send;
+
+        res = send(c->sock, p->buffer, p->loc - p->buffer, 0);
+        if (res == -1)
+        {
+            //if (errno != EWOULDBLOCK)
+            //{
+                perror("send");
+            //}
+            return;
+        }
+
+        c->packet_send = p->next;
+        free(p);
+
+        if (c->packet_send == NULL) return;
+    }
+}
+
 static void net_packetrecv(struct client_t *c)
 {
 	size_t res;
@@ -298,6 +326,7 @@ void net_run()
 				c.writable = false;
 				c.close = false;
 				c.packet_recv = NULL;
+				c.packet_send = NULL;
 				client_list_add(&s_clients, c);
 			}
 		}
@@ -317,7 +346,10 @@ void net_run()
 	for (i = 0; i < clients; i++)
 	{
 		struct client_t *c = &s_clients.items[i];
-		c->writable = !!FD_ISSET(c->sock, &write_fd);
+		if (FD_ISSET(c->sock, &write_fd))
+		{
+		    net_packetsend(c);
+		}
 		if (FD_ISSET(c->sock, &read_fd))
 		{
 			net_packetrecv(c);
