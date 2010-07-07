@@ -6,18 +6,26 @@
 #include "network.h"
 #include "player.h"
 
+struct server_t g_server;
+
 int main(int argc, char **argv)
 {
     int tick = 0;
 	struct level_t level;
 	int x, y, z;
 
-	level_init(&level, 64, 2048, 64);
+	level_init(&level, 64, 64, 64);
 	level.name = strdup("main");
 
 	level_gen(&level, 0);
 
 	level_list_add(&s_levels, &level);
+
+	g_server.name = "TEST TEST TEST";
+	g_server.motd = "This is a test";
+	g_server.max_players = 10;
+	g_server.players = 0;
+	g_server.public = false;
 
 	net_init();
 

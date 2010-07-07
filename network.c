@@ -10,6 +10,7 @@
 #include "client.h"
 #include "packet.h"
 #include "player.h"
+#include "mcc.h"
 
 static void resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
@@ -91,7 +92,8 @@ void heartbeat_run(bool can_write, bool can_read)
             static const char url[] = "/heartbeat.jsp";
             static const char host[] = "www.minecraft.net";
             char postdata[1024];
-            snprintf(postdata, sizeof postdata, "port=%u&users=%u&max=%u&name=%s&public=false&version=7&salt=a7ebefb9bf1d4063\r\n", 25565, 15, 20, "TEST+TEST+TEST");
+            snprintf(postdata, sizeof postdata, "port=%u&users=%u&max=%u&name=%s&public=%s&version=7&salt=a7ebefb9bf1d4063\r\n",
+                      25565, g_server.players, g_server.max_players, g_server.name, g_server.public ? "true" : "false");
 
             char request[2048];
             snprintf(request, sizeof request,

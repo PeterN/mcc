@@ -101,7 +101,7 @@ void level_send(struct client_t *c, unsigned index)
 
     client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
 
-    client_add_packet(c, packet_send_teleport_player(0, 32*32, 2048*32, 32*32, 0, 0));
+    //client_add_packet(c, packet_send_teleport_player(0, 32*32, 2048*32, 32*32, 0, 0));
 
     //struct packet_t *packet_send_level_initialize();
     //struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *data, uint8_t percent);
@@ -117,6 +117,17 @@ void level_gen(struct level_t *level, int type)
     int mz = level->z;
 
     int i;
+    for (y = 0; y < my / 2; y++)
+    {
+        block.type = (y < my / 2 - 5) ? ROCK : (y < my / 2 - 1) ? DIRT : GRASS;
+        for (x = 0; x < mx; x++)
+        {
+            for (z = 0; z < mz; z++)
+            {
+                level_set_block(level, &block, level_get_index(level, x, y, z));
+            }
+        }
+    }
     for (i = 0; i < mx * mz / 64; i++)
     {
         x = rand() % mx;

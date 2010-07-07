@@ -7,6 +7,7 @@
 #include "client.h"
 #include "player.h"
 #include "level.h"
+#include "mcc.h"
 
 void packet_init(struct packet_t *p)
 {
@@ -136,7 +137,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	free(username);
 	free(key);
 
-	client_add_packet(c, packet_send_player_id(7, "TEST TEST TEST", "This is a test", 0x64));
+	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, 0x64));
 
 	level_send(c, 0);
 }
