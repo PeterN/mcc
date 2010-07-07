@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include "block.h"
 #include "mcc.h"
 #include "level.h"
 #include "network.h"
@@ -9,11 +10,12 @@ int main(int argc, char **argv)
 {
     int tick = 0;
 	struct level_t level;
+	int x, y, z;
 
-	level_init(&level, 64, 64, 64);
+	level_init(&level, 64, 2048, 64);
 	level.name = strdup("main");
 
-	level_clear_block(&level, level_get_index(&level, 1, 1, 1));
+	level_gen(&level, 0);
 
 	level_list_add(&s_levels, &level);
 

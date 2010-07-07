@@ -6,6 +6,7 @@
 #include "network.h"
 #include "client.h"
 #include "player.h"
+#include "level.h"
 
 void packet_init(struct packet_t *p)
 {
@@ -57,8 +58,8 @@ static void packet_send_byte(struct packet_t *p, uint8_t data)
 
 static void packet_send_short(struct packet_t *p, int16_t data)
 {
-	*p->loc++ = ((uint16_t)data & 0xFF) >> 8;
-	*p->loc++ = ((uint16_t)data & 0xFF);
+	*p->loc++ = ((uint16_t)data >> 8) & 0xFF;;
+	*p->loc++ =  (uint16_t)data       & 0xFF;
 }
 
 static void packet_send_string(struct packet_t *p, const char *data)
@@ -136,6 +137,8 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	free(key);
 
 	client_add_packet(c, packet_send_player_id(7, "TEST TEST TEST", "This is a test", 0x64));
+
+	level_send(c, 0);
 }
 
 void packet_recv_set_block(struct client_t *c, struct packet_t *p)
@@ -182,7 +185,6 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 void packet_recv(struct client_t *c, struct packet_t *p)
 {
 	uint8_t type = packet_recv_byte(p);
-	printf("Woo! 0x%02X - %lu\n", type, p->pos);
 
 	switch (type)
 	{

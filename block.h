@@ -58,6 +58,7 @@ enum blocktype_t
 	BOOKCASE,
 	STONEVINE,
 	OBSIDIAN,
+	ROCK_END,
 
 	/*OP_GLASS = 100,
 	OPSIDIAN,

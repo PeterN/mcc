@@ -4,6 +4,8 @@
 #include "block.h"
 #include "physics.h"
 
+struct client_t;
+
 struct level_t
 {
     char *name;
@@ -22,11 +24,14 @@ extern struct level_list_t s_levels;
 
 static inline unsigned level_get_index(struct level_t *level, unsigned x, unsigned y, unsigned z)
 {
-	return x + (z * level->y + y) * level->x;
+	//return x + (z * level->y + y) * level->x;
+	return x + (z + y * level->z) * level->x;
 }
 
 void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 void level_clear_block(struct level_t *level, unsigned index);
+void level_send(struct client_t *client, unsigned level);
+void level_gen(struct level_t *level, int type);
 
 #endif /* LEVEL_H */

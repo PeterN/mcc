@@ -129,7 +129,11 @@ void heartbeat_run(bool can_write, bool can_read)
                 break;
             }
 
-            printf("res %u bytes: %s", res, buf);
+            char *b = strstr(buf, "\r\n\r\n") + 4;
+            char *c = strstr(b, "\r\n");
+            *c = '\0';
+
+            printf("%s\n", b);
             /* Fall through */
         }
 
@@ -230,7 +234,6 @@ static void net_packetrecv(struct client_t *c)
 	while (p->pos < p->size)
 	{
 		res = recv(c->sock, p->buffer + p->pos, p->size - p->pos, 0);
-		printf("got %lu bytes\n", res);
 		if (res == -1)
 		{
 			if (errno != EWOULDBLOCK)
@@ -254,7 +257,6 @@ static void net_packetrecv(struct client_t *c)
 				net_close(c, true);
 				return;
 			}
-			printf("Packet type 0x%02X, expecting %lu bytes\n", p->buffer[0], p->size);
 		}
 		p->pos += res;
 	}
