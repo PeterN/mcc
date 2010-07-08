@@ -1,6 +1,7 @@
 #ifndef LEVEL_H
 #define LEVEL_H
 
+#include <pthread.h>
 #include "block.h"
 #include "physics.h"
 
@@ -15,6 +16,9 @@ struct level_t
 
 	struct block_t *blocks;
 	struct physics_list_t physics;
+
+	pthread_t thread;
+	pthread_mutex_t mutex;
 };
 
 bool level_t_compare(struct level_t **a, struct level_t **b);
@@ -31,7 +35,7 @@ static inline unsigned level_get_index(struct level_t *level, unsigned x, unsign
 void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 void level_clear_block(struct level_t *level, unsigned index);
-void level_send(struct client_t *client, unsigned level);
+bool level_send(struct client_t *client);
 void level_gen(struct level_t *level, int type);
 
 #endif /* LEVEL_H */

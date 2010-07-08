@@ -12,6 +12,7 @@ struct client_t
 	int sock;
 	bool writable;
 	bool close;
+	bool waiting_for_level;
 	struct packet_t *packet_recv;
 	struct packet_t *packet_send;
 	struct player_t *player;

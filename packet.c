@@ -139,7 +139,9 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, 0x64));
 
-	level_send(c, 0);
+    c->player->level = s_levels.items[0];
+
+	level_send(c);
 }
 
 void packet_recv_set_block(struct client_t *c, struct packet_t *p)
@@ -181,6 +183,29 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 	char *message = packet_recv_string(p);
 
 	printf("Player said: %s\n", message);
+
+	if (message[0] == '!')
+	{
+	    message++;
+	    if (strcasecmp("home", message) == 0)
+	    {
+	        struct level_t *l = malloc(sizeof *l);
+            level_init(l, 128, 32, 128);
+            l->name = strdup("home");
+            level_list_add(&s_levels, l);
+
+            level_gen(l, 0);
+
+            c->player->level = l;
+            level_send(c);
+	    }
+	    else if (strcasecmp("goto", message) == 0)
+	    {
+	        long l = strtol(message + 5, NULL, 10);
+	        c->player->level = s_levels.items[l];
+	        level_send(c);
+	    }
+	}
 }
 
 void packet_recv(struct client_t *c, struct packet_t *p)

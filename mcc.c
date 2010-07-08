@@ -5,6 +5,7 @@
 #include "level.h"
 #include "network.h"
 #include "player.h"
+#include "client.h"
 
 struct server_t g_server;
 
@@ -12,9 +13,9 @@ int main(int argc, char **argv)
 {
     int tick = 0;
 	struct level_t level;
-	int x, y, z;
+	int i;
 
-	level_init(&level, 64, 64, 64);
+	level_init(&level, 32, 32, 32);
 	level.name = strdup("main");
 
 	level_gen(&level, 0);
@@ -37,6 +38,18 @@ int main(int argc, char **argv)
 
 		if ((tick % 5000) == 0) player_info();
 		if ((tick % 60000) == 0) heartbeat_start();
+
+        if ((tick % 1000) == 0)
+        {
+            for (i = 0; i < s_clients.used; i++)
+            {
+                struct client_t *c = &s_clients.items[i];
+                if (c->waiting_for_level)
+                {
+                    level_send(c);
+                }
+            }
+        }
 	}
 
 	return 0;

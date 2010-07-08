@@ -115,7 +115,7 @@ void heartbeat_run(bool can_write, bool can_read)
             }
 
             s_heartbeat_stage = 1;
-            break;
+            return;
         }
 
         case 1:
@@ -136,14 +136,15 @@ void heartbeat_run(bool can_write, bool can_read)
             *c = '\0';
 
             printf("%s\n", b);
-            /* Fall through */
+            break;
         }
 
         default:
-            close(s_heartbeatfd);
-            s_heartbeatfd = -1;
             break;
     }
+
+    close(s_heartbeatfd);
+    s_heartbeatfd = -1;
 }
 
 void net_init()
