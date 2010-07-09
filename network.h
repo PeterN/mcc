@@ -9,6 +9,9 @@ void net_init();
 void net_run();
 void net_close(struct client_t *c, bool remove_player);
 
-void heartbeat_start();
+void net_set_nonblock(int fd);
+
+struct sockaddr_in;
+bool resolve(const char *hostname, int port, struct sockaddr_in *addr);
 
 #endif /* NET_H */

@@ -6,6 +6,8 @@
 #include "network.h"
 #include "player.h"
 #include "client.h"
+#include "heartbeat.h"
+#include "irc.h"
 
 struct server_t g_server;
 
@@ -17,7 +19,7 @@ int main(int argc, char **argv)
     if (!level_load("main"))
     {
         struct level_t *l = malloc(sizeof *l);
-        level_init(l, 256, 64, 256, "main");
+        level_init(l, 256, 256, 256, "main");
         level_gen(l, 0);
         level_list_add(&s_levels, l);
     }
@@ -28,7 +30,14 @@ int main(int argc, char **argv)
 	g_server.players = 0;
 	g_server.public = false;
 
+	g_server.irc.hostname = "irc.lspace.org";
+	g_server.irc.port = 6667;
+	g_server.irc.name = "mccbot";
+	g_server.irc.channel = "#mc2";
+	g_server.irc.pass = NULL;
+
 	net_init();
+	//irc_start();
 
 	while (1)
 	{

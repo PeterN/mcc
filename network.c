@@ -10,9 +10,10 @@
 #include "client.h"
 #include "packet.h"
 #include "player.h"
-#include "mcc.h"
+#include "irc.h"
+#include "heartbeat.h"
 
-static void resolve(const char *hostname, int port, struct sockaddr_in *addr)
+bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
     struct addrinfo *ai;
     struct addrinfo hints;
@@ -29,7 +30,7 @@ static void resolve(const char *hostname, int port, struct sockaddr_in *addr)
     if (e != 0)
     {
         perror("getaddrinfo");
-        return;
+        return false;
     }
 
     struct addrinfo *runp;
@@ -43,108 +44,18 @@ static void resolve(const char *hostname, int port, struct sockaddr_in *addr)
     }
 
     freeaddrinfo(ai);
+
+    return true;
 }
 
 static struct sockaddr_in serv_addr;
-static struct sockaddr_in beat_addr;
-static int s_listenfd;
-static int s_heartbeatfd = -1;
-static int s_heartbeat_stage;
 
-static void net_set_nonblock(int fd)
+static int s_listenfd;
+
+void net_set_nonblock(int fd)
 {
 	int flags = fcntl(fd, F_GETFL, 0);
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-}
-
-void heartbeat_start()
-{
-    if (s_heartbeatfd != -1) return;
-
-    s_heartbeatfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (s_heartbeatfd < 0)
-    {
-        perror("socket");
-        return;
-    }
-
-    net_set_nonblock(s_heartbeatfd);
-
-    if (connect(s_heartbeatfd, (struct sockaddr *)&beat_addr, sizeof beat_addr) < 0)
-    {
-        if (errno != EINPROGRESS) {
-            perror("connect");
-            s_heartbeatfd = -1;
-        }
-    }
-
-    s_heartbeat_stage = 0;
-}
-
-void heartbeat_run(bool can_write, bool can_read)
-{
-    switch (s_heartbeat_stage)
-    {
-        case 0:
-        {
-            if (!can_write) return;
-
-            static const char url[] = "/heartbeat.jsp";
-            static const char host[] = "www.minecraft.net";
-            char postdata[1024];
-            snprintf(postdata, sizeof postdata, "port=%u&users=%u&max=%u&name=%s&public=%s&version=7&salt=a7ebefb9bf1d4063\r\n",
-                      25565, g_server.players, g_server.max_players, g_server.name, g_server.public ? "true" : "false");
-
-            char request[2048];
-            snprintf(request, sizeof request,
-                        "POST %s HTTP/1.0\r\n"
-                        "Host: %s\r\n"
-                        //"Accept: */*\r\n"
-                        //"Connection: close"
-                        //"User-Agent: mcc/0.1\r\n"
-                        "Content-Length: %lu\r\n"
-                        "Content-Type: application/x-www-form-urlencoded\r\n\r\n"
-                        "%s",
-                        url, host, strlen(postdata), postdata);
-
-            int res = write(s_heartbeatfd, request, strlen(request));
-            if (res < 0)
-            {
-                perror("write");
-                break;
-            }
-
-            s_heartbeat_stage = 1;
-            return;
-        }
-
-        case 1:
-        {
-            if (!can_read) return;
-
-            char buf[2048];
-
-            int res = read(s_heartbeatfd, buf, sizeof buf);
-            if (res < 0)
-            {
-                perror("read");
-                break;
-            }
-
-            char *b = strstr(buf, "\r\n\r\n") + 4;
-            char *c = strstr(b, "\r\n");
-            *c = '\0';
-
-            printf("%s\n", b);
-            break;
-        }
-
-        default:
-            break;
-    }
-
-    close(s_heartbeatfd);
-    s_heartbeatfd = -1;
 }
 
 void net_init()
@@ -175,7 +86,6 @@ void net_init()
 
 	net_set_nonblock(s_listenfd);
 
-    resolve("www.minecraft.net", 80, &beat_addr);
     heartbeat_start();
 }
 
@@ -294,10 +204,16 @@ void net_run()
 	/* Add listen socket */
 	FD_SET(s_listenfd, &read_fd);
 
-	if (s_heartbeatfd >= 0)
+	if (s_heartbeat_fd >= 0)
 	{
-	    FD_SET(s_heartbeatfd, &read_fd);
-	    FD_SET(s_heartbeatfd, &write_fd);
+	    FD_SET(s_heartbeat_fd, &read_fd);
+	    FD_SET(s_heartbeat_fd, &write_fd);
+	}
+
+	if (s_irc_fd >= 0)
+	{
+	    FD_SET(s_irc_fd, &read_fd);
+	    FD_SET(s_irc_fd, &write_fd);
 	}
 
 	/* Add clients */
@@ -337,14 +253,25 @@ void net_run()
 		}
 	}
 
-    if (s_heartbeatfd >= 0)
+    if (s_heartbeat_fd >= 0)
 	{
-	    bool can_write = FD_ISSET(s_heartbeatfd, &write_fd);
-	    bool can_read  = FD_ISSET(s_heartbeatfd, &read_fd);
+	    bool can_write = FD_ISSET(s_heartbeat_fd, &write_fd);
+	    bool can_read  = FD_ISSET(s_heartbeat_fd, &read_fd);
 
 	    if (can_write || can_read)
 	    {
 	        heartbeat_run(can_write, can_read);
+	    }
+	}
+
+	if (s_irc_fd >= 0)
+	{
+	    bool can_write = FD_ISSET(s_irc_fd, &write_fd);
+	    bool can_read  = FD_ISSET(s_irc_fd, &read_fd);
+
+	    if (can_write || can_read)
+	    {
+	        irc_run(can_write, can_read);
 	    }
 	}
 

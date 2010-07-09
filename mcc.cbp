@@ -48,6 +48,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="colour.h" />
+		<Unit filename="heartbeat.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="heartbeat.h" />
+		<Unit filename="irc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="irc.h" />
 		<Unit filename="level.c">
 			<Option compilerVar="CC" />
 		</Unit>

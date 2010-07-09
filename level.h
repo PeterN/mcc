@@ -14,9 +14,16 @@ struct level_t
 	unsigned y;
 	unsigned z;
 
+	int16_t spawnx;
+	int16_t spawny;
+	int16_t spawnz;
+	uint8_t spawnh;
+	uint8_t spawnp;
+
 	struct block_t *blocks;
 	struct physics_list_t physics;
 
+    bool changed;
 	pthread_t thread;
 	pthread_mutex_t mutex;
 };

@@ -53,6 +53,14 @@ void level_set_block(struct level_t *level, struct block_t *block, unsigned inde
 	}
 }
 
+void level_set_block_if(struct level_t *level, struct block_t *block, unsigned index, enum blocktype_t type)
+{
+    if (level->blocks[index].type == type)
+    {
+        level_set_block(level, block, index);
+    }
+}
+
 void level_clear_block(struct level_t *level, unsigned index)
 {
 	static struct block_t empty = { AIR, 0 };
@@ -127,7 +135,7 @@ bool level_send(struct client_t *c)
 
     client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
 
-    //client_add_packet(c, packet_send_teleport_player(0, 32*32, 2048*32, 32*32, 0, 0));
+    client_add_packet(c, packet_send_teleport_player(0xFF, level->spawnx, level->spawny, level->spawnz, level->spawnh, level->spawnp));
 
     c->waiting_for_level = false;
 
@@ -296,10 +304,12 @@ void *level_gen_thread(void *arg)
     }
 
     block.type = AIR;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < 50; i++)
     {
         level_gen_heightmap(cmh, mx, mz);
         level_gen_heightmap(cmd, mx, mz);
+
+        int base = cmd[0] * my;
 
         for (z = 0; z < mz; z++)
         {
@@ -308,13 +318,13 @@ void *level_gen_thread(void *arg)
                 //int h = hm[x + z * dmx] * my / 2 + my / 3;
                 float ch = cmh[x + z * dmx];
                 float cd = cmd[x + z * dmx];
-                if (fabs(cd - ch) < 0.15f)
+                if (fabs(ch) < 0.25f)
                 {
                     //block.type = i % 3 ? AIR : ROCK;
                     //int cdi = h - cd * my / 4;
                     //int chi = cdi + (ch - 0.5f) * my / 4;
-                    int cdi = cd * my / 2 + my / 3;// / 1.5f;
-                    int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
+                    int cdi = base + cd * my / 8;// / 1.5f;
+                    int chi = (ch - 0.25f) * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
                     if (cdi > chi) {
                         cdi = cdi ^ chi;
                         chi = cdi ^ chi;
@@ -345,10 +355,10 @@ void *level_gen_thread(void *arg)
         {
             for (x = 0; x < mx; x++)
             {
-                for (y = my / 2; y > 1; y--)
+                for (y = my / 2 - 1; y > 1; y--)
                 {
                     unsigned index = level_get_index(level, x, y, z);
-                    if (level->blocks[index].type == AIR && y < my / 2)
+                    if (y > my / 2 - 3 && level->blocks[index].type == AIR)
                     {
                         if (x == 0 || x == mx - 1 || z == 0 || z == mz - 1)
                         {
@@ -357,21 +367,49 @@ void *level_gen_thread(void *arg)
                     }
                     else if (level->blocks[index].type == WATER)
                     {
-                        index = level_get_index(level, x, y - 1, z);
-                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
-                        index = level_get_index(level, x - 1, y, z);
-                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
-                        index = level_get_index(level, x + 1, y, z);
-                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
-                        index = level_get_index(level, x, y, z - 1);
-                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
-                        index = level_get_index(level, x, y, z + 1);
-                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
+                        level_set_block_if(level, &block, level_get_index(level, x, y - 1, z), AIR);
+                        if (x > 0) level_set_block_if(level, &block, level_get_index(level, x - 1, y, z), AIR);
+                        if (x < mx - 1) level_set_block_if(level, &block, level_get_index(level, x + 1, y, z), AIR);
+                        if (z > 0) level_set_block_if(level, &block, level_get_index(level, x, y, z - 1), AIR);
+                        if (z < mz - 1) level_set_block_if(level, &block, level_get_index(level, x, y, z + 1), AIR);
                     }
                 }
             }
         }
     }
+
+    /* Grow grass on soil */
+    for (z = 0; z < mz; z++)
+    {
+        for (x = 0; x < mx; x++)
+        {
+            for (y = my - 1; y > 0; y--)
+            {
+                unsigned index = level_get_index(level, x, y, z);
+                if (level->blocks[index].type == DIRT)
+                {
+                    level->blocks[index].type = GRASS;
+                    break;
+                }
+                if (level->blocks[index].type != AIR) break;
+            }
+        }
+    }
+
+    level->spawnx = mx * 16;
+    level->spawnz = mz * 16;
+    for (y = my - 1; y > 0; y--)
+    {
+        unsigned index = level_get_index(level, x, y, z);
+        if (level->blocks[index].type != AIR)
+        {
+            level->spawny = (y + 2) * 32;
+            break;
+        }
+    }
+
+    level->spawnh = 90 * 256 / 360;
+    level->spawnp = 90 * 256 / 360;
 
     /*
     for (y = 0; y < my / 2; y++)
@@ -409,6 +447,8 @@ void *level_gen_thread(void *arg)
     free(hm);
     free(cmd);
     free(cmh);
+
+    level->changed = true;
 
     pthread_mutex_unlock(&level->mutex);
 
@@ -467,6 +507,8 @@ bool level_save(struct level_t *l)
 
     printf("Saved %s\n", filename);
 
+    l->changed = false;
+
     return true;
 }
 
@@ -501,6 +543,9 @@ void level_save_all()
 
     for (i = 0; i < s_levels.used; i++)
     {
-        level_save(s_levels.items[i]);
+        if (s_levels.items[i]->changed)
+        {
+            level_save(s_levels.items[i]);
+        }
     }
 }

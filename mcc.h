@@ -10,6 +10,15 @@ struct server_t
     int max_players;
     int players;
     bool public;
+
+    struct
+    {
+        char *hostname;
+        int port;
+        char *name;
+        char *channel;
+        char *pass;
+    } irc;
 };
 
 extern struct server_t g_server;

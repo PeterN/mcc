@@ -27,5 +27,7 @@ struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name
 struct packet_t *packet_send_level_initialize();
 struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *data, uint8_t percent);
 struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z);
+struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, int16_t x, int16_t y, int16_t z, uint8_t heading, uint8_t pitch);
+struct packet_t *packet_send_teleport_player(uint8_t player_id, int16_t x, int16_t y, int16_t z, uint8_t heading, uint8_t pitch);
 
 #endif /* PACKET_H */
