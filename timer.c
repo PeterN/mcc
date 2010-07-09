@@ -1,6 +1,6 @@
 #include <time.h>
 
-int test()
+void test()
 {
     //timer_create();
 }

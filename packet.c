@@ -124,11 +124,13 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
     if (player == NULL)
     {
         player = player_add(username);
+        printf("%s connected\n", username);
         //message_queue("%s connected", username);
     }
     else
     {
         net_close(client_get_by_player(player), false);
+        printf("%s reconnected\n", username);
         //message_queue("%s reconnected", username);
     }
 
@@ -139,7 +141,14 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, 0x64));
 
-    c->player->level = s_levels.items[0];
+    if (c->player->level == NULL)
+    {
+        if (!level_get_by_name("main", &c->player->level))
+        {
+            net_close(c, true);
+            return;
+        }
+    }
 
 	level_send(c);
 }
@@ -179,7 +188,7 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 
 void packet_recv_message(struct client_t *c, struct packet_t *p)
 {
-	uint8_t unused = packet_recv_byte(p);
+	/*uint8_t unused =*/ packet_recv_byte(p);
 	char *message = packet_recv_string(p);
 
 	printf("Player said: %s\n", message);
@@ -189,21 +198,36 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 	    message++;
 	    if (strcasecmp("home", message) == 0)
 	    {
-	        struct level_t *l = malloc(sizeof *l);
-            level_init(l, 128, 32, 128);
-            l->name = strdup("home");
-            level_list_add(&s_levels, l);
+	        char name[64];
+	        struct level_t *l;
 
-            level_gen(l, 0);
+	        snprintf(name, sizeof name, "%s's home", c->player->username);
 
-            c->player->level = l;
-            level_send(c);
+	        if (!level_get_by_name(name, &l))
+	        {
+	            l = malloc(sizeof *l);
+                level_init(l, 32, 32, 32, name);
+                level_gen(l, 0);
+                level_list_add(&s_levels, l);
+	        }
+
+            if (c->player->level != l)
+            {
+                /* Don't resend the level if play is already on it */
+                c->player->level = l;
+                level_send(c);
+            }
 	    }
-	    else if (strcasecmp("goto", message) == 0)
+	    else if (strncasecmp("goto ", message, 5) == 0)
 	    {
-	        long l = strtol(message + 5, NULL, 10);
-	        c->player->level = s_levels.items[l];
-	        level_send(c);
+            if (level_get_by_name(message + 5, &c->player->level))
+            {
+                level_send(c);
+            }
+            else
+            {
+                printf("Unable to find level %s\n", message + 5);
+            }
 	    }
 	}
 }

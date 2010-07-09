@@ -12,15 +12,15 @@ struct server_t g_server;
 int main(int argc, char **argv)
 {
     int tick = 0;
-	struct level_t level;
 	int i;
 
-	level_init(&level, 32, 32, 32);
-	level.name = strdup("main");
-
-	level_gen(&level, 0);
-
-	level_list_add(&s_levels, &level);
+    if (!level_load("main"))
+    {
+        struct level_t *l = malloc(sizeof *l);
+        level_init(l, 256, 64, 256, "main");
+        level_gen(l, 0);
+        level_list_add(&s_levels, l);
+    }
 
 	g_server.name = "TEST TEST TEST";
 	g_server.motd = "This is a test";
@@ -38,6 +38,7 @@ int main(int argc, char **argv)
 
 		if ((tick % 5000) == 0) player_info();
 		if ((tick % 60000) == 0) heartbeat_start();
+		if ((tick % 20000) == 0) level_save_all();
 
         if ((tick % 1000) == 0)
         {
@@ -51,6 +52,8 @@ int main(int argc, char **argv)
             }
         }
 	}
+
+	level_save_all();
 
 	return 0;
 }

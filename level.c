@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
@@ -9,6 +10,8 @@
 #include "packet.h"
 #include "player.h"
 
+#define M_PI 3.14159265358979f
+
 struct level_list_t s_levels;
 
 bool level_t_compare(struct level_t **a, struct level_t **b)
@@ -16,10 +19,11 @@ bool level_t_compare(struct level_t **a, struct level_t **b)
     return *a == *b;
 }
 
-void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z)
+void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name)
 {
     memset(level, 0, sizeof *level);
 
+    level->name = strdup(name);
 	level->x = x;
 	level->y = y;
 	level->z = z;
@@ -74,7 +78,6 @@ bool level_send(struct client_t *c)
 
     memset(&z, 0, sizeof z);
     if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
-    //if (deflateInit(&_z, 5) != Z_OK) return;
 
     uint8_t *buffer = malloc(4 + length);
     uint8_t *bufp = buffer;
@@ -108,18 +111,23 @@ bool level_send(struct client_t *c)
         {
             client_add_packet(c, packet_send_level_data_chunk(n, outbuf, (length - z.avail_in) * 100 / length));
         }
+
+        if (r == Z_STREAM_END) break;
+        if (r != Z_OK)
+        {
+            free(buffer);
+            return false;
+        }
     }
     while (z.avail_in > 0 || z.avail_out == 0);
+
+    free(buffer);
 
     deflateEnd(&z);
 
     client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
 
     //client_add_packet(c, packet_send_teleport_player(0, 32*32, 2048*32, 32*32, 0, 0));
-
-    //struct packet_t *packet_send_level_initialize();
-    //struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *data, uint8_t percent);
-    //struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z);
 
     c->waiting_for_level = false;
 
@@ -130,12 +138,12 @@ static const float _amplitudes[] = {
     16000, 19200, 12800, 8000, 3200, 256, 64
 };
 
-float random_height(int max)
+static float random_height(int max)
 {
     return ((float)rand() / INT_MAX - 0.5f) * max;
 }
 
-bool level_apply_noise(float *map, int mx, int mz, int log_frequency, int amplitude)
+static bool level_apply_noise(float *map, int mx, int mz, int log_frequency, int amplitude)
 {
     int size_min = mx < mz ? mx : mz;
     int step = size_min >> log_frequency;
@@ -190,7 +198,7 @@ bool level_apply_noise(float *map, int mx, int mz, int log_frequency, int amplit
     return (step > 1);
 }
 
-void level_normalize(float *map, int mx, int mz, int my)
+static void level_normalize(float *map, int mx, int mz)
 {
     int x, z;
     float hmin = 0.0f;
@@ -207,8 +215,6 @@ void level_normalize(float *map, int mx, int mz, int my)
         }
     }
 
-    printf("Min: %f, Max: %f\n", hmin, hmax);
-
     for (z = 0; z <= mz; z++)
     {
         for (x = 0; x <= mx; x++)
@@ -216,25 +222,13 @@ void level_normalize(float *map, int mx, int mz, int my)
             float h = map[x + z * dmx];
             h -= hmin;
             h /= (hmax - hmin);
-            h *= my / 8;
-            h += my / 2;
-            map[x + z * dmx] = h < 0 ? 0 : h >= my ? my - 1 : h;
+            map[x + z * dmx] = h < 0.0 ? 0.0 : h >= 1.0f ? 1.0f : (asin(h * 2.0f - 1.0f) / M_PI + 0.5f);
         }
     }
 }
 
-
-void *level_gen_thread(void *arg)
+static void level_gen_heightmap(float *map, int mx, int mz)
 {
-    struct level_t *level = arg;
-    struct block_t block;
-    int i, x, y, z;
-    int mx = level->x;
-    int my = level->y;
-    int mz = level->z;
-
-    float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
-
     unsigned iteration_round = 0;
     bool continue_iteration;
     int log_size_min;
@@ -254,18 +248,39 @@ void *level_gen_thread(void *arg)
             amplitude = 0;
         }
 
-        continue_iteration = level_apply_noise(hm, mx, mz, iteration_round, amplitude);
+        continue_iteration = level_apply_noise(map, mx, mz, iteration_round, amplitude);
         iteration_round++;
     } while (continue_iteration);
 
-    level_normalize(hm, mx, mz, my);
+    level_normalize(map, mx, mz);
+}
+
+void *level_gen_thread(void *arg)
+{
+    int i;
+    struct level_t *level = arg;
+    struct block_t block;
+    int x, y, z;
+    int mx = level->x;
+    int my = level->y;
+    int mz = level->z;
+
+    float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
+    float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
+    float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);
+
+    level_gen_heightmap(hm, mx, mz);
+    level_gen_heightmap(cmh, mx, mz);
+    level_gen_heightmap(cmd, mx, mz);
+
     int dmx = mx + 1;
 
     for (z = 0; z < mz; z++)
     {
         for (x = 0; x < mx; x++)
         {
-            int h = hm[x + z * dmx];
+            int h = hm[x + z * dmx] * my / 2 + my / 3;
+
             for (y = 0; y < h; y++)
             {
                 block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y < my / 2) ? SAND : GRASS;
@@ -276,6 +291,84 @@ void *level_gen_thread(void *arg)
             for (; y < my / 2; y++)
             {
                 level_set_block(level, &block, level_get_index(level, x, y, z));
+            }
+        }
+    }
+
+    block.type = AIR;
+    for (i = 0; i < 4; i++)
+    {
+        level_gen_heightmap(cmh, mx, mz);
+        level_gen_heightmap(cmd, mx, mz);
+
+        for (z = 0; z < mz; z++)
+        {
+            for (x = 0; x < mx; x++)
+            {
+                //int h = hm[x + z * dmx] * my / 2 + my / 3;
+                float ch = cmh[x + z * dmx];
+                float cd = cmd[x + z * dmx];
+                if (fabs(cd - ch) < 0.15f)
+                {
+                    //block.type = i % 3 ? AIR : ROCK;
+                    //int cdi = h - cd * my / 4;
+                    //int chi = cdi + (ch - 0.5f) * my / 4;
+                    int cdi = cd * my / 2 + my / 3;// / 1.5f;
+                    int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
+                    if (cdi > chi) {
+                        cdi = cdi ^ chi;
+                        chi = cdi ^ chi;
+                        cdi = cdi ^ chi;
+                    }
+                    for (y = cdi; y < chi; y++)
+                    {
+                        unsigned index;
+                        if (y < 0 || y >= my) continue;
+                        index = level_get_index(level, x, y, z);
+                        //if (block.type == ROCK && (level->blocks[index].type == AIR || level->blocks[index].type == WATER))
+                        //{
+                            level_set_block(level, &block, index);
+                        //}
+                    }
+                }
+            }
+        }
+    }
+
+    block.type = WATER;
+    for (i = 0; i < 100; i++)
+    {
+        level_gen_heightmap(cmh, mx, mz);
+        level_gen_heightmap(cmd, mx, mz);
+
+        for (z = 0; z < mz; z++)
+        {
+            for (x = 0; x < mx; x++)
+            {
+                for (y = my / 2; y > 1; y--)
+                {
+                    unsigned index = level_get_index(level, x, y, z);
+                    if (level->blocks[index].type == AIR && y < my / 2)
+                    {
+                        if (x == 0 || x == mx - 1 || z == 0 || z == mz - 1)
+                        {
+                            level_set_block(level, &block, index);
+                        }
+                    }
+                    else if (level->blocks[index].type == WATER)
+                    {
+                        index = level_get_index(level, x, y - 1, z);
+                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
+                        index = level_get_index(level, x - 1, y, z);
+                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
+                        index = level_get_index(level, x + 1, y, z);
+                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
+                        index = level_get_index(level, x, y, z - 1);
+                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
+                        index = level_get_index(level, x, y, z + 1);
+                        if (level->blocks[index].type == AIR) level_set_block(level, &block, index);
+                    }
+                }
             }
         }
     }
@@ -314,6 +407,8 @@ void *level_gen_thread(void *arg)
     }*/
 
     free(hm);
+    free(cmd);
+    free(cmh);
 
     pthread_mutex_unlock(&level->mutex);
 
@@ -324,4 +419,88 @@ void level_gen(struct level_t *level, int type)
 {
     pthread_mutex_lock(&level->mutex);
     int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
+}
+
+bool level_load(const char *name, struct level_t **level)
+{
+    struct level_t *l;
+    unsigned x, y, z;
+    gzFile gz;
+
+    char filename[64];
+    snprintf(filename, sizeof filename, "levels/%s.mcl", name);
+
+    gz = gzopen(filename, "rb");
+    if (gz == NULL) return false;
+
+    l = malloc(sizeof *l);
+    gzread(gz, &x, sizeof x);
+    gzread(gz, &y, sizeof y);
+    gzread(gz, &z, sizeof z);
+    level_init(l, x, y, z, name);
+
+    gzread(gz, l->blocks, sizeof *l->blocks * x * y *z);
+
+    gzclose(gz);
+
+    level_list_add(&s_levels, l);
+
+    printf("Loaded %s\n", filename);
+
+    if (level != NULL) *level = l;
+    return true;
+}
+
+bool level_save(struct level_t *l)
+{
+    char filename[64];
+    snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
+
+    gzFile gz = gzopen(filename, "wb");
+    if (gz == NULL) return false;
+
+    gzwrite(gz, &l->x, sizeof l->x);
+    gzwrite(gz, &l->y, sizeof l->y);
+    gzwrite(gz, &l->z, sizeof l->z);
+    gzwrite(gz, l->blocks, sizeof *l->blocks * l->x * l->y * l->z);
+    gzclose(gz);
+
+    printf("Saved %s\n", filename);
+
+    return true;
+}
+
+bool level_get_by_name(const char *name, struct level_t **level)
+{
+    int i;
+    struct level_t *l;
+
+    for (i = 0; i < s_levels.used; i++)
+    {
+        l = s_levels.items[i];
+        if (strcasecmp(l->name, name) == 0)
+        {
+            if (level != NULL) *level = l;
+            return true;
+        }
+    }
+
+    /* See if level is saved? */
+    if (level_load(name, &l))
+    {
+        if (level != NULL) *level = l;
+        return true;
+    }
+
+    return false;
+}
+
+void level_save_all()
+{
+    int i;
+
+    for (i = 0; i < s_levels.used; i++)
+    {
+        level_save(s_levels.items[i]);
+    }
 }
