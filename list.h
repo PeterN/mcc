@@ -18,6 +18,11 @@ static inline void X ## _list_init(struct X ## _list_t *list) \
 	list->items = NULL; \
 } \
 \
+static inline void X ## _list_free(struct X ## _list_t *list) \
+{ \
+    free(list->items); \
+} \
+\
 static inline T * X ## _list_add(struct X ## _list_t *list, T item) \
 { \
 	if (list->used >= list->size) \

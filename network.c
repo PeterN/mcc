@@ -118,13 +118,13 @@ static void net_packetsend(struct client_t *c)
             //{
                 perror("send");
             //}
-            return;
+            break;
         }
 
         c->packet_send = p->next;
         free(p);
 
-        if (c->packet_send == NULL) return;
+        if (c->packet_send == NULL) break;
     }
 }
 
@@ -135,8 +135,7 @@ static void net_packetrecv(struct client_t *c)
 
 	if (c->packet_recv == NULL)
 	{
-		c->packet_recv = malloc(sizeof *c->packet_recv);
-		packet_init(c->packet_recv);
+		c->packet_recv = packet_init(1500);
 	}
 
 	p = c->packet_recv;
@@ -243,11 +242,8 @@ void net_run()
 
 			{
 				struct client_t c;
+				memset(&c, 0, sizeof c);
 				c.sock = fd;
-				c.writable = false;
-				c.close = false;
-				c.packet_recv = NULL;
-				c.packet_send = NULL;
 				client_list_add(&s_clients, c);
 			}
 		}
@@ -287,4 +283,14 @@ void net_run()
 			net_packetrecv(c);
 		}
 	}
+}
+
+void net_notify_all(const char *message, bool thread)
+{
+    int i;
+    for (i = 0; i < s_clients.used; i++)
+    {
+        struct client_t *c = &s_clients.items[i];
+        client_add_packet(c, packet_send_message(0xFF, message));
+    }
 }

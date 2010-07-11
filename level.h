@@ -4,25 +4,23 @@
 #include <pthread.h>
 #include "block.h"
 #include "physics.h"
+#include "position.h"
 
 struct client_t;
 
 struct level_t
 {
-    char *name;
+    char name[64];
 	unsigned x;
 	unsigned y;
 	unsigned z;
 
-	int16_t spawnx;
-	int16_t spawny;
-	int16_t spawnz;
-	uint8_t spawnh;
-	uint8_t spawnp;
+	struct position_t spawn;
 
 	struct block_t *blocks;
 	struct physics_list_t physics;
 
+    int type;
     bool changed;
 	pthread_t thread;
 	pthread_mutex_t mutex;
@@ -45,6 +43,11 @@ void level_clear_block(struct level_t *level, unsigned index);
 bool level_send(struct client_t *client);
 void level_gen(struct level_t *level, int type);
 bool level_get_by_name(const char *name, struct level_t **level);
+bool level_load(const char *name, struct level_t **level);
 void level_save_all();
+void level_unload_empty();
+
+void level_change_block(struct level_t *level, struct client_t *c, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t);
+void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index);
 
 #endif /* LEVEL_H */

@@ -78,6 +78,7 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="player.h" />
+		<Unit filename="position.h" />
 		<Unit filename="timer.c">
 			<Option compilerVar="CC" />
 		</Unit>

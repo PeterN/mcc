@@ -15,7 +15,7 @@ enum blocktype_t
 	STONE,
 	WOOD,
 	SHRUB,
-	BLACKROCK,
+	ADMINIUM,
 	WATER,
 	WATERSTILL,
 	LAVA,
@@ -87,23 +87,28 @@ enum blocktype_t
 
 struct block_t
 {
-	uint16_t type;
-	uint16_t data;
+    uint16_t fixed:1;
+    uint16_t physics:1;
+	uint16_t type:14;
+	uint16_t data:16;
 };
 
 static inline bool block_is_fixed(const struct block_t *block)
 {
-	return HasBit(block->type, 15);
+	//return HasBit(block->type, 15);
+	return block->fixed;
 }
 
 static inline bool block_has_physics(const struct block_t *block)
 {
-	return HasBit(block->type, 14);
+	//return HasBit(block->type, 14);
+	return block->physics;
 }
 
 static inline enum blocktype_t block_get_blocktype(const struct block_t *block)
 {
-	return GetBits(block->type, 0, 14);
+	//return GetBits(block->type, 0, 14);
+	return block->type;
 }
 
 #endif /* BLOCK_H */

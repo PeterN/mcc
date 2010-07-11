@@ -89,7 +89,7 @@ bool blocktype_is_placable(enum blocktype_t type)
 	{
 		case AIR:
 		case GRASS:
-		case BLACKROCK:
+		case ADMINIUM:
 		case WATER:
 		case WATERSTILL:
 		case LAVA:

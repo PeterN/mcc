@@ -29,5 +29,6 @@ extern struct client_list_t s_clients;
 struct client_t *client_get_by_player(struct player_t *p);
 
 void client_add_packet(struct client_t *c, struct packet_t *p);
+void client_process(struct client_t *c, char *message);
 
 #endif /* CLIENT_H */

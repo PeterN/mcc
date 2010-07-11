@@ -4,13 +4,13 @@
 #include <limits.h>
 #include <zlib.h>
 #include <pthread.h>
+#include <math.h>
 #include "level.h"
 #include "block.h"
 #include "client.h"
 #include "packet.h"
 #include "player.h"
-
-#define M_PI 3.14159265358979f
+#include "network.h"
 
 struct level_list_t s_levels;
 
@@ -23,7 +23,7 @@ void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const
 {
     memset(level, 0, sizeof *level);
 
-    level->name = strdup(name);
+    strncpy(level->name, name, sizeof level->name);
 	level->x = x;
 	level->y = y;
 	level->z = z;
@@ -135,15 +135,25 @@ bool level_send(struct client_t *c)
 
     client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
 
-    client_add_packet(c, packet_send_teleport_player(0xFF, level->spawnx, level->spawny, level->spawnz, level->spawnh, level->spawnp));
+    client_add_packet(c, packet_send_teleport_player(0xFF, &level->spawn));
 
     c->waiting_for_level = false;
 
     return true;
 }
 
-static const float _amplitudes[] = {
-    16000, 19200, 12800, 8000, 3200, 256, 64
+static const float _amplitudes[][7] = {
+    {16000,   256,   128,    64,    32,    16,    16},
+    /* Very smooth */
+    {16000,  5600,  1968,   688,   240,    16,    16},
+    /* Smooth */
+    {16000, 16000,  6448,  3200,  1024,   128,    16},
+    /* Rough */
+    {16000, 19200, 12800,  8000,  3200,   256,    64},
+    /* Very Rough */
+    {24000, 16000, 19200, 16000,  8000,   512,   320},
+    /* Huh */
+    {1, 1, 1, 1, 1, 1, 1},
 };
 
 static float random_height(int max)
@@ -230,12 +240,50 @@ static void level_normalize(float *map, int mx, int mz)
             float h = map[x + z * dmx];
             h -= hmin;
             h /= (hmax - hmin);
-            map[x + z * dmx] = h < 0.0 ? 0.0 : h >= 1.0f ? 1.0f : (asin(h * 2.0f - 1.0f) / M_PI + 0.5f);
+            h = h < 0.0 ? 0.0 : h >= 1.0f ? 1.0f : h;//(asin(h * 2.0f - 1.0f) / M_PI + 0.5f);
+            if (h < 0.5) {
+                h = sin((h - 0.25f) * 2 * M_PI) / 4.0f + 0.25f;
+            }
+            else
+            {
+                h = sin((h - 0.75f) * 2 * M_PI) / 4.0f + 0.75f;
+            }
+            map[x + z * dmx] = h;
         }
     }
 }
 
-static void level_gen_heightmap(float *map, int mx, int mz)
+/*
+static void level_smooth_slopes(float *map, int mx, int mz, float dh_max)
+{
+    int x, z;
+    int dmx = mx + 1;
+    for (z = 0; z <= mz; z++)
+    {
+        for (x = 0; x <= mx; x++)
+        {
+            float h_max = map[(x > 0 ? x - 1 : 0) + z * dmx];
+            float h_max2 = map[x + (z > 0 ? z - 1 : 0) * dmx];
+            if (h_max2 < h_max) h_max = h_max2;
+            h_max += 1.0f / dh_max;
+            if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
+        }
+    }
+    for (z = mz; z >= 0; z--)
+    {
+        for (x = mx; x >= 0; x--)
+        {
+            float h_max = map[(x < mx ? x + 1 : x) + z * dmx];
+            float h_max2 = map[x + (z < mz ? z + 1 : z) * dmx];
+            if (h_max2 < h_max) h_max = h_max2;
+            h_max += 1.0f / dh_max;
+            if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
+        }
+    }
+}
+*/
+
+static void level_gen_heightmap(float *map, int mx, int mz, int type)
 {
     unsigned iteration_round = 0;
     bool continue_iteration;
@@ -251,7 +299,7 @@ static void level_gen_heightmap(float *map, int mx, int mz)
     do {
         log_frequency = iteration_round - log_frequency_min;
         if (log_frequency >= 0) {
-            amplitude = _amplitudes[log_frequency];
+            amplitude = _amplitudes[type][log_frequency];
         } else {
             amplitude = 0;
         }
@@ -273,143 +321,163 @@ void *level_gen_thread(void *arg)
     int my = level->y;
     int mz = level->z;
 
-    float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
-    float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
-    float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);
-
-    level_gen_heightmap(hm, mx, mz);
-    level_gen_heightmap(cmh, mx, mz);
-    level_gen_heightmap(cmd, mx, mz);
-
-    int dmx = mx + 1;
-
-    for (z = 0; z < mz; z++)
+    if (level->type == 0 || level->type == 1)
     {
-        for (x = 0; x < mx; x++)
-        {
-            int h = hm[x + z * dmx] * my / 2 + my / 3;
-
-            for (y = 0; y < h; y++)
-            {
-                block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y < my / 2) ? SAND : GRASS;
-                level_set_block(level, &block, level_get_index(level, x, y, z));
-            }
-
-            block.type = WATER;
-            for (; y < my / 2; y++)
-            {
-                level_set_block(level, &block, level_get_index(level, x, y, z));
-            }
-        }
-    }
-
-    block.type = AIR;
-    for (i = 0; i < 50; i++)
-    {
-        level_gen_heightmap(cmh, mx, mz);
-        level_gen_heightmap(cmd, mx, mz);
-
-        int base = cmd[0] * my;
-
         for (z = 0; z < mz; z++)
         {
             for (x = 0; x < mx; x++)
             {
-                //int h = hm[x + z * dmx] * my / 2 + my / 3;
-                float ch = cmh[x + z * dmx];
-                float cd = cmd[x + z * dmx];
-                if (fabs(ch) < 0.25f)
+                int h = my / 2 + 1;
+
+                for (y = 0; y < h; y++)
                 {
-                    //block.type = i % 3 ? AIR : ROCK;
-                    //int cdi = h - cd * my / 4;
-                    //int chi = cdi + (ch - 0.5f) * my / 4;
-                    int cdi = base + cd * my / 8;// / 1.5f;
-                    int chi = (ch - 0.25f) * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
-                    if (cdi > chi) {
-                        cdi = cdi ^ chi;
-                        chi = cdi ^ chi;
-                        cdi = cdi ^ chi;
-                    }
-                    for (y = cdi; y < chi; y++)
-                    {
-                        unsigned index;
-                        if (y < 0 || y >= my) continue;
-                        index = level_get_index(level, x, y, z);
-                        //if (block.type == ROCK && (level->blocks[index].type == AIR || level->blocks[index].type == WATER))
-                        //{
-                            level_set_block(level, &block, index);
-                        //}
-                    }
+                    block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : GRASS;
+                    if (level->type == 1 && y == h - 2) block.type = ADMINIUM;
+                    level_set_block(level, &block, level_get_index(level, x, y, z));
                 }
             }
         }
     }
-
-    block.type = WATER;
-    for (i = 0; i < 100; i++)
+    else
     {
-        level_gen_heightmap(cmh, mx, mz);
-        level_gen_heightmap(cmd, mx, mz);
+        float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
+        float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
+        float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);
+
+        level_gen_heightmap(hm, mx, mz, level->type - 2);
+        //level_smooth_slopes(hm, mx, mz, my);
+
+        int dmx = mx + 1;
 
         for (z = 0; z < mz; z++)
         {
             for (x = 0; x < mx; x++)
             {
-                for (y = my / 2 - 1; y > 1; y--)
+                int h = hm[x + z * dmx] * my / 4 + my * 3 / 8;
+
+                for (y = 0; y < h; y++)
                 {
-                    unsigned index = level_get_index(level, x, y, z);
-                    if (y > my / 2 - 3 && level->blocks[index].type == AIR)
+                    block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y < my / 2) ? SAND : GRASS;
+                    level_set_block(level, &block, level_get_index(level, x, y, z));
+                }
+
+                block.type = WATER;
+                for (; y < my / 2; y++)
+                {
+                    level_set_block(level, &block, level_get_index(level, x, y, z));
+                }
+            }
+        }
+
+        block.type = AIR;
+        for (i = 0; i < my / 4; i++)
+        {
+            level_gen_heightmap(cmh, mx, mz, level->type - 2);
+            level_gen_heightmap(cmd, mx, mz, level->type - 2);
+
+            int base = cmd[0] * my;
+
+            for (z = 0; z < mz; z++)
+            {
+                for (x = 0; x < mx; x++)
+                {
+                    //int h = hm[x + z * dmx] * my / 2 + my / 3;
+                    float ch = cmh[x + z * dmx];
+                    float cd = cmd[x + z * dmx];
+                    if (fabsf(ch) < 0.25f)
                     {
-                        if (x == 0 || x == mx - 1 || z == 0 || z == mz - 1)
+                        //block.type = i % 3 ? AIR : ROCK;
+                        //int cdi = h - cd * my / 4;
+                        //int chi = cdi + (ch - 0.5f) * my / 4;
+                        int cdi = base + cd * my / 8;// / 1.5f;
+                        int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
+                        if (cdi > chi) {
+                            cdi = cdi ^ chi;
+                            chi = cdi ^ chi;
+                            cdi = cdi ^ chi;
+                        }
+                        for (y = cdi; y < chi; y++)
                         {
-                            level_set_block(level, &block, index);
+                            unsigned index;
+                            if (y < 0 || y >= my) continue;
+                            index = level_get_index(level, x, y, z);
+                            //if (block.type == ROCK && (level->blocks[index].type == AIR || level->blocks[index].type == WATER))
+                            //{
+                                level_set_block(level, &block, index);
+                            //}
                         }
                     }
-                    else if (level->blocks[index].type == WATER)
+                }
+            }
+        }
+
+        free(hm);
+        free(cmd);
+        free(cmh);
+
+        block.type = WATER;
+        for (i = 0; i < 100; i++)
+        {
+            for (z = 0; z < mz; z++)
+            {
+                for (x = 0; x < mx; x++)
+                {
+                    for (y = my / 2 - 1; y > 1; y--)
                     {
-                        level_set_block_if(level, &block, level_get_index(level, x, y - 1, z), AIR);
-                        if (x > 0) level_set_block_if(level, &block, level_get_index(level, x - 1, y, z), AIR);
-                        if (x < mx - 1) level_set_block_if(level, &block, level_get_index(level, x + 1, y, z), AIR);
-                        if (z > 0) level_set_block_if(level, &block, level_get_index(level, x, y, z - 1), AIR);
-                        if (z < mz - 1) level_set_block_if(level, &block, level_get_index(level, x, y, z + 1), AIR);
+                        unsigned index = level_get_index(level, x, y, z);
+                        if (y > my / 2 - 3 && level->blocks[index].type == AIR)
+                        {
+                            if (x == 0 || x == mx - 1 || z == 0 || z == mz - 1)
+                            {
+                                level_set_block(level, &block, index);
+                            }
+                        }
+                        else if (level->blocks[index].type == WATER)
+                        {
+                            level_set_block_if(level, &block, level_get_index(level, x, y - 1, z), AIR);
+                            if (x > 0) level_set_block_if(level, &block, level_get_index(level, x - 1, y, z), AIR);
+                            if (x < mx - 1) level_set_block_if(level, &block, level_get_index(level, x + 1, y, z), AIR);
+                            if (z > 0) level_set_block_if(level, &block, level_get_index(level, x, y, z - 1), AIR);
+                            if (z < mz - 1) level_set_block_if(level, &block, level_get_index(level, x, y, z + 1), AIR);
+                        }
                     }
                 }
             }
         }
-    }
 
-    /* Grow grass on soil */
-    for (z = 0; z < mz; z++)
-    {
-        for (x = 0; x < mx; x++)
+        /* Grow grass on soil */
+        for (z = 0; z < mz; z++)
         {
-            for (y = my - 1; y > 0; y--)
+            for (x = 0; x < mx; x++)
             {
-                unsigned index = level_get_index(level, x, y, z);
-                if (level->blocks[index].type == DIRT)
+                for (y = my - 1; y > 0; y--)
                 {
-                    level->blocks[index].type = GRASS;
-                    break;
+                    unsigned index = level_get_index(level, x, y, z);
+                    if (level->blocks[index].type == DIRT)
+                    {
+                        level->blocks[index].type = GRASS;
+                        break;
+                    }
+                    if (level->blocks[index].type != AIR) break;
                 }
-                if (level->blocks[index].type != AIR) break;
             }
         }
     }
 
-    level->spawnx = mx * 16;
-    level->spawnz = mz * 16;
+    level->spawn.x = mx * 16;
+    level->spawn.z = mz * 16;
     for (y = my - 1; y > 0; y--)
     {
         unsigned index = level_get_index(level, x, y, z);
         if (level->blocks[index].type != AIR)
         {
-            level->spawny = (y + 2) * 32;
+            level->spawn.y = (y + 2) * 32;
             break;
         }
     }
 
-    level->spawnh = 90 * 256 / 360;
-    level->spawnp = 90 * 256 / 360;
+    level->spawn.h = 90 * 256 / 360;
+    level->spawn.p = 90 * 256 / 360;
 
     /*
     for (y = 0; y < my / 2; y++)
@@ -444,21 +512,43 @@ void *level_gen_thread(void *arg)
         level_set_block(level, &block, level_get_index(level, x, y, z));
     }*/
 
-    free(hm);
-    free(cmd);
-    free(cmh);
 
     level->changed = true;
 
     pthread_mutex_unlock(&level->mutex);
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Created level '%s'", level->name);
+    net_notify_all(buf);
 
     return NULL;
 }
 
 void level_gen(struct level_t *level, int type)
 {
+    level->type = type;
+
     pthread_mutex_lock(&level->mutex);
     int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
+    if (r != 0)
+    {
+        fprintf(stderr, "Unable to create thread for level generation, server may pause\n");
+        level_gen_thread(level);
+    }
+}
+
+void level_unload(struct level_t *level)
+{
+    char buf[64];
+    snprintf(buf, sizeof buf, "Level '%s' unloaded", level->name);
+    net_notify_all(buf);
+
+    printf("Unloaded %s\n", level->name);
+
+    physics_list_free(&level->physics);
+
+    free(level->blocks);
+    free(level);
 }
 
 bool level_load(const char *name, struct level_t **level)
@@ -485,7 +575,9 @@ bool level_load(const char *name, struct level_t **level)
 
     level_list_add(&s_levels, l);
 
-    printf("Loaded %s\n", filename);
+    char buf[64];
+    snprintf(buf, sizeof buf, "Level '%s' loaded", name);
+    net_notify_all(buf);
 
     if (level != NULL) *level = l;
     return true;
@@ -520,7 +612,7 @@ bool level_get_by_name(const char *name, struct level_t **level)
     for (i = 0; i < s_levels.used; i++)
     {
         l = s_levels.items[i];
-        if (strcasecmp(l->name, name) == 0)
+        if (l != NULL && strcasecmp(l->name, name) == 0)
         {
             if (level != NULL) *level = l;
             return true;
@@ -543,9 +635,112 @@ void level_save_all()
 
     for (i = 0; i < s_levels.used; i++)
     {
-        if (s_levels.items[i]->changed)
+        if (s_levels.items[i] != NULL && s_levels.items[i]->changed)
         {
             level_save(s_levels.items[i]);
+        }
+    }
+}
+
+void level_unload_empty()
+{
+    int i, j;
+
+    for (i = 0; i < s_levels.used; i++)
+    {
+        struct level_t *l = s_levels.items[i];
+
+        if (l == NULL || l->changed) continue;
+
+        /* Test if another thread is accessing... */
+        if (pthread_mutex_trylock(&l->mutex) != 0) continue;
+        pthread_mutex_unlock(&l->mutex);
+
+        bool player_on = false;
+        for (j = 0; j < s_clients.used; j++)
+        {
+            const struct player_t *p = s_clients.items[j].player;
+            if (p == NULL) continue;
+            if (p->level == l)
+            {
+                player_on = true;
+                break;
+            }
+        }
+
+        if (player_on) continue;
+
+        level_unload(l);
+        //level_list_del(&s_levels, l);
+
+        s_levels.items[i] = NULL;
+    }
+}
+
+void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t)
+{
+    int i;
+
+    if (x < 0 || y < 0 || z < 0 || x >= level->x || y >= level->y || z >= level->z)
+    {
+        return;
+    }
+
+    if (HasBit(client->player->flags, PLAYER_BANNED))
+    {
+        /* Ignore banned players :D */
+        return;
+    }
+
+    unsigned index = level_get_index(level, x, y, z);
+    struct block_t *b = &level->blocks[index];
+    enum blocktype_t bt = block_get_blocktype(b);
+
+    if (HasBit(client->player->flags, PLAYER_PLACE_SOLID)) t = ADMINIUM;
+    if (m == 0) t = AIR;
+
+    if (!HasBit(client->player->flags, PLAYER_OP) && (bt == ADMINIUM || t == ADMINIUM))
+    {
+        client_add_packet(client, packet_send_set_block(x, y, z, b->type));
+        return;
+    }
+
+    if (bt != t)
+    {
+        player_undo_log(client->player, index);
+
+        b->type = t;
+        b->fixed = HasBit(client->player->flags, PLAYER_PLACE_FIXED);
+        level->changed = true;
+
+        for (i = 0; i < s_clients.used; i++)
+        {
+            struct client_t *c = &s_clients.items[i];
+            if (client != c && c->player->level == level)
+            {
+                client_add_packet(c, packet_send_set_block(x, y, z, t));
+            }
+        }
+    }
+}
+
+void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index)
+{
+    int i;
+    struct block_t *b = &level->blocks[index];
+    *b = *block;
+    level->changed = true;
+
+    int16_t x = index % level->x;
+    int16_t z = (index / level->x) % level->z;
+    int16_t y = index / level->x / level->z;
+
+    for (i = 0; i < s_clients.used; i++)
+    {
+        struct client_t *c = &s_clients.items[i];
+        if (c->player->level == level)
+        {
+            client_add_packet(c, packet_send_set_block(x, y, z, block->type));
         }
     }
 }

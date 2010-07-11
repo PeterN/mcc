@@ -16,11 +16,11 @@ int main(int argc, char **argv)
     int tick = 0;
 	int i;
 
-    if (!level_load("main"))
+    if (!level_load("main", NULL))
     {
         struct level_t *l = malloc(sizeof *l);
-        level_init(l, 256, 256, 256, "main");
-        level_gen(l, 0);
+        level_init(l, 128, 32, 128, "main");
+        level_gen(l, 1);
         level_list_add(&s_levels, l);
     }
 
@@ -48,6 +48,7 @@ int main(int argc, char **argv)
 		if ((tick % 5000) == 0) player_info();
 		if ((tick % 60000) == 0) heartbeat_start();
 		if ((tick % 20000) == 0) level_save_all();
+		if ((tick % 20000) == 0) level_unload_empty();
 
         if ((tick % 1000) == 0)
         {

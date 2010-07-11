@@ -9,13 +9,17 @@
 #include "level.h"
 #include "mcc.h"
 
-void packet_init(struct packet_t *p)
+struct packet_t *packet_init(size_t len)
 {
-	memset(p->buffer, 0, sizeof p->buffer);
+    struct packet_t *p = malloc(sizeof *p + len);
+
+	memset(p->buffer, 0, len);
 	p->loc = p->buffer;
 	p->size = 0;
 	p->pos = 0;
 	p->next = NULL;
+
+	return p;
 }
 
 /* Low-level packet receiving */
@@ -115,23 +119,33 @@ size_t packet_recv_size(uint8_t type)
 
 void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 {
-	uint8_t version = packet_recv_byte(p);
+    char buf[64];
+
+	/* uint8_t version = */ packet_recv_byte(p);
 	char *username = packet_recv_string(p);
 	char *key = packet_recv_string(p);
-	uint8_t unused = packet_recv_byte(p);
+	/* uint8_t unused = */ packet_recv_byte(p);
+
+	if (c->player != NULL)
+	{
+	    net_close(c, false);
+	    return;
+	}
 
     struct player_t *player = player_get_by_name(username);
     if (player == NULL)
     {
         player = player_add(username);
-        printf("%s connected\n", username);
-        //message_queue("%s connected", username);
+
+        snprintf(buf, sizeof buf, "%s connected\n", username);
+        net_notify_all(buf);
     }
     else
     {
         net_close(client_get_by_player(player), false);
-        printf("%s reconnected\n", username);
-        //message_queue("%s reconnected", username);
+
+        snprintf(buf, sizeof buf, "%s reconnected\n", username);
+        net_notify_all(buf);
     }
 
     c->player = player;
@@ -143,10 +157,15 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
     if (c->player->level == NULL)
     {
-        if (!level_get_by_name("main", &c->player->level))
+        struct level_t *l;
+        if (!level_get_by_name("main", &l))
         {
             net_close(c, true);
             return;
+        }
+        else
+        {
+            player_change_level(c->player, l);
         }
     }
 
@@ -161,21 +180,37 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 	uint8_t m = packet_recv_byte(p);
 	uint8_t t = packet_recv_byte(p);
 
+	if (c->player == NULL)
+	{
+	    net_close(c, false);
+	    return;
+	}
+
 	if (m > 1)
 	{
 		net_close(c, true);
 		return;
 	}
+
+	level_change_block(c->player->level, c, x, y, z, m, t);
 }
 
 void packet_recv_position(struct client_t *c, struct packet_t *p)
 {
 	uint8_t player_id = packet_recv_byte(p);
-	int16_t x = packet_recv_short(p);
-	int16_t y = packet_recv_short(p);
-	int16_t z = packet_recv_short(p);
-	uint8_t heading = packet_recv_byte(p);
-	uint8_t pitch = packet_recv_byte(p);
+
+	struct position_t pos;
+	pos.x = packet_recv_short(p);
+	pos.y = packet_recv_short(p);
+	pos.z = packet_recv_short(p);
+	pos.h = packet_recv_byte(p);
+	pos.p = packet_recv_byte(p);
+
+	if (c->player == NULL)
+	{
+	    net_close(c, false);
+	    return;
+	}
 
 	if (player_id != 0xFF)
 	{
@@ -183,7 +218,7 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
-//	player_move(c->player, x, y, z, heading, pitch);
+	player_move(c->player, &pos);
 }
 
 void packet_recv_message(struct client_t *c, struct packet_t *p)
@@ -191,45 +226,15 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 	/*uint8_t unused =*/ packet_recv_byte(p);
 	char *message = packet_recv_string(p);
 
-	printf("Player said: %s\n", message);
-
-	if (message[0] == '!')
+	if (c->player == NULL)
 	{
-	    message++;
-	    if (strcasecmp("home", message) == 0)
-	    {
-	        char name[64];
-	        struct level_t *l;
-
-	        snprintf(name, sizeof name, "%s's home", c->player->username);
-
-	        if (!level_get_by_name(name, &l))
-	        {
-	            l = malloc(sizeof *l);
-                level_init(l, 32, 32, 32, name);
-                level_gen(l, 0);
-                level_list_add(&s_levels, l);
-	        }
-
-            if (c->player->level != l)
-            {
-                /* Don't resend the level if play is already on it */
-                c->player->level = l;
-                level_send(c);
-            }
-	    }
-	    else if (strncasecmp("goto ", message, 5) == 0)
-	    {
-            if (level_get_by_name(message + 5, &c->player->level))
-            {
-                level_send(c);
-            }
-            else
-            {
-                printf("Unable to find level %s\n", message + 5);
-            }
-	    }
+	    net_close(c, false);
+	    return;
 	}
+
+	client_process(c, message);
+
+	free(message);
 }
 
 void packet_recv(struct client_t *c, struct packet_t *p)
@@ -252,9 +257,7 @@ void packet_recv(struct client_t *c, struct packet_t *p)
 
 struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name, const char *server_motd, uint8_t user_type)
 {
-	struct packet_t *p = malloc(sizeof *p);
-
-	packet_init(p);
+	struct packet_t *p = packet_init(131);
 	packet_send_byte(p, 0x00);
 	packet_send_byte(p, protocol);
 	packet_send_string(p, server_name);
@@ -266,9 +269,7 @@ struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name
 
 struct packet_t *packet_send_ping()
 {
-	struct packet_t *p = malloc(sizeof *p);
-
-	packet_init(p);
+	struct packet_t *p = packet_init(1);
 	packet_send_byte(p, 0x01);
 
 	return p;
@@ -276,9 +277,7 @@ struct packet_t *packet_send_ping()
 
 struct packet_t *packet_send_level_initialize()
 {
-	struct packet_t *p = malloc(sizeof *p);
-
-	packet_init(p);
+	struct packet_t *p = packet_init(1);
 	packet_send_byte(p, 0x02);
 
 	return p;
@@ -286,9 +285,7 @@ struct packet_t *packet_send_level_initialize()
 
 struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *data, uint8_t percent)
 {
-	struct packet_t *p = malloc(sizeof *p);
-
-	packet_init(p);
+	struct packet_t *p = packet_init(1028);
 	packet_send_byte(p, 0x03);
 	packet_send_short(p, chunk_length);
 	packet_send_byte_array(p, data, chunk_length);
@@ -299,9 +296,7 @@ struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *dat
 
 struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z)
 {
-	struct packet_t *p = malloc(sizeof *p);
-
-	packet_init(p);
+	struct packet_t *p = packet_init(7);
 	packet_send_byte(p, 0x04);
 	packet_send_short(p, x);
 	packet_send_short(p, y);
@@ -312,9 +307,7 @@ struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z)
 
 struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t type)
 {
-	struct packet_t *p = malloc(sizeof *p);
-
-	packet_init(p);
+	struct packet_t *p = packet_init(8);
 	packet_send_byte(p, 0x06);
 	packet_send_short(p, x);
 	packet_send_short(p, y);
@@ -324,44 +317,40 @@ struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t 
 	return p;
 }
 
-struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, int16_t x, int16_t y, int16_t z, uint8_t heading, uint8_t pitch)
+struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, struct position_t *pos)
 {
-	struct packet_t *p = malloc(sizeof *p);
+	struct packet_t *p = packet_init(74);
 
-	packet_init(p);
 	packet_send_byte(p, 0x07);
 	packet_send_byte(p, player_id);
 	packet_send_string(p, player_name);
-	packet_send_short(p, x);
-	packet_send_short(p, y);
-	packet_send_short(p, z);
-	packet_send_byte(p, heading);
-	packet_send_byte(p, pitch);
+	packet_send_short(p, pos->x);
+	packet_send_short(p, pos->y);
+	packet_send_short(p, pos->z);
+	packet_send_byte(p, pos->h);
+	packet_send_byte(p, pos->p);
 
 	return p;
 }
 
-struct packet_t *packet_send_teleport_player(uint8_t player_id, int16_t x, int16_t y, int16_t z, uint8_t heading, uint8_t pitch)
+struct packet_t *packet_send_teleport_player(uint8_t player_id, struct position_t *pos)
 {
-	struct packet_t *p = malloc(sizeof *p);
+	struct packet_t *p = packet_init(10);
 
-	packet_init(p);
 	packet_send_byte(p, 0x08);
 	packet_send_byte(p, player_id);
-	packet_send_short(p, x);
-	packet_send_short(p, y);
-	packet_send_short(p, z);
-	packet_send_byte(p, heading);
-	packet_send_byte(p, pitch);
+	packet_send_short(p, pos->x);
+	packet_send_short(p, pos->y);
+	packet_send_short(p, pos->z);
+	packet_send_byte(p, pos->h);
+	packet_send_byte(p, pos->p);
 
 	return p;
 }
 
 struct packet_t *packet_send_despawn_player(uint8_t player_id)
 {
-	struct packet_t *p = malloc(sizeof *p);
-
-	packet_init(p);
+	struct packet_t *p = packet_init(2);
 	packet_send_byte(p, 0x0C);
 	packet_send_byte(p, player_id);
 
@@ -370,9 +359,8 @@ struct packet_t *packet_send_despawn_player(uint8_t player_id)
 
 struct packet_t *packet_send_message(uint8_t player_id, const char *message)
 {
-	struct packet_t *p = malloc(sizeof *p);
+	struct packet_t *p = packet_init(66);
 
-	packet_init(p);
 	packet_send_byte(p, 0x0D);
 	packet_send_byte(p, player_id);
 	packet_send_string(p, message);
@@ -382,9 +370,8 @@ struct packet_t *packet_send_message(uint8_t player_id, const char *message)
 
 struct packet_t *packet_send_disconnect_player(const char *reason)
 {
-	struct packet_t *p = malloc(sizeof *p);
+	struct packet_t *p = packet_init(65);
 
-	packet_init(p);
 	packet_send_byte(p, 0x0E);
 	packet_send_string(p, reason);
 
@@ -393,9 +380,8 @@ struct packet_t *packet_send_disconnect_player(const char *reason)
 
 struct packet_t *packet_send_update_user_type(uint8_t player_id, uint8_t user_type)
 {
-	struct packet_t *p = malloc(sizeof *p);
+	struct packet_t *p = packet_init(3);
 
-	packet_init(p);
 	packet_send_byte(p, 0x0F);
 	packet_send_byte(p, player_id);
 	packet_send_byte(p, user_type);

@@ -9,6 +9,8 @@ void net_init();
 void net_run();
 void net_close(struct client_t *c, bool remove_player);
 
+void net_notify_all(const char *message);
+
 void net_set_nonblock(int fd);
 
 struct sockaddr_in;
