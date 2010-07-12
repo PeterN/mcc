@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdint.h>
 #include "block.h"
 #include "list.h"
@@ -28,6 +29,7 @@ enum
 
 struct player_t
 {
+    int globalid;
     char *username;
     enum rank_t rank;
 

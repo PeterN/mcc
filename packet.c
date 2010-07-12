@@ -153,6 +153,12 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	free(username);
 	free(key);
 
+	if (player->rank == RANK_BANNED)
+	{
+	    net_close(c, false);
+	    return;
+	}
+
 	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, 0x64));
 
     if (c->player->level == NULL)

@@ -75,11 +75,14 @@ bool level_send(struct client_t *c)
     int x;
     z_stream z;
 
-    c->waiting_for_level = true;
-
     /* If we can't lock the mutex then the thread is already locked */
     if (pthread_mutex_trylock(&level->mutex))
     {
+        if (!c->waiting_for_level)
+        {
+            client_notify(c, "Please wait for level generation to complete");
+            c->waiting_for_level = true;
+        }
         return false;
     }
     pthread_mutex_unlock(&level->mutex);
@@ -136,6 +139,27 @@ bool level_send(struct client_t *c)
     client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
 
     client_add_packet(c, packet_send_spawn_player(0xFF, c->player->username, &level->spawn));
+
+    int id = 0;
+    int i;
+    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+    {
+        if (level->clients[i] == NULL)
+        {
+            level->clients[i] = c;
+            id = i;
+            break;
+        }
+    }
+
+    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+    {
+        if (level->clients[i] != NULL && level->clients[i] != c)
+        {
+            client_add_packet(c, packet_send_spawn_player(i, level->clients[i]->player->username, &level->clients[i]->player->pos));
+            client_add_packet(level->clients[i], packet_send_spawn_player(i, c->player->username, &level->spawn));
+        }
+    }
 
     c->waiting_for_level = false;
 
@@ -684,6 +708,12 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 {
     int i;
 
+    if (client->waiting_for_level)
+    {
+        client_notify(client, "Changed ignored whilst waiting for level change!");
+        return;
+    }
+
     if (x < 0 || y < 0 || z < 0 || x >= level->x || y >= level->y || z >= level->z)
     {
         return;
@@ -703,7 +733,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
     if (HasBit(client->player->flags, PLAYER_PLACE_SOLID)) nt = ADMINIUM;
     if (m == 0) nt = AIR;
 
-    if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
+    if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed || (b->owner != 0 && b->owner != client->player->globalid)))
     {
         client_add_packet(client, packet_send_set_block(x, y, z, b->type));
         return;
@@ -715,6 +745,8 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
         b->type = nt;
         b->fixed = HasBit(client->player->flags, PLAYER_PLACE_FIXED);
+        b->owner = (b->type == AIR && !b->fixed) ? 0 : client->player->globalid;
+
         level->changed = true;
 
         for (i = 0; i < s_clients.used; i++)

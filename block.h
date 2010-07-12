@@ -91,6 +91,7 @@ struct block_t
     uint16_t physics:1;
 	uint16_t type:14;
 	uint16_t data:16;
+	uint32_t owner;
 };
 
 static inline bool block_is_fixed(const struct block_t *block)

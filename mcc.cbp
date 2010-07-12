@@ -49,6 +49,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="colour.h" />
+		<Unit filename="commands.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="heartbeat.c">
 			<Option compilerVar="CC" />
 		</Unit>

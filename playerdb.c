@@ -7,6 +7,7 @@ static sqlite3 *s_db;
 static sqlite3_stmt *s_rank_get_stmt;
 static sqlite3_stmt *s_rank_set_stmt;
 static sqlite3_stmt *s_new_user_stmt;
+static sqlite3_stmt *s_globalid_get_stmt;
 static sqlite3_stmt *s_password_stmt;
 
 void playerdb_init()
@@ -22,14 +23,21 @@ void playerdb_init()
     }
 
     char *err;
-    sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS players (username TEXT PRIMARY KEY, rank INT, password TEXT, last_visit DATETIME)", NULL, NULL, &err);
+    sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, rank INT, password TEXT, first_visit DATETIME, last_visit DATETIME)", NULL, NULL, &err);
     if (err != NULL)
     {
         fprintf(stderr, "Errrrr: %s", err);
         sqlite3_free(err);
     }
 
-    res = sqlite3_prepare_v2(s_db, "SELECT rank FROM players WHERE username = ?", -1, &s_rank_get_stmt, NULL);
+    sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS bans (net TEXT PRIMARY KEY, date DATETIME)", NULL, NULL, &err);
+    if (err != NULL)
+    {
+        fprintf(stderr, "Errrrr: %s", err);
+        sqlite3_free(err);
+    }
+
+    res = sqlite3_prepare_v2(s_db, "SELECT rank FROM players WHERE username = lower(?)", -1, &s_rank_get_stmt, NULL);
     if (res != SQLITE_OK)
     {
         fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
@@ -37,7 +45,7 @@ void playerdb_init()
         return;
     }
 
-    res = sqlite3_prepare_v2(s_db, "UPDATE players SET rank = ? WHERE username = ?", -1, &s_rank_set_stmt, NULL);
+    res = sqlite3_prepare_v2(s_db, "UPDATE players SET rank = ? WHERE username = lower(?)", -1, &s_rank_set_stmt, NULL);
     if (res != SQLITE_OK)
     {
         fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
@@ -45,7 +53,7 @@ void playerdb_init()
         return;
     }
 
-    res = sqlite3_prepare_v2(s_db, "INSERT INTO players (username, rank, password, last_visit) VALUES (?, 1, NULL, ?)", -1, &s_new_user_stmt, NULL);
+    res = sqlite3_prepare_v2(s_db, "INSERT INTO players (username, rank) VALUES (lower(?), 1)", -1, &s_new_user_stmt, NULL);
     if (res != SQLITE_OK)
     {
         fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
@@ -53,8 +61,15 @@ void playerdb_init()
         return;
     }
 
+    res = sqlite3_prepare_v2(s_db, "SELECT id FROM players WHERE username = ?", -1, &s_globalid_get_stmt, NULL);
+    if (res != SQLITE_OK)
+    {
+        fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
+        sqlite3_close(s_db);
+        return;
+    }
 
-    res = sqlite3_prepare_v2(s_db, "SELECT password FROM players WHERE username = ? AND password = ?", -1, &s_password_stmt, NULL);
+    res = sqlite3_prepare_v2(s_db, "SELECT password FROM players WHERE username = lower(?) AND password = ?", -1, &s_password_stmt, NULL);
     if (res != SQLITE_OK)
     {
         fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
@@ -68,8 +83,34 @@ void playerdb_close()
     sqlite3_finalize(s_rank_get_stmt);
     sqlite3_finalize(s_rank_set_stmt);
     sqlite3_finalize(s_new_user_stmt);
+    sqlite3_finalize(s_globalid_get_stmt);
     sqlite3_finalize(s_password_stmt);
     sqlite3_close(s_db);
+}
+
+int playerdb_get_globalid(const char *username)
+{
+    int i;
+    int res;
+
+    for (i = 0; i < 2; i++)
+    {
+        sqlite3_reset(s_globalid_get_stmt);
+        sqlite3_bind_text(s_globalid_get_stmt, 1, username, -1, SQLITE_STATIC);
+        res = sqlite3_step(s_globalid_get_stmt);
+        if (res == SQLITE_ROW)
+        {
+            return sqlite3_column_int(s_globalid_get_stmt, 0);
+        }
+
+        /* New user! */
+        sqlite3_reset(s_new_user_stmt);
+        sqlite3_bind_text(s_new_user_stmt, 1, username, -1, SQLITE_STATIC);
+        sqlite3_step(s_new_user_stmt);
+    }
+
+    fprintf(stderr, "Unable to get globalid for '%s'", username);
+    return 0;
 }
 
 int playerdb_get_rank(const char *username)
@@ -86,7 +127,6 @@ int playerdb_get_rank(const char *username)
     /* New user! */
     sqlite3_reset(s_new_user_stmt);
     sqlite3_bind_text(s_new_user_stmt, 1, username, -1, SQLITE_STATIC);
-    sqlite3_bind_int(s_new_user_stmt, 2, time(NULL));
     sqlite3_step(s_new_user_stmt);
 
     /* Default rank */

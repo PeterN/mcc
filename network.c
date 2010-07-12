@@ -236,16 +236,18 @@ void net_run()
 	{
 		while (1)
 		{
+		    struct client_t c;
+		    struct sockaddr_storage sin;
+		    socklen_t sin_len = sizeof sin;
+
 			/* This better be nonblocking! */
-			int fd = accept(s_listenfd, NULL, NULL);
+			int fd = accept(s_listenfd, (struct sockaddr *)&sin, &sin_len);
 			if (fd == -1) break;
 
-			{
-				struct client_t c;
-				memset(&c, 0, sizeof c);
-				c.sock = fd;
-				client_list_add(&s_clients, c);
-			}
+			memset(&c, 0, sizeof c);
+			c.sock = fd;
+			c.sin  = sin;
+			client_list_add(&s_clients, c);
 		}
 	}
 

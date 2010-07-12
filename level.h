@@ -6,6 +6,8 @@
 #include "physics.h"
 #include "position.h"
 
+#define MAX_CLIENTS_PER_LEVEL 64
+
 struct client_t;
 
 struct level_t
@@ -19,6 +21,9 @@ struct level_t
 
 	struct block_t *blocks;
 	struct physics_list_t physics;
+
+	/* Max players on a level */
+	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
 
     int type;
     bool changed;
