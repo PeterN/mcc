@@ -1,0 +1,112 @@
+#include <stdio.h>
+#include <time.h>
+#include <sqlite3.h>
+#include "player.h"
+
+static sqlite3 *s_db;
+static sqlite3_stmt *s_rank_get_stmt;
+static sqlite3_stmt *s_rank_set_stmt;
+static sqlite3_stmt *s_new_user_stmt;
+static sqlite3_stmt *s_password_stmt;
+
+void playerdb_init()
+{
+    int res;
+
+    res = sqlite3_open("player.db", &s_db);
+    if (res != SQLITE_OK)
+    {
+        fprintf(stderr, "Can't open database: %s", sqlite3_errmsg(s_db));
+        sqlite3_close(s_db);
+        return;
+    }
+
+    char *err;
+    sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS players (username TEXT PRIMARY KEY, rank INT, password TEXT, last_visit DATETIME)", NULL, NULL, &err);
+    if (err != NULL)
+    {
+        fprintf(stderr, "Errrrr: %s", err);
+        sqlite3_free(err);
+    }
+
+    res = sqlite3_prepare_v2(s_db, "SELECT rank FROM players WHERE username = ?", -1, &s_rank_get_stmt, NULL);
+    if (res != SQLITE_OK)
+    {
+        fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
+        sqlite3_close(s_db);
+        return;
+    }
+
+    res = sqlite3_prepare_v2(s_db, "UPDATE players SET rank = ? WHERE username = ?", -1, &s_rank_set_stmt, NULL);
+    if (res != SQLITE_OK)
+    {
+        fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
+        sqlite3_close(s_db);
+        return;
+    }
+
+    res = sqlite3_prepare_v2(s_db, "INSERT INTO players (username, rank, password, last_visit) VALUES (?, 1, NULL, ?)", -1, &s_new_user_stmt, NULL);
+    if (res != SQLITE_OK)
+    {
+        fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
+        sqlite3_close(s_db);
+        return;
+    }
+
+
+    res = sqlite3_prepare_v2(s_db, "SELECT password FROM players WHERE username = ? AND password = ?", -1, &s_password_stmt, NULL);
+    if (res != SQLITE_OK)
+    {
+        fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
+        sqlite3_close(s_db);
+        return;
+    }
+}
+
+void playerdb_close()
+{
+    sqlite3_finalize(s_rank_get_stmt);
+    sqlite3_finalize(s_rank_set_stmt);
+    sqlite3_finalize(s_new_user_stmt);
+    sqlite3_finalize(s_password_stmt);
+    sqlite3_close(s_db);
+}
+
+int playerdb_get_rank(const char *username)
+{
+    int res;
+    sqlite3_reset(s_rank_get_stmt);
+    sqlite3_bind_text(s_rank_get_stmt, 1, username, -1, SQLITE_STATIC);
+    res = sqlite3_step(s_rank_get_stmt);
+    if (res == SQLITE_ROW)
+    {
+        return sqlite3_column_int(s_rank_get_stmt, 0);
+    }
+
+    /* New user! */
+    sqlite3_reset(s_new_user_stmt);
+    sqlite3_bind_text(s_new_user_stmt, 1, username, -1, SQLITE_STATIC);
+    sqlite3_bind_int(s_new_user_stmt, 2, time(NULL));
+    sqlite3_step(s_new_user_stmt);
+
+    /* Default rank */
+    return RANK_GUEST;
+}
+
+void playerdb_set_rank(const char *username, int rank)
+{
+    sqlite3_reset(s_rank_set_stmt);
+    sqlite3_bind_int(s_rank_set_stmt, 1, rank);
+    sqlite3_bind_text(s_rank_set_stmt, 2, username, -1, SQLITE_STATIC);
+    sqlite3_step(s_rank_set_stmt);
+}
+
+int playerdb_password_check(const char *username, const char *password)
+{
+    sqlite3_reset(s_password_stmt);
+    sqlite3_bind_text(s_password_stmt, 1, username, -1, SQLITE_STATIC);
+    sqlite3_bind_text(s_password_stmt, 1, password, -1, SQLITE_STATIC);
+    sqlite3_step(s_password_stmt);
+    return sqlite3_column_int(s_password_stmt, 0);
+}
+

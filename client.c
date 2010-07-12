@@ -6,6 +6,7 @@
 #include "packet.h"
 #include "level.h"
 #include "network.h"
+#include "mcc.h"
 
 struct client_list_t s_clients;
 
@@ -62,9 +63,17 @@ void client_process(struct client_t *c, char *message)
 
 	        if (end) break;
 	    }
+	    if (strcasecmp("exit", param[0]) == 0)
+	    {
+	        if (c->player->rank != RANK_ADMIN) goto unknown;
+
+	        g_server.exit = true;
+	    }
         if (strcasecmp("fixed", param[0]) == 0)
         {
-            if (HasBit(c->player->flags, PLAYER_OP)) ToggleBit(c->player->flags, PLAYER_PLACE_FIXED);
+            if (c->player->rank < RANK_OP) goto unknown;
+
+            ToggleBit(c->player->flags, PLAYER_PLACE_FIXED);
 
 	        char buf[64];
             snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, PLAYER_PLACE_FIXED) ? "on" : "off");
@@ -159,6 +168,8 @@ void client_process(struct client_t *c, char *message)
 	    }
 	    else if (strcasecmp("newlvl", param[0]) == 0)
 	    {
+	        if (c->player->rank != RANK_ADMIN) goto unknown;
+
 	        if (params != 6)
 	        {
                 client_add_packet(c, packet_send_message(0xFF, "newlvl [name] [x] [y] [z] [type]"));
@@ -186,9 +197,56 @@ void client_process(struct client_t *c, char *message)
                 client_add_packet(c, packet_send_message(0xFF, buf));
             }
 	    }
+	    else if (strcasecmp("setrank", param[0]) == 0)
+	    {
+	        int oldrank;
+	        int newrank;
+	        struct player_t *p;
+
+	        if (c->player->rank < RANK_OP) goto unknown;
+
+	        if (params != 3)
+	        {
+	            client_add_packet(c, packet_send_message(0xFF, "setrank [name] [rank]"));
+	            return;
+	        }
+
+            newrank = rank_get_by_name(param[2]);
+            if (newrank == -1 && c->player->rank == RANK_ADMIN)
+            {
+                client_add_packet(c, packet_send_message(0xFF, "Invalid rank: banned guest builder advbuilder op admin"));
+                return;
+            }
+            if ((newrank == -1 || newrank >= RANK_OP) && c->player->rank == RANK_OP)
+            {
+                client_add_packet(c, packet_send_message(0xFF, "Invalid rank: banned guest builder advbuilder"));
+                return;
+            }
+
+            oldrank = playerdb_get_rank(param[1]);
+            if (oldrank == newrank)
+            {
+                client_add_packet(c, packet_send_message(0xFF, "User already at rank"));
+                return;
+            }
+            if (c->player->rank != RANK_ADMIN && oldrank == RANK_ADMIN)
+            {
+                client_add_packet(c, packet_send_message(0xFF, "Cannot demote admin"));
+                return;
+            }
+
+	        playerdb_set_rank(param[1], rank_get_by_name(param[2]));
+	        p = player_get_by_name(param[1]);
+	        if (p != NULL)
+	        {
+	            p->rank = newrank;
+	        }
+	    }
 	    else if (strcasecmp("solid", param[0]) == 0)
 	    {
-	        if (HasBit(c->player->flags, PLAYER_OP)) ToggleBit(c->player->flags, PLAYER_PLACE_SOLID);
+	        if (c->player->rank < RANK_OP) goto unknown;
+
+	        ToggleBit(c->player->flags, PLAYER_PLACE_SOLID);
 
 	        char buf[64];
             snprintf(buf, sizeof buf, "Solid %s", HasBit(c->player->flags, PLAYER_PLACE_SOLID) ? "on" : "off");
@@ -196,6 +254,8 @@ void client_process(struct client_t *c, char *message)
 	    }
 	    else if (strcasecmp("undo", param[0]) == 0)
 	    {
+	        if (c->player->rank < RANK_OP) goto unknown;
+
 	        if (params == 3)
 	        {
                 char buf[64], *bufp;
@@ -244,7 +304,9 @@ void client_process(struct client_t *c, char *message)
 	    }
 	    else
 	    {
-	        client_add_packet(c, packet_send_message(0xFF, "unknown command"));
+unknown:
+	        client_add_packet(c, packet_send_message(0xFF, "Unknown command"));
+	        return;
 	    }
 	}
 	else

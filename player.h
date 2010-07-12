@@ -9,10 +9,18 @@
 
 struct level_t;
 
+enum rank_t
+{
+    RANK_BANNED,
+    RANK_GUEST,
+    RANK_BUILDER,
+    RANK_ADV_BUILDER,
+    RANK_OP,
+    RANK_ADMIN,
+};
+
 enum
 {
-    PLAYER_ADMIN  = 0,
-    PLAYER_OP     = 1,
     PLAYER_BANNED = 2,
     PLAYER_PLACE_SOLID = 3,
     PLAYER_PLACE_FIXED = 4,
@@ -21,6 +29,7 @@ enum
 struct player_t
 {
     char *username;
+    enum rank_t rank;
 
     struct position_t pos;
     uint8_t flags;
@@ -45,5 +54,7 @@ void player_info();
 
 void player_undo_log(struct player_t *player, unsigned index);
 void player_undo(const char *username, const char *levelname, const char *timestamp);
+
+enum rank_t rank_get_by_name(const char *rank);
 
 #endif /* PLAYER_H */

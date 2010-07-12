@@ -4,20 +4,23 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static inline bool HasBit(unsigned x, unsigned y)
-{
-	return (x & (1U << y)) != 0;
-}
+#define HasBit(x, y) (((x) & (1U << (y))) != 0)
+//static inline bool HasBit(unsigned x, unsigned y)
+//{
+//	return (x & (1U << y)) != 0;
+//}
 
-static inline void SetBit(unsigned x, unsigned y)
-{
-    x |= (1U << y);
-}
+#define SetBit(x, y) (x) |= (1U << (y))
+//static inline void SetBit(unsigned x, unsigned y)
+//{
+    //x |= (1U << y);
+//}
 
-static inline void ToggleBit(unsigned x, unsigned y)
-{
-    x ^= (1U << y);
-}
+#define ToggleBit(x, y) (x) ^= (1U << (y))
+//static inline void ToggleBit(unsigned x, unsigned y)
+//{
+//  x ^= (1U << y);
+//}
 
 static inline unsigned GetBits(unsigned x, unsigned s, unsigned n)
 {

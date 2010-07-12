@@ -35,6 +35,7 @@ struct player_t *player_add(const char *username)
     struct player_t *p = malloc(sizeof *p);
     memset(p, 0, sizeof *p);
     p->username = strdup(username);
+    p->rank = playerdb_get_rank(username);
 
     player_list_add(&s_players, p);
     g_server.players++;
@@ -108,7 +109,8 @@ void player_info()
 
 void player_undo_log(struct player_t *player, unsigned index)
 {
-    if (HasBit(player->flags, PLAYER_OP)) return;
+    /* Don't store undo logs for privileged users */
+    if (player->rank >= RANK_ADV_BUILDER) return;
 
     if (player->undo_log == NULL)
     {
@@ -179,4 +181,15 @@ void player_undo(const char *username, const char *levelname, const char *timest
 
     snprintf(buf, sizeof buf, "Undone %d actions by %s", nmemb, username);
     net_notify_all(buf);
+}
+
+enum rank_t rank_get_by_name(const char *rank)
+{
+    if (!strcasecmp(rank, "banned")) return RANK_BANNED;
+    if (!strcasecmp(rank, "guest")) return RANK_GUEST;
+    if (!strcasecmp(rank, "builder")) return RANK_BUILDER;
+    if (!strcasecmp(rank, "advbuilder")) return RANK_ADV_BUILDER;
+    if (!strcasecmp(rank, "op")) return RANK_OP;
+    if (!strcasecmp(rank, "admin")) return RANK_ADMIN;
+    return -1;
 }

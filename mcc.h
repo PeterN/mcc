@@ -10,6 +10,7 @@ struct server_t
     int max_players;
     int players;
     bool public;
+    bool exit;
 
     struct
     {

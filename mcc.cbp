@@ -17,6 +17,7 @@
 				<Linker>
 					<Add library="z" />
 					<Add library="pthread" />
+					<Add library="sqlite3" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -78,6 +79,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="player.h" />
+		<Unit filename="playerdb.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="position.h" />
 		<Unit filename="timer.c">
 			<Option compilerVar="CC" />

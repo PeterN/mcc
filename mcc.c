@@ -29,6 +29,7 @@ int main(int argc, char **argv)
 	g_server.max_players = 10;
 	g_server.players = 0;
 	g_server.public = false;
+	g_server.exit = false;
 
 	g_server.irc.hostname = "irc.lspace.org";
 	g_server.irc.port = 6667;
@@ -36,10 +37,12 @@ int main(int argc, char **argv)
 	g_server.irc.channel = "#mc2";
 	g_server.irc.pass = NULL;
 
+	playerdb_init();
+
 	net_init();
 	//irc_start();
 
-	while (1)
+	while (!g_server.exit)
 	{
 		usleep(1000);
 		tick++;
@@ -64,6 +67,8 @@ int main(int argc, char **argv)
 	}
 
 	level_save_all();
+
+	playerdb_close();
 
 	return 0;
 }

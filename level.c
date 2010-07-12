@@ -135,7 +135,7 @@ bool level_send(struct client_t *c)
 
     client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
 
-    client_add_packet(c, packet_send_teleport_player(0xFF, &level->spawn));
+    client_add_packet(c, packet_send_spawn_player(0xFF, c->player->username, &level->spawn));
 
     c->waiting_for_level = false;
 
@@ -569,6 +569,8 @@ bool level_load(const char *name, struct level_t **level)
     gzread(gz, &z, sizeof z);
     level_init(l, x, y, z, name);
 
+    gzread(gz, &l->spawn, sizeof l->spawn);
+
     gzread(gz, l->blocks, sizeof *l->blocks * x * y *z);
 
     gzclose(gz);
@@ -594,6 +596,7 @@ bool level_save(struct level_t *l)
     gzwrite(gz, &l->x, sizeof l->x);
     gzwrite(gz, &l->y, sizeof l->y);
     gzwrite(gz, &l->z, sizeof l->z);
+    gzwrite(gz, &l->spawn, sizeof l->spawn);
     gzwrite(gz, l->blocks, sizeof *l->blocks * l->x * l->y * l->z);
     gzclose(gz);
 
@@ -695,30 +698,31 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
     unsigned index = level_get_index(level, x, y, z);
     struct block_t *b = &level->blocks[index];
     enum blocktype_t bt = block_get_blocktype(b);
+    enum blocktype_t nt = t;
 
-    if (HasBit(client->player->flags, PLAYER_PLACE_SOLID)) t = ADMINIUM;
-    if (m == 0) t = AIR;
+    if (HasBit(client->player->flags, PLAYER_PLACE_SOLID)) nt = ADMINIUM;
+    if (m == 0) nt = AIR;
 
-    if (!HasBit(client->player->flags, PLAYER_OP) && (bt == ADMINIUM || t == ADMINIUM))
+    if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
     {
         client_add_packet(client, packet_send_set_block(x, y, z, b->type));
         return;
     }
 
-    if (bt != t)
+    if (bt != nt)
     {
         player_undo_log(client->player, index);
 
-        b->type = t;
+        b->type = nt;
         b->fixed = HasBit(client->player->flags, PLAYER_PLACE_FIXED);
         level->changed = true;
 
         for (i = 0; i < s_clients.used; i++)
         {
             struct client_t *c = &s_clients.items[i];
-            if (client != c && c->player->level == level)
+            if ((client != c || nt != t) && c->player->level == level)
             {
-                client_add_packet(c, packet_send_set_block(x, y, z, t));
+                client_add_packet(c, packet_send_set_block(x, y, z, nt));
             }
         }
     }
