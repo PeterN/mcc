@@ -49,10 +49,12 @@ int main(int argc, char **argv)
 		tick++;
 		net_run();
 
-		if ((tick % 5000) == 0) player_info();
+		if ((tick % 2500) == 0) client_info();
 		if ((tick % 60000) == 0) heartbeat_start();
 		if ((tick % 20000) == 0) level_save_all();
 		if ((tick % 20000) == 0) level_unload_empty();
+
+		if ((tick % 33) == 0) player_send_positions();
 
         if ((tick % 1000) == 0)
         {

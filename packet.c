@@ -128,7 +128,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	if (c->player != NULL)
 	{
-	    net_close(c, false);
+	    net_close(c, false, "already logged in");
 	    return;
 	}
 
@@ -136,26 +136,32 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
     if (player == NULL)
     {
         player = player_add(username);
+        if (player == NULL)
+        {
+            net_close(c, false, "cannot get global id");
+            return;
+        }
 
         snprintf(buf, sizeof buf, "%s connected\n", username);
         net_notify_all(buf);
     }
     else
     {
-        net_close(client_get_by_player(player), false);
+        net_close(client_get_by_player(player), false, "reconnected");
 
         snprintf(buf, sizeof buf, "%s reconnected\n", username);
         net_notify_all(buf);
     }
 
     c->player = player;
+    player->client = c;
 
 	free(username);
 	free(key);
 
 	if (player->rank == RANK_BANNED)
 	{
-	    net_close(c, false);
+	    net_close(c, false, "banned");
 	    return;
 	}
 
@@ -166,7 +172,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
         struct level_t *l;
         if (!level_get_by_name("main", &l))
         {
-            net_close(c, true);
+            net_close(c, true, "cannot load main level");
             return;
         }
         else
@@ -188,13 +194,13 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, false);
+	    net_close(c, false, "not logged in");
 	    return;
 	}
 
 	if (m > 1)
 	{
-		net_close(c, true);
+		net_close(c, true, "invalid set block data");
 		return;
 	}
 
@@ -214,13 +220,13 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, false);
+	    net_close(c, false, "not logged in");
 	    return;
 	}
 
 	if (player_id != 0xFF)
 	{
-		net_close(c, true);
+		net_close(c, true, "invalid position data");
 		return;
 	}
 
@@ -234,7 +240,7 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, false);
+	    net_close(c, false, "not logged in");
 	    return;
 	}
 
@@ -348,6 +354,46 @@ struct packet_t *packet_send_teleport_player(uint8_t player_id, struct position_
 	packet_send_short(p, pos->x);
 	packet_send_short(p, pos->y);
 	packet_send_short(p, pos->z);
+	packet_send_byte(p, pos->h);
+	packet_send_byte(p, pos->p);
+
+	return p;
+}
+
+struct packet_t *packet_send_full_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz, struct position_t *pos)
+{
+	struct packet_t *p = packet_init(7);
+
+	packet_send_byte(p, 0x09);
+	packet_send_byte(p, player_id);
+	packet_send_byte(p, dx);
+	packet_send_byte(p, dy);
+	packet_send_byte(p, dz);
+	packet_send_byte(p, pos->h);
+	packet_send_byte(p, pos->p);
+
+	return p;
+}
+
+struct packet_t *packet_send_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz)
+{
+	struct packet_t *p = packet_init(5);
+
+	packet_send_byte(p, 0x0A);
+	packet_send_byte(p, player_id);
+	packet_send_byte(p, dx);
+	packet_send_byte(p, dy);
+	packet_send_byte(p, dz);
+
+	return p;
+}
+
+struct packet_t *packet_send_orientation_update(uint8_t player_id, struct position_t *pos)
+{
+	struct packet_t *p = packet_init(4);
+
+	packet_send_byte(p, 0x0B);
+	packet_send_byte(p, player_id);
 	packet_send_byte(p, pos->h);
 	packet_send_byte(p, pos->p);
 

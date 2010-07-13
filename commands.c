@@ -82,9 +82,9 @@ CMD(commands)
     struct command_t *comp = s_commands;
     for (; comp->command != NULL; comp++)
     {
-        if (c->player->rank <= comp->rank) continue;
+        if (c->player->rank < comp->rank) continue;
 
-        size_t len = strlen(comp->command);
+        size_t len = strlen(comp->command) + 1;
         if (len >= sizeof buf - (bufp - buf))
         {
             client_notify(c, buf);
@@ -92,9 +92,35 @@ CMD(commands)
         }
 
         strcpy(bufp, comp->command);
+        bufp[len - 1] = ' ';
         bufp += len;
     }
 
+    client_notify(c, buf);
+}
+
+CMD(cuboid)
+{
+	if (params > 2)
+	{
+		client_notify(c, "cuboid [<type>]");
+		return;
+	}
+
+	c->player->mode = MODE_CUBOID;
+	c->player->cuboid_start = UINT_MAX;
+
+	if (params == 2)
+	{
+		c->player->cuboid_type = blocktype_get_by_name(param[1]);
+	}
+	else
+	{
+		c->player->cuboid_type = -1;
+	}
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Place corners of cuboid");
     client_notify(c, buf);
 }
 
@@ -105,10 +131,10 @@ CMD(exit)
 
 CMD(fixed)
 {
-    player_toggle_mode(c->player, MODE_PLACE_FIXED);
+    ToggleBit(c->player->flags, FLAG_PLACE_FIXED);
 
     char buf[64];
-    snprintf(buf, sizeof buf, "Fixed %s", (c->player->mode == MODE_PLACE_FIXED) ? "on" : "off");
+    snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, FLAG_PLACE_FIXED) ? "on" : "off");
     client_notify(c, buf);
 }
 
@@ -196,15 +222,28 @@ CMD(kick)
         return;
     }
 
+    char buf[64];
+    snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
+
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
         struct client_t *c = &s_clients.items[i];
+        if (c->player == NULL) continue;
         if (strcasecmp(c->player->username, param[1]) == 0)
         {
-            net_close(c, true);
+            net_close(c, true, buf);
         }
     }
+}
+
+CMD(lava)
+{
+    player_toggle_mode(c->player, MODE_PLACE_LAVA);
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Lava %s", (c->player->mode == MODE_PLACE_LAVA) ? "on" : "off");
+    client_notify(c, buf);
 }
 
 static int level_filename_filter(const struct dirent *d)
@@ -346,6 +385,12 @@ CMD(setrank)
     net_notify_all(buf);
 }
 
+CMD(setspawn)
+{
+    c->player->level->spawn = c->player->pos;
+    c->player->level->changed = true;
+}
+
 CMD(solid)
 {
     player_toggle_mode(c->player, MODE_PLACE_SOLID);
@@ -423,9 +468,19 @@ CMD(undo)
     player_undo(param[1], param[2], param[3]);
 }
 
+CMD(water)
+{
+    player_toggle_mode(c->player, MODE_PLACE_WATER);
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Water %s", (c->player->mode == MODE_PLACE_WATER) ? "on" : "off");
+    client_notify(c, buf);
+}
+
 struct command_t s_commands[] = {
     { "ban", RANK_OP, &cmd_ban },
     { "commands", RANK_GUEST, &cmd_commands },
+    { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid },
     { "exit", RANK_ADMIN, &cmd_exit },
     { "fixed", RANK_OP, &cmd_fixed },
     { "goto", RANK_GUEST, &cmd_goto },
@@ -434,15 +489,18 @@ struct command_t s_commands[] = {
     { "identify", RANK_GUEST, &cmd_identify },
     { "info", RANK_BUILDER, &cmd_info },
     { "kick", RANK_OP, &cmd_kick },
+    { "lava", RANK_BUILDER, &cmd_lava },
     { "levels", RANK_GUEST, &cmd_levels },
     { "mapinfo", RANK_GUEST, &cmd_mapinfo },
     { "motd", RANK_BANNED, &cmd_motd },
     { "newlvl", RANK_ADMIN, &cmd_newlvl },
     { "rules", RANK_BANNED, &cmd_rules },
     { "setrank", RANK_OP, &cmd_setrank },
+    { "setspawn", RANK_OP, &cmd_setspawn },
     { "solid", RANK_OP, &cmd_solid },
     { "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
     { "undo", RANK_OP, &cmd_undo },
+    { "water", RANK_BUILDER, &cmd_water },
     { NULL, -1, NULL },
 };
 

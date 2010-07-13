@@ -33,11 +33,14 @@ struct player_t *player_get_by_name(const char *username)
 
 struct player_t *player_add(const char *username)
 {
+    int globalid = playerdb_get_globalid(username);
+    if (globalid == -1) return NULL;
+
     struct player_t *p = malloc(sizeof *p);
     memset(p, 0, sizeof *p);
     p->username = strdup(username);
     p->rank = playerdb_get_rank(username);
-    p->globalid = playerdb_get_globalid(username);
+    p->globalid = globalid;
 
     player_list_add(&s_players, p);
     g_server.players++;
@@ -73,6 +76,12 @@ bool player_change_level(struct player_t *player, struct level_t *level)
 {
     if (player->level == level) return false;
 
+    if (player->level != NULL)
+    {
+        client_send_despawn(player->client, false);
+        player->level->clients[player->levelid] = NULL;
+    }
+
     player->level = level;
 
     player_change_undo_log(player, level);
@@ -92,14 +101,29 @@ void player_move(struct player_t *player, struct position_t *pos)
 void player_send_position(struct player_t *player)
 {
     int changed = 0;
+    int dx = 0, dy = 0, dz = 0;
     if (player->pos.x != player->oldpos.x || player->pos.y != player->oldpos.y || player->pos.z != player->oldpos.z)
     {
         changed = 1;
+        dx = player->pos.x - player->oldpos.x;
+        dy = player->pos.y - player->oldpos.y;
+        dz = player->pos.z - player->oldpos.z;
+
+        if (abs(dx) > 32 || abs(dy) > 32 || abs(dz) > 32)
+        {
+            changed = 4;
+        }
     }
     if (player->pos.h != player->oldpos.h || player->pos.p != player->oldpos.p)
     {
         changed |= 2;
     }
+
+    if (changed == 0) return;
+
+    //printf("%s changed: %dx%dx%d (%d %d)\n", player->username, player->pos.x, player->pos.y, player->pos.z, player->pos.h, player->pos.p);
+
+    //changed = 4;
 
     int i;
     for (i = 0; i < s_clients.used; i++)
@@ -107,8 +131,36 @@ void player_send_position(struct player_t *player)
         struct client_t *c = &s_clients.items[i];
         if (c->player != NULL && c->player != player && c->player->level == player->level)
         {
-            client_add_packet(c, packet_send_teleport_player(c->player->levelid, &player->pos));
+            switch (changed)
+            {
+                case 1:
+                    client_add_packet(c, packet_send_position_update(player->levelid, dx, dy, dz));
+                    break;
+
+                case 2:
+                    client_add_packet(c, packet_send_orientation_update(player->levelid, &player->pos));
+                    break;
+
+                case 3:
+                    client_add_packet(c, packet_send_full_position_update(player->levelid, dx, dy, dz, &player->pos));
+                    break;
+
+                default:
+                    client_add_packet(c, packet_send_teleport_player(player->levelid, &player->pos));
+                    break;
+            }
         }
+    }
+
+    player->oldpos = player->pos;
+}
+
+void player_send_positions()
+{
+    int i;
+    for (i = 0; i < s_players.used; i++)
+    {
+        player_send_position(s_players.items[i]);
     }
 }
 

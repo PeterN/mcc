@@ -8,6 +8,7 @@
 #include "list.h"
 #include "position.h"
 
+struct client_t;
 struct level_t;
 
 enum rank_t
@@ -20,12 +21,19 @@ enum rank_t
     RANK_ADMIN,
 };
 
+enum
+{
+    FLAG_PLACE_FIXED,
+};
+
 enum mode_t
 {
     MODE_NORMAL,
     MODE_INFO,
+    MODE_CUBOID,
     MODE_PLACE_SOLID,
-    MODE_PLACE_FIXED,
+    MODE_PLACE_WATER,
+    MODE_PLACE_LAVA,
 };
 
 struct player_t
@@ -35,11 +43,16 @@ struct player_t
     char *username;
     enum rank_t rank;
     enum mode_t mode;
+    uint8_t flags;
 
     struct position_t pos;
     struct position_t oldpos;
 
     struct level_t *level;
+    struct client_t *client;
+
+    unsigned cuboid_start;
+    enum blocktype_t cuboid_type;
 
     FILE *undo_log;
     char undo_log_name[256];
@@ -66,5 +79,7 @@ static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 {
     player->mode = (player->mode == mode) ? MODE_NORMAL : mode;
 }
+
+void player_send_positions();
 
 #endif /* PLAYER_H */

@@ -112,6 +112,8 @@ bool level_send(struct client_t *c)
         return false;
     }
 
+    printf("%s assigned id %d\n", c->player->username, c->player->levelid);
+
     memset(&z, 0, sizeof z);
     if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
 
@@ -163,7 +165,8 @@ bool level_send(struct client_t *c)
 
     client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
 
-    client_add_packet(c, packet_send_spawn_player(0xFF, c->player->username, &level->spawn));
+    c->player->pos = level->spawn;
+    client_add_packet(c, packet_send_spawn_player(0xFF, c->player->username, &c->player->pos));
 
     int i;
     for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -563,6 +566,8 @@ void *level_gen_thread(void *arg)
     snprintf(buf, sizeof buf, "Created level '%s'", level->name);
     net_notify_all(buf);
 
+    fputs(buf, stderr);
+
     return NULL;
 }
 
@@ -585,7 +590,7 @@ void level_unload(struct level_t *level)
     snprintf(buf, sizeof buf, "Level '%s' unloaded", level->name);
     net_notify_all(buf);
 
-    printf("Unloaded %s\n", level->name);
+    fputs(buf, stderr);
 
     physics_list_free(&level->physics);
 
@@ -622,6 +627,8 @@ bool level_load(const char *name, struct level_t **level)
     char buf[64];
     snprintf(buf, sizeof buf, "Level '%s' loaded", name);
     net_notify_all(buf);
+
+    fputs(buf, stderr);
 
     if (level != NULL) *level = l;
     return true;
@@ -722,6 +729,70 @@ void level_unload_empty()
     }
 }
 
+bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int16_t *y, int16_t *z)
+{
+	if (index < 0 || index >= level->x * level->y * level->z) return false;
+
+	if (x != NULL) *x = index % level->x;
+    if (y != NULL) *y = index / level->x / level->z;
+    if (z != NULL) *z = (index / level->x) % level->z;
+
+    return true;
+}
+
+static void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t type)
+{
+	int16_t sx, sy, sz;
+	int16_t ex, ey, ez;
+	int16_t x, y, z;
+
+	printf("ok\n");
+	if (!level_get_xyz(level, start, &sx, &sy, &sz)) return;
+	printf("ok: %d %d %d\n", sx, sy, sz);
+	if (!level_get_xyz(level, end, &ex, &ey, &ez)) return;
+	printf("ok: %d %d %d\n", ex, ey, ez);
+
+	int16_t t;
+	if (ex < sx) { t = sx; sx = ex; ex = t; }
+	if (ey < sy) { t = sy; sy = ey; ey = t; }
+	if (ez < sz) { t = sz; sz = ez; ez = t; }
+
+	int n = 0;
+	for (x = sx; x <= ex; x++)
+	{
+		for (y = sy; y <= ey; y++)
+		{
+			for (z = sz; z <= ez; z++)
+			{
+				unsigned index = level_get_index(level, x, y, z);
+				struct block_t *b = &level->blocks[index];
+				enum blocktype_t bt = block_get_blocktype(b);
+				b->type = type;
+
+				if (bt != type)
+				{
+					int i;
+					for (i = 0; i < s_clients.used; i++)
+					{
+						struct client_t *c = &s_clients.items[i];
+						if (c->player == NULL) continue;
+						if (c->player->level == level)
+						{
+							client_add_packet(c, packet_send_set_block(x, y, z, type));
+						}
+					}
+
+					n++;
+				}
+			}
+		}
+	}
+
+	printf("ok: %d blocks changed\n", n);
+
+	level->changed = true;
+}
+
 void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t)
 {
     int i;
@@ -755,10 +826,29 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         client_add_packet(client, packet_send_set_block(x, y, z, bt));
         return;
     }
+    else if (client->player->mode == MODE_CUBOID)
+    {
+    	client_add_packet(client, packet_send_set_block(x, y, z, bt));
+
+		if (client->player->cuboid_start == UINT_MAX)
+		{
+			client->player->cuboid_start = index;
+			client_notify(client, "Cuboid start placed");
+			return;
+		}
+
+		client_notify(client, "Cuboid end placed");
+		level_cuboid(level, client->player->cuboid_start, index, client->player->cuboid_type == -1 ? t : client->player->cuboid_type);
+		client->player->mode = MODE_NORMAL;
+		return;
+    }
 
     enum blocktype_t nt = t;
 
     if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
+    else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
+    else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
+
     if (m == 0) nt = AIR;
 
     if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed || (b->owner != 0 && b->owner != client->player->globalid)))
@@ -772,7 +862,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         player_undo_log(client->player, index);
 
         b->type = nt;
-        b->fixed = client->player->mode == MODE_PLACE_FIXED;
+        b->fixed = HasBit(client->player->flags, FLAG_PLACE_FIXED);
         b->owner = (b->type == AIR && !b->fixed) ? 0 : client->player->globalid;
 
         level->changed = true;
@@ -780,6 +870,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         for (i = 0; i < s_clients.used; i++)
         {
             struct client_t *c = &s_clients.items[i];
+            if (c->player == NULL) continue;
             if ((client != c || (nt != t && m == 1)) && c->player->level == level)
             {
                 client_add_packet(c, packet_send_set_block(x, y, z, nt));
@@ -795,13 +886,13 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
     *b = *block;
     level->changed = true;
 
-    int16_t x = index % level->x;
-    int16_t z = (index / level->x) % level->z;
-    int16_t y = index / level->x / level->z;
+    int16_t x, y, z;
+    if (!level_get_xyz(level, index, &x, &y, &z)) return;
 
     for (i = 0; i < s_clients.used; i++)
     {
         struct client_t *c = &s_clients.items[i];
+        if (c->player == NULL) continue;
         if (c->player->level == level)
         {
             client_add_packet(c, packet_send_set_block(x, y, z, block->type));

@@ -114,5 +114,6 @@ static inline enum blocktype_t block_get_blocktype(const struct block_t *block)
 }
 
 const char *blocktype_get_name(enum blocktype_t type);
+enum blocktype_t blocktype_get_by_name(const char *name);
 
 #endif /* BLOCK_H */

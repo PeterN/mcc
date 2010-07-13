@@ -44,4 +44,6 @@ static inline void client_notify(struct client_t *c, const char *message)
     client_add_packet(c, packet_send_message(0xFF, message));
 }
 
+void client_info();
+
 #endif /* CLIENT_H */

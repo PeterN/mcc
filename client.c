@@ -21,9 +21,11 @@ struct client_t *client_get_by_player(struct player_t *p)
 
     return NULL;
 }
-
 void client_add_packet(struct client_t *c, struct packet_t *p)
 {
+	/* Don't add packets for closed sockets */
+	if (c->close) return;
+
     struct packet_t **ip = &c->packet_send;
     while (*ip != NULL)
     {
@@ -39,6 +41,7 @@ bool client_notify_by_username(const char *username, const char *message)
     for (i = 0; i < s_clients.used; i++)
     {
         struct client_t *c = &s_clients.items[i];
+        if (c->player == NULL) continue;
         if (strcasecmp(c->player->username, username) == 0)
         {
             client_notify(c, message);
@@ -118,6 +121,7 @@ void client_process(struct client_t *c, char *message)
 
 void client_send_spawn(const struct client_t *c, bool hiding)
 {
+    if (c->player == NULL || c->player->level == NULL) return;
     const struct level_t *level = c->player->level;
 
     int i;
@@ -125,13 +129,14 @@ void client_send_spawn(const struct client_t *c, bool hiding)
     {
         if (level->clients[i] != NULL && level->clients[i] != c)
         {
-            client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->username, &level->spawn));
+            client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->username, &c->player->pos));
         }
     }
 }
 
 void client_send_despawn(const struct client_t *c, bool hiding)
 {
+    if (c->player == NULL || c->player->level == NULL) return;
     const struct level_t *level = c->player->level;
 
     int i;
@@ -142,4 +147,25 @@ void client_send_despawn(const struct client_t *c, bool hiding)
             client_add_packet(level->clients[i], packet_send_despawn_player(c->player->levelid));
         }
     }
+}
+
+void client_info()
+{
+	int i;
+	for (i = 0; i < s_clients.used; i++)
+	{
+		const struct client_t *c = &s_clients.items[i];
+		if (c->player == NULL)
+		{
+			printf("%d: Connecting...\n", i);
+		}
+		else if (c->player->level == NULL)
+		{
+			printf("%d: %s (%d)\n", i, c->player->username, c->player->globalid);
+		}
+		else
+		{
+			printf("%d: %s (%d) on %s (%d)\n", i, c->player->username, c->player->globalid, c->player->level->name, c->player->levelid);
+		}
+	}
 }

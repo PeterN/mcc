@@ -89,9 +89,17 @@ void net_init()
     heartbeat_start();
 }
 
-void net_close(struct client_t *c, bool remove_player)
+void net_close(struct client_t *c, bool remove_player, const char *reason)
 {
-	printf("Closing connection\n");
+	if (c->player == NULL)
+	{
+		fprintf(stderr, "Closing connection: %s\n", reason);
+	}
+	else
+	{
+		fprintf(stderr, "Closing connection %s (%d): %s\n", c->player->username, c->player->globalid, reason);
+	}
+
 	close(c->sock);
 
 	/* Mark client for deletion */
@@ -158,7 +166,7 @@ static void net_packetrecv(struct client_t *c)
 		}
 		else if (res == 0)
 		{
-			net_close(c, true);
+			net_close(c, true, "read of 0 bytes");
 			return;
 		}
 
@@ -167,8 +175,9 @@ static void net_packetrecv(struct client_t *c)
 			p->size = packet_recv_size(p->buffer[0]);
 			if (p->size == -1)
 			{
-				printf("Unrecognised packet type 0x%02X!\n", p->buffer[0]);
-				net_close(c, true);
+			    char buf[64];
+			    snprintf(buf, sizeof buf, "unrecognised packet type 0x%02X!\n", p->buffer[0]);
+				net_close(c, true, buf);
 				return;
 			}
 		}

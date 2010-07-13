@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <strings.h>
 #include "block.h"
 
@@ -52,6 +53,7 @@ static const char *s_standard_blocks[] = {
 	"bookcase",
 	"mossy_cobblestone",
 	"obsidian",
+	NULL,
 };
 
 /*static const char *s_op_blocks[] = {
@@ -207,4 +209,15 @@ enum blocktype_t blocktype_convert_to_save(enum blocktype_t type)
 const char *blocktype_get_name(enum blocktype_t type)
 {
     return s_standard_blocks[type];
+}
+
+enum blocktype_t blocktype_get_by_name(const char *name)
+{
+	int i;
+	for (i = 0; s_standard_blocks[i] != NULL; i++)
+	{
+		if (strcasecmp(s_standard_blocks[i], name) == 0) return i;
+	}
+
+	return -1;
 }
