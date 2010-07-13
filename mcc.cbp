@@ -52,6 +52,7 @@
 		<Unit filename="commands.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="commands.h" />
 		<Unit filename="heartbeat.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -85,6 +86,7 @@
 		<Unit filename="playerdb.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="playerdb.h" />
 		<Unit filename="position.h" />
 		<Unit filename="timer.c">
 			<Option compilerVar="CC" />
