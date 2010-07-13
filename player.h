@@ -20,21 +20,24 @@ enum rank_t
     RANK_ADMIN,
 };
 
-enum
+enum mode_t
 {
-    PLAYER_BANNED = 2,
-    PLAYER_PLACE_SOLID = 3,
-    PLAYER_PLACE_FIXED = 4,
+    MODE_NORMAL,
+    MODE_INFO,
+    MODE_PLACE_SOLID,
+    MODE_PLACE_FIXED,
 };
 
 struct player_t
 {
     int globalid;
+    int levelid;
     char *username;
     enum rank_t rank;
+    enum mode_t mode;
 
     struct position_t pos;
-    uint8_t flags;
+    struct position_t oldpos;
 
     struct level_t *level;
 
@@ -58,5 +61,10 @@ void player_undo_log(struct player_t *player, unsigned index);
 void player_undo(const char *username, const char *levelname, const char *timestamp);
 
 enum rank_t rank_get_by_name(const char *rank);
+
+static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
+{
+    player->mode = (player->mode == mode) ? MODE_NORMAL : mode;
+}
 
 #endif /* PLAYER_H */

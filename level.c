@@ -10,6 +10,7 @@
 #include "client.h"
 #include "packet.h"
 #include "player.h"
+#include "playerdb.h"
 #include "network.h"
 
 struct level_list_t s_levels;
@@ -68,6 +69,23 @@ void level_clear_block(struct level_t *level, unsigned index)
 	level_set_block(level, &empty, index);
 }
 
+int level_get_new_id(struct level_t *level, struct client_t *c)
+{
+    int i;
+    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+    {
+        if (level->clients[i] == NULL)
+        {
+            level->clients[i] = c;
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+
+
 bool level_send(struct client_t *c)
 {
     struct level_t *level = c->player->level;
@@ -86,6 +104,13 @@ bool level_send(struct client_t *c)
         return false;
     }
     pthread_mutex_unlock(&level->mutex);
+
+    c->player->levelid = level_get_new_id(level, c);
+    if (c->player->levelid == -1)
+    {
+        client_notify(c, "Level is full");
+        return false;
+    }
 
     memset(&z, 0, sizeof z);
     if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
@@ -140,25 +165,18 @@ bool level_send(struct client_t *c)
 
     client_add_packet(c, packet_send_spawn_player(0xFF, c->player->username, &level->spawn));
 
-    int id = 0;
     int i;
     for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
     {
-        if (level->clients[i] == NULL)
+        if (level->clients[i] != NULL && level->clients[i] != c && !level->clients[i]->hidden)
         {
-            level->clients[i] = c;
-            id = i;
-            break;
+            client_add_packet(c, packet_send_spawn_player(i, level->clients[i]->player->username, &level->clients[i]->player->pos));
         }
     }
 
-    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+    if (!c->hidden)
     {
-        if (level->clients[i] != NULL && level->clients[i] != c)
-        {
-            client_add_packet(c, packet_send_spawn_player(i, level->clients[i]->player->username, &level->clients[i]->player->pos));
-            client_add_packet(level->clients[i], packet_send_spawn_player(i, c->player->username, &level->spawn));
-        }
+        client_send_spawn(c, false);
     }
 
     c->waiting_for_level = false;
@@ -708,9 +726,15 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 {
     int i;
 
+    if (client->player->rank == RANK_BANNED)
+    {
+        /* Ignore banned players :D */
+        return;
+    }
+
     if (client->waiting_for_level)
     {
-        client_notify(client, "Changed ignored whilst waiting for level change!");
+        client_notify(client, "Change ignored whilst waiting for level change!");
         return;
     }
 
@@ -719,23 +743,27 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         return;
     }
 
-    if (HasBit(client->player->flags, PLAYER_BANNED))
-    {
-        /* Ignore banned players :D */
-        return;
-    }
-
     unsigned index = level_get_index(level, x, y, z);
     struct block_t *b = &level->blocks[index];
     enum blocktype_t bt = block_get_blocktype(b);
+
+    if (client->player->mode == MODE_INFO)
+    {
+        char buf[64];
+        snprintf(buf, sizeof buf, "%s at %dx%dx%d placed by %s", blocktype_get_name(bt), x, y, z, playerdb_get_username(b->owner));
+        client_notify(client, buf);
+        client_add_packet(client, packet_send_set_block(x, y, z, bt));
+        return;
+    }
+
     enum blocktype_t nt = t;
 
-    if (HasBit(client->player->flags, PLAYER_PLACE_SOLID)) nt = ADMINIUM;
+    if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
     if (m == 0) nt = AIR;
 
     if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed || (b->owner != 0 && b->owner != client->player->globalid)))
     {
-        client_add_packet(client, packet_send_set_block(x, y, z, b->type));
+        client_add_packet(client, packet_send_set_block(x, y, z, bt));
         return;
     }
 
@@ -744,7 +772,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         player_undo_log(client->player, index);
 
         b->type = nt;
-        b->fixed = HasBit(client->player->flags, PLAYER_PLACE_FIXED);
+        b->fixed = client->player->mode == MODE_PLACE_FIXED;
         b->owner = (b->type == AIR && !b->fixed) ? 0 : client->player->globalid;
 
         level->changed = true;
@@ -752,7 +780,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         for (i = 0; i < s_clients.used; i++)
         {
             struct client_t *c = &s_clients.items[i];
-            if ((client != c || nt != t) && c->player->level == level)
+            if ((client != c || (nt != t && m == 1)) && c->player->level == level)
             {
                 client_add_packet(c, packet_send_set_block(x, y, z, nt));
             }
@@ -779,4 +807,44 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
             client_add_packet(c, packet_send_set_block(x, y, z, block->type));
         }
     }
+}
+
+static void level_mark_teleporter(struct level_t *level, struct position_t *pos)
+{
+    unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
+    level->blocks[index].teleporter = 1;
+}
+
+static void level_unmark_teleporter(struct level_t *level, struct position_t *pos)
+{
+    unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
+    level->blocks[index].teleporter = 0;
+}
+
+void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level)
+{
+    int i = 0;
+    for (i = 0; i < level->teleporters.used; i++)
+    {
+        struct teleporter_t *t = &level->teleporters.items[i];
+        if (strcasecmp(t->name, name) == 0)
+        {
+            level_unmark_teleporter(level, &t->pos);
+            t->pos = *pos;
+            if (dest != NULL) strncpy(t->dest, dest, sizeof t->dest);
+            if (dest_level != NULL) strncpy(t->dest_level, dest_level, sizeof t->dest_level);
+            level_mark_teleporter(level, pos);
+            return;
+        }
+    }
+
+    struct teleporter_t t;
+    memset(&t, 0, sizeof t);
+    strncpy(t.name, name, sizeof t.name);
+    t.pos = *pos;
+    if (dest != NULL) strncpy(t.dest, dest, sizeof t.dest);
+    if (dest_level != NULL) strncpy(t.dest_level, dest_level, sizeof t.dest_level);
+
+    teleporter_list_add(&level->teleporters, t);
+    level_mark_teleporter(level, pos);
 }

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <dirent.h>
 #include "client.h"
+#include "commands.h"
 #include "player.h"
 #include "packet.h"
 #include "level.h"
@@ -58,6 +59,8 @@ void client_process(struct client_t *c, char *message)
 	    char *param[10];
 	    int params = 0;
 
+	    memset(param, 0, sizeof param);
+
 	    for (;;)
 	    {
 	        size_t l = strcspn(bufp, " ,");
@@ -71,7 +74,7 @@ void client_process(struct client_t *c, char *message)
 	        if (end) break;
 	    }
 
-	    if (!command_process(c, params, param))
+	    if (!command_process(c, params, (const char **)param))
         {
             client_notify(c, "Unknown command");
 	        return;
@@ -84,11 +87,14 @@ void client_process(struct client_t *c, char *message)
 	        case '@': // Private message
 	        {
                 size_t l = strcspn(message, " ,");
-                message[l] = '\0';
-                snprintf(buf, sizeof buf, "(%s: %s)", c->player->username, message + l + 1);
-                if (!client_notify_by_username(message + 1, buf))
+                if (l != strlen(message))
                 {
-                    client_notify(c, "User is offline");
+                    message[l] = '\0';
+                    snprintf(buf, sizeof buf, "(%s: %s)", c->player->username, message + l + 1);
+                    if (!client_notify_by_username(message + 1, buf))
+                    {
+                        client_notify(c, "User is offline");
+                    }
                 }
                 return;
 	        }
@@ -108,4 +114,32 @@ void client_process(struct client_t *c, char *message)
 
 	    net_notify_all(buf);
 	}
+}
+
+void client_send_spawn(const struct client_t *c, bool hiding)
+{
+    const struct level_t *level = c->player->level;
+
+    int i;
+    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+    {
+        if (level->clients[i] != NULL && level->clients[i] != c)
+        {
+            client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->username, &level->spawn));
+        }
+    }
+}
+
+void client_send_despawn(const struct client_t *c, bool hiding)
+{
+    const struct level_t *level = c->player->level;
+
+    int i;
+    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+    {
+        if (level->clients[i] != NULL && level->clients[i] != c)
+        {
+            client_add_packet(level->clients[i], packet_send_despawn_player(c->player->levelid));
+        }
+    }
 }

@@ -203,3 +203,8 @@ enum blocktype_t blocktype_convert_to_save(enum blocktype_t type)
 			return type;
 	}
 }*/
+
+const char *blocktype_get_name(enum blocktype_t type)
+{
+    return s_standard_blocks[type];
+}

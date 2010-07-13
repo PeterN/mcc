@@ -6,6 +6,7 @@
 #include "level.h"
 #include "packet.h"
 #include "player.h"
+#include "playerdb.h"
 #include "mcc.h"
 #include "network.h"
 
@@ -36,6 +37,7 @@ struct player_t *player_add(const char *username)
     memset(p, 0, sizeof *p);
     p->username = strdup(username);
     p->rank = playerdb_get_rank(username);
+    p->globalid = playerdb_get_globalid(username);
 
     player_list_add(&s_players, p);
     g_server.players++;
@@ -84,16 +86,28 @@ bool player_change_level(struct player_t *player, struct level_t *level)
 
 void player_move(struct player_t *player, struct position_t *pos)
 {
-    int i;
-
     player->pos = *pos;
+}
 
+void player_send_position(struct player_t *player)
+{
+    int changed = 0;
+    if (player->pos.x != player->oldpos.x || player->pos.y != player->oldpos.y || player->pos.z != player->oldpos.z)
+    {
+        changed = 1;
+    }
+    if (player->pos.h != player->oldpos.h || player->pos.p != player->oldpos.p)
+    {
+        changed |= 2;
+    }
+
+    int i;
     for (i = 0; i < s_clients.used; i++)
     {
         struct client_t *c = &s_clients.items[i];
-        if (c->player != player && c->player->level == player->level)
+        if (c->player != NULL && c->player != player && c->player->level == player->level)
         {
-            client_add_packet(c, packet_send_teleport_player(0 /*c->player->playerid*/, pos));
+            client_add_packet(c, packet_send_teleport_player(c->player->levelid, &player->pos));
         }
     }
 }

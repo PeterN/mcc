@@ -6,6 +6,7 @@
 #include "level.h"
 #include "packet.h"
 #include "player.h"
+#include "playerdb.h"
 #include "mcc.h"
 #include "network.h"
 
@@ -51,7 +52,7 @@ CMD(ban)
 
     if (params != 2)
     {
-        client_notify(c, "ban [user]");
+        client_notify(c, "ban <user>");
         return;
     }
 
@@ -104,10 +105,10 @@ CMD(exit)
 
 CMD(fixed)
 {
-    ToggleBit(c->player->flags, PLAYER_PLACE_FIXED);
+    player_toggle_mode(c->player, MODE_PLACE_FIXED);
 
     char buf[64];
-    snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, PLAYER_PLACE_FIXED) ? "on" : "off");
+    snprintf(buf, sizeof buf, "Fixed %s", (c->player->mode == MODE_PLACE_FIXED) ? "on" : "off");
     client_notify(c, buf);
 }
 
@@ -115,7 +116,7 @@ CMD(goto)
 {
     if (params != 2)
     {
-        client_notify(c, "goto [name]");
+        client_notify(c, "goto <name>");
         return;
     }
 
@@ -130,6 +131,24 @@ CMD(goto)
         snprintf(buf, sizeof buf, "Cannot go to level '%s'", param[1]);
         client_notify(c, buf);
     }
+}
+
+CMD(hide)
+{
+    c->hidden = !c->hidden;
+
+    if (c->hidden)
+    {
+        client_send_despawn(c, true);
+    }
+    else
+    {
+        client_send_spawn(c, true);
+    }
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
+    client_notify(c, buf);
 }
 
 CMD(home)
@@ -155,16 +174,25 @@ CMD(identify)
 {
     if (params != 2)
     {
-        client_notify(c, "identify [password]");
+        client_notify(c, "identify <password>");
         return;
     }
+}
+
+CMD(info)
+{
+    player_toggle_mode(c->player, MODE_INFO);
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Block info %s", (c->player->mode == MODE_INFO) ? "on" : "off");
+    client_notify(c, buf);
 }
 
 CMD(kick)
 {
     if (params != 2)
     {
-        client_notify(c, "kick [user]");
+        client_notify(c, "kick <user>");
         return;
     }
 
@@ -237,7 +265,7 @@ CMD(newlvl)
 {
     if (params != 6)
     {
-        client_notify(c, "newlvl [name] [x] [y] [z] [type]");
+        client_notify(c, "newlvl <name> <x> <y> <z> <type>");
         client_notify(c, " type: 0=flat 1=flat/adminium 2=smooth 6=rough");
         return;
     }
@@ -278,7 +306,7 @@ CMD(setrank)
 
     if (params != 3)
     {
-        client_notify(c, "setrank [name] [rank]");
+        client_notify(c, "setrank <name> <rank>");
         return;
     }
 
@@ -320,10 +348,10 @@ CMD(setrank)
 
 CMD(solid)
 {
-    ToggleBit(c->player->flags, PLAYER_PLACE_SOLID);
+    player_toggle_mode(c->player, MODE_PLACE_SOLID);
 
     char buf[64];
-    snprintf(buf, sizeof buf, "Solid %s", HasBit(c->player->flags, PLAYER_PLACE_SOLID) ? "on" : "off");
+    snprintf(buf, sizeof buf, "Solid %s", (c->player->mode == MODE_PLACE_SOLID) ? "on" : "off");
     client_notify(c, buf);
 }
 
@@ -333,9 +361,26 @@ static int undo_filename_filter(const struct dirent *d)
     return strncmp(d->d_name, s_pattern, strlen(s_pattern)) == 0;
 }
 
+CMD(teleporter)
+{
+    if (params < 2 || params > 5)
+    {
+        client_notify(c, "teleporter <name> [<dest> [<level>]]");
+        return;
+    }
+
+    level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3]);
+}
+
 CMD(undo)
 {
     char buf[64];
+
+    if (params < 3 || params > 4)
+    {
+        client_notify(c, "undo <user> <level> [<time>]");
+        return;
+    }
 
     if (params == 3)
     {
@@ -374,12 +419,6 @@ CMD(undo)
 
         client_notify(c, buf);
     }
-    if (params != 4)
-    {
-        client_notify(c, "undo [user] [level]");
-        client_notify(c, "undo [user] [level] [time]");
-        return;
-    }
 
     player_undo(param[1], param[2], param[3]);
 }
@@ -390,8 +429,10 @@ struct command_t s_commands[] = {
     { "exit", RANK_ADMIN, &cmd_exit },
     { "fixed", RANK_OP, &cmd_fixed },
     { "goto", RANK_GUEST, &cmd_goto },
+    { "hide", RANK_OP, &cmd_hide },
     { "home", RANK_GUEST, &cmd_home },
     { "identify", RANK_GUEST, &cmd_identify },
+    { "info", RANK_BUILDER, &cmd_info },
     { "kick", RANK_OP, &cmd_kick },
     { "levels", RANK_GUEST, &cmd_levels },
     { "mapinfo", RANK_GUEST, &cmd_mapinfo },
@@ -400,6 +441,7 @@ struct command_t s_commands[] = {
     { "rules", RANK_BANNED, &cmd_rules },
     { "setrank", RANK_OP, &cmd_setrank },
     { "solid", RANK_OP, &cmd_solid },
+    { "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
     { "undo", RANK_OP, &cmd_undo },
     { NULL, -1, NULL },
 };

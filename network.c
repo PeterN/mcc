@@ -97,6 +97,8 @@ void net_close(struct client_t *c, bool remove_player)
 	/* Mark client for deletion */
 	c->close = true;
 
+	client_send_despawn(c, false);
+
 	if (remove_player) player_del(c->player);
 }
 

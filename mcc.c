@@ -5,6 +5,7 @@
 #include "level.h"
 #include "network.h"
 #include "player.h"
+#include "playerdb.h"
 #include "client.h"
 #include "heartbeat.h"
 #include "irc.h"
@@ -25,10 +26,10 @@ int main(int argc, char **argv)
     }
 
 	g_server.name = "TEST TEST TEST";
-	g_server.motd = "This is a test";
-	g_server.max_players = 10;
+	g_server.motd = "Test server for Just Another Minecraft Server";
+	g_server.max_players = 20;
 	g_server.players = 0;
-	g_server.public = false;
+	g_server.public = true;
 	g_server.exit = false;
 
 	g_server.irc.hostname = "irc.lspace.org";

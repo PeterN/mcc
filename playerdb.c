@@ -8,6 +8,7 @@ static sqlite3_stmt *s_rank_get_stmt;
 static sqlite3_stmt *s_rank_set_stmt;
 static sqlite3_stmt *s_new_user_stmt;
 static sqlite3_stmt *s_globalid_get_stmt;
+static sqlite3_stmt *s_username_get_stmt;
 static sqlite3_stmt *s_password_stmt;
 
 void playerdb_init()
@@ -69,6 +70,14 @@ void playerdb_init()
         return;
     }
 
+    res = sqlite3_prepare_v2(s_db, "SELECT username FROM players WHERE id = ?", -1, &s_username_get_stmt, NULL);
+    if (res != SQLITE_OK)
+    {
+        fprintf(stderr, "Can't prepare statement: %s", sqlite3_errmsg(s_db));
+        sqlite3_close(s_db);
+        return;
+    }
+
     res = sqlite3_prepare_v2(s_db, "SELECT password FROM players WHERE username = lower(?) AND password = ?", -1, &s_password_stmt, NULL);
     if (res != SQLITE_OK)
     {
@@ -111,6 +120,20 @@ int playerdb_get_globalid(const char *username)
 
     fprintf(stderr, "Unable to get globalid for '%s'", username);
     return 0;
+}
+
+const char *playerdb_get_username(int globalid)
+{
+    int res;
+    sqlite3_reset(s_username_get_stmt);
+    sqlite3_bind_int(s_username_get_stmt, 1, globalid);
+    res = sqlite3_step(s_username_get_stmt);
+    if (res == SQLITE_ROW)
+    {
+        return (const char *)sqlite3_column_text(s_username_get_stmt, 0);
+    }
+
+    return "unknown";
 }
 
 int playerdb_get_rank(const char *username)

@@ -323,7 +323,7 @@ struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t 
 	return p;
 }
 
-struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, struct position_t *pos)
+struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(74);
 

@@ -30,7 +30,7 @@ struct packet_t *packet_send_level_initialize();
 struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *data, uint8_t percent);
 struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z);
 struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t type);
-struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, struct position_t *pos);
+struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, const struct position_t *pos);
 struct packet_t *packet_send_teleport_player(uint8_t player_id, struct position_t *pos);
 struct packet_t *packet_send_despawn_player(uint8_t player_id);
 struct packet_t *packet_send_message(uint8_t player_id, const char *message);
