@@ -97,6 +97,7 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="timer.h" />
+		<Unit filename="util.h" />
 		<Unit filename="vertex.h" />
 		<Extensions>
 			<envvars />

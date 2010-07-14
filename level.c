@@ -13,6 +13,7 @@
 #include "player.h"
 #include "playerdb.h"
 #include "network.h"
+#include "util.h"
 
 struct level_list_t s_levels;
 
@@ -627,6 +628,7 @@ bool level_load(const char *name, struct level_t **level)
 
     char filename[64];
     snprintf(filename, sizeof filename, "levels/%s.mcl", name);
+    lcase(filename);
 
     gz = gzopen(filename, "rb");
     if (gz == NULL) return false;
@@ -659,6 +661,7 @@ bool level_save(struct level_t *l)
 {
     char filename[64];
     snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
+    lcase(filename);
 
     gzFile gz = gzopen(filename, "wb");
     if (gz == NULL) return false;

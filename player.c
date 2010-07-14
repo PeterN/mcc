@@ -9,6 +9,7 @@
 #include "playerdb.h"
 #include "mcc.h"
 #include "network.h"
+#include "util.h"
 
 static struct player_list_t s_players;
 
@@ -172,6 +173,8 @@ void player_undo_log(struct player_t *player, unsigned index)
     {
         time_t t = time(NULL);
         snprintf(player->undo_log_name, sizeof player->undo_log_name, "undo/%s_%s_%lu.bin", player->level->name, player->username, t);
+        lcase(player->undo_log_name);
+
         player->undo_log = fopen(player->undo_log_name, "wb");
         if (player->undo_log == NULL)
         {
@@ -194,6 +197,7 @@ void player_undo(struct client_t *c, const char *username, const char *levelname
 
     char buf[256];
     snprintf(buf, sizeof buf, "undo/%s_%s_%s.bin", levelname, username, timestamp);
+    lcase(buf);
 
     struct player_t *player = player_get_by_name(username);
     if (player != NULL && strcasecmp(player->undo_log_name, buf) == 0)
