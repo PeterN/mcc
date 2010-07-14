@@ -61,7 +61,6 @@ static inline unsigned level_get_index(struct level_t *level, unsigned x, unsign
 
 void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
-void level_clear_block(struct level_t *level, unsigned index);
 bool level_send(struct client_t *client);
 void level_gen(struct level_t *level, int type);
 bool level_get_by_name(const char *name, struct level_t **level);

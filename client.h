@@ -24,11 +24,11 @@ struct client_t
 	struct player_t *player;
 };
 
-static inline bool client_t_compare(struct client_t *a, struct client_t *b)
+static inline bool client_t_compare(struct client_t **a, struct client_t **b)
 {
-	return a->sock == b->sock;
+	return (*a) == (*b);
 }
-LIST(client, struct client_t, client_t_compare)
+LIST(client, struct client_t *, client_t_compare)
 
 extern struct client_list_t s_clients;
 

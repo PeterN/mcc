@@ -7,7 +7,7 @@ struct client_t;
 
 void net_init();
 void net_run();
-void net_close(struct client_t *c, bool remove_player, const char *reason);
+void net_close(struct client_t *c, const char *reason);
 
 void net_notify_all(const char *message);
 

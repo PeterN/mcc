@@ -22,7 +22,7 @@ struct player_t *player_get_by_name(const char *username)
     int i;
     for (i = 0; i < s_players.used; i++)
 	{
-		if (strcmp(s_players.items[i]->username, username) == 0)
+		if (strcasecmp(s_players.items[i]->username, username) == 0)
 		{
 		    return s_players.items[i];
 		}
@@ -51,7 +51,7 @@ struct player_t *player_add(const char *username)
 void player_del(struct player_t *player)
 {
     if (player == NULL) return;
-    player_list_del(&s_players, player);
+    player_list_del_item(&s_players, player);
     g_server.players--;
 
     if (player->undo_log != NULL)
@@ -76,19 +76,9 @@ bool player_change_level(struct player_t *player, struct level_t *level)
 {
     if (player->level == level) return false;
 
-    if (player->level != NULL)
-    {
-        client_send_despawn(player->client, false);
-        player->level->clients[player->levelid] = NULL;
-    }
-
-    player->level = level;
+    player->new_level = level;
 
     player_change_undo_log(player, level);
-
-    char buf[64];
-    snprintf(buf, sizeof buf, "%s moved to '%s'", player->username, level->name);
-    net_notify_all(buf);
 
     return true;
 }
@@ -128,7 +118,7 @@ void player_send_position(struct player_t *player)
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
-        struct client_t *c = &s_clients.items[i];
+        struct client_t *c = s_clients.items[i];
         if (c->player != NULL && c->player != player && c->player->level == player->level)
         {
             switch (changed)
@@ -185,9 +175,7 @@ void player_undo_log(struct player_t *player, unsigned index)
         player->undo_log = fopen(player->undo_log_name, "wb");
         if (player->undo_log == NULL)
         {
-            char buf[64];
-            snprintf(buf, sizeof buf, "Unable to open undo log %s", player->undo_log_name);
-            net_notify_all(buf);
+            fprintf(stderr, "Unable to open undo log %s", player->undo_log_name);
             return;
         }
     }
@@ -196,7 +184,7 @@ void player_undo_log(struct player_t *player, unsigned index)
     fwrite(&player->level->blocks[index], sizeof player->level->blocks[index], 1, player->undo_log);
 }
 
-void player_undo(const char *username, const char *levelname, const char *timestamp)
+void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp)
 {
     struct level_t *level;
     if (!level_get_by_name(levelname, &level))
@@ -208,7 +196,7 @@ void player_undo(const char *username, const char *levelname, const char *timest
     snprintf(buf, sizeof buf, "undo/%s_%s_%s.bin", levelname, username, timestamp);
 
     struct player_t *player = player_get_by_name(username);
-    if (player != NULL && strcmp(player->undo_log_name, buf) == 0)
+    if (player != NULL && strcasecmp(player->undo_log_name, buf) == 0)
     {
         /* Can't playback existing undo log, so... make a new one */
         player_change_undo_log(player, level);
@@ -218,7 +206,7 @@ void player_undo(const char *username, const char *levelname, const char *timest
 
     if (f == NULL)
     {
-        net_notify_all("No actions to undo");
+        client_notify(c, "No actions to undo");
         return;
     }
 

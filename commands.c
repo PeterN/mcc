@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 #include <dirent.h>
 #include "client.h"
 #include "level.h"
@@ -228,11 +229,11 @@ CMD(kick)
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
-        struct client_t *c = &s_clients.items[i];
+        struct client_t *c = s_clients.items[i];
         if (c->player == NULL) continue;
         if (strcasecmp(c->player->username, param[1]) == 0)
         {
-            net_close(c, true, buf);
+            net_close(c, buf);
         }
     }
 }
@@ -381,7 +382,7 @@ CMD(setrank)
     }
 
     char buf[64];
-    snprintf(buf, sizeof buf, "%s rank set to %s", param[0], param[2]);
+    snprintf(buf, sizeof buf, "%s rank set to %s", param[1], param[2]);
     net_notify_all(buf);
 }
 
@@ -415,6 +416,33 @@ CMD(teleporter)
     }
 
     level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3]);
+}
+
+CMD(tp)
+{
+    char buf[64];
+
+    if (params != 2)
+    {
+        client_notify(c, "tp <user>");
+        return;
+    }
+
+    const struct player_t *p = player_get_by_name(param[1]);
+    if (p == NULL)
+    {
+        snprintf(buf, sizeof buf, "%s is offline", param[1]);
+        client_notify(c, buf);
+        return;
+    }
+    if (p->level != c->player->level)
+    {
+        snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+        client_notify(c, buf);
+        return;
+    }
+
+    client_add_packet(c, packet_send_teleport_player(0xFF, &p->pos));
 }
 
 CMD(undo)
@@ -463,9 +491,10 @@ CMD(undo)
         }
 
         client_notify(c, buf);
+        return;
     }
 
-    player_undo(param[1], param[2], param[3]);
+    player_undo(c, param[1], param[2], param[3]);
 }
 
 CMD(water)
@@ -481,6 +510,7 @@ struct command_t s_commands[] = {
     { "ban", RANK_OP, &cmd_ban },
     { "commands", RANK_GUEST, &cmd_commands },
     { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid },
+    { "z", RANK_ADV_BUILDER, &cmd_cuboid },
     { "exit", RANK_ADMIN, &cmd_exit },
     { "fixed", RANK_OP, &cmd_fixed },
     { "goto", RANK_GUEST, &cmd_goto },
@@ -499,6 +529,7 @@ struct command_t s_commands[] = {
     { "setspawn", RANK_OP, &cmd_setspawn },
     { "solid", RANK_OP, &cmd_solid },
     { "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
+    { "tp", RANK_BUILDER, &cmd_tp },
     { "undo", RANK_OP, &cmd_undo },
     { "water", RANK_BUILDER, &cmd_water },
     { NULL, -1, NULL },

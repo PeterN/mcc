@@ -18,6 +18,7 @@
 					<Add library="z" />
 					<Add library="pthread" />
 					<Add library="sqlite3" />
+					<Add library="rt" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -53,6 +54,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="commands.h" />
+		<Unit filename="cuboid.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="cuboid.h" />
 		<Unit filename="heartbeat.c">
 			<Option compilerVar="CC" />
 		</Unit>

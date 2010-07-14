@@ -11,20 +11,24 @@
 
 struct client_list_t s_clients;
 
-struct client_t *client_get_by_player(struct player_t *p)
+/*struct client_t *client_get_by_player(struct player_t *p)
 {
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
-        if (s_clients.items[i].player == p) return &s_clients.items[i];
+        if (s_clients.items[i]->player == p) return s_clients.items[i];
     }
 
     return NULL;
-}
+}*/
+
 void client_add_packet(struct client_t *c, struct packet_t *p)
 {
 	/* Don't add packets for closed sockets */
-	if (c->close) return;
+	if (c->close) {
+	    free(p);
+	    return;
+	}
 
     struct packet_t **ip = &c->packet_send;
     while (*ip != NULL)
@@ -40,7 +44,7 @@ bool client_notify_by_username(const char *username, const char *message)
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
-        struct client_t *c = &s_clients.items[i];
+        struct client_t *c = s_clients.items[i];
         if (c->player == NULL) continue;
         if (strcasecmp(c->player->username, username) == 0)
         {
@@ -98,6 +102,10 @@ void client_process(struct client_t *c, char *message)
                     {
                         client_notify(c, "User is offline");
                     }
+                    else
+                    {
+                        client_notify(c, buf);
+                    }
                 }
                 return;
 	        }
@@ -130,6 +138,7 @@ void client_send_spawn(const struct client_t *c, bool hiding)
         if (level->clients[i] != NULL && level->clients[i] != c)
         {
             client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->username, &c->player->pos));
+            //printf("Told %s (%d) about %s joining %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
         }
     }
 }
@@ -145,6 +154,7 @@ void client_send_despawn(const struct client_t *c, bool hiding)
         if (level->clients[i] != NULL && level->clients[i] != c)
         {
             client_add_packet(level->clients[i], packet_send_despawn_player(c->player->levelid));
+            //printf("Told %s (%d) about %s leaving %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
         }
     }
 }
@@ -154,7 +164,7 @@ void client_info()
 	int i;
 	for (i = 0; i < s_clients.used; i++)
 	{
-		const struct client_t *c = &s_clients.items[i];
+		const struct client_t *c = s_clients.items[i];
 		if (c->player == NULL)
 		{
 			printf("%d: Connecting...\n", i);

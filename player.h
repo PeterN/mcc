@@ -48,7 +48,7 @@ struct player_t
     struct position_t pos;
     struct position_t oldpos;
 
-    struct level_t *level;
+    struct level_t *level, *new_level;
     struct client_t *client;
 
     unsigned cuboid_start;
@@ -71,7 +71,7 @@ void player_move(struct player_t *player, struct position_t *pos);
 void player_info();
 
 void player_undo_log(struct player_t *player, unsigned index);
-void player_undo(const char *username, const char *levelname, const char *timestamp);
+void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp);
 
 enum rank_t rank_get_by_name(const char *rank);
 

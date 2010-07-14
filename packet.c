@@ -128,60 +128,58 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	if (c->player != NULL)
 	{
-	    net_close(c, false, "already logged in");
+	    net_close(c, "already logged in");
+
+	    free(username);
+	    free(key);
 	    return;
 	}
 
     struct player_t *player = player_get_by_name(username);
     if (player == NULL)
     {
-        player = player_add(username);
-        if (player == NULL)
-        {
-            net_close(c, false, "cannot get global id");
-            return;
-        }
-
         snprintf(buf, sizeof buf, "%s connected\n", username);
-        net_notify_all(buf);
     }
     else
     {
-        net_close(client_get_by_player(player), false, "reconnected");
+        net_close(player->client, "reconnected");
 
         snprintf(buf, sizeof buf, "%s reconnected\n", username);
-        net_notify_all(buf);
+    }
+
+    player = player_add(username);
+
+    /* No longer need these */
+	free(username);
+	free(key);
+
+    if (player == NULL)
+    {
+        net_close(c, "cannot get global id");
+        return;
     }
 
     c->player = player;
     player->client = c;
 
-	free(username);
-	free(key);
-
 	if (player->rank == RANK_BANNED)
 	{
-	    net_close(c, false, "banned");
+	    net_close(c, "banned");
 	    return;
 	}
 
-	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, 0x64));
+	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, (c->player->rank >= RANK_OP) ? 0x64 : 0));
 
-    if (c->player->level == NULL)
+    struct level_t *l;
+    if (!level_get_by_name("main", &l))
     {
-        struct level_t *l;
-        if (!level_get_by_name("main", &l))
-        {
-            net_close(c, true, "cannot load main level");
-            return;
-        }
-        else
-        {
-            player_change_level(c->player, l);
-        }
+        net_close(c, "cannot load main level");
+        return;
     }
 
-	level_send(c);
+    net_notify_all(buf);
+
+    if (player_change_level(c->player, l)) level_send(c);
 }
 
 void packet_recv_set_block(struct client_t *c, struct packet_t *p)
@@ -194,13 +192,13 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, false, "not logged in");
+	    net_close(c, "not logged in");
 	    return;
 	}
 
 	if (m > 1)
 	{
-		net_close(c, true, "invalid set block data");
+		net_close(c, "invalid set block data");
 		return;
 	}
 
@@ -220,13 +218,13 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, false, "not logged in");
+	    net_close(c, "not logged in");
 	    return;
 	}
 
 	if (player_id != 0xFF)
 	{
-		net_close(c, true, "invalid position data");
+		net_close(c, "invalid position data");
 		return;
 	}
 
@@ -240,7 +238,7 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, false, "not logged in");
+	    net_close(c, "not logged in");
 	    return;
 	}
 
@@ -345,7 +343,7 @@ struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_
 	return p;
 }
 
-struct packet_t *packet_send_teleport_player(uint8_t player_id, struct position_t *pos)
+struct packet_t *packet_send_teleport_player(uint8_t player_id, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(10);
 
@@ -360,7 +358,7 @@ struct packet_t *packet_send_teleport_player(uint8_t player_id, struct position_
 	return p;
 }
 
-struct packet_t *packet_send_full_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz, struct position_t *pos)
+struct packet_t *packet_send_full_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(7);
 
@@ -388,7 +386,7 @@ struct packet_t *packet_send_position_update(uint8_t player_id, int8_t dx, int8_
 	return p;
 }
 
-struct packet_t *packet_send_orientation_update(uint8_t player_id, struct position_t *pos)
+struct packet_t *packet_send_orientation_update(uint8_t player_id, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(4);
 

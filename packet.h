@@ -31,10 +31,10 @@ struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *dat
 struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z);
 struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t type);
 struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, const struct position_t *pos);
-struct packet_t *packet_send_teleport_player(uint8_t player_id, struct position_t *pos);
-struct packet_t *packet_send_full_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz, struct position_t *pos);
+struct packet_t *packet_send_teleport_player(uint8_t player_id, const struct position_t *pos);
+struct packet_t *packet_send_full_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz, const struct position_t *pos);
 struct packet_t *packet_send_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz);
-struct packet_t *packet_send_orientation_update(uint8_t player_id, struct position_t *pos);
+struct packet_t *packet_send_orientation_update(uint8_t player_id, const struct position_t *pos);
 struct packet_t *packet_send_despawn_player(uint8_t player_id);
 struct packet_t *packet_send_message(uint8_t player_id, const char *message);
 struct packet_t *packet_send_disconnect_player(const char *reason);

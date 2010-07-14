@@ -27,14 +27,14 @@ static inline T * X ## _list_add(struct X ## _list_t *list, T item) \
 { \
 	if (list->used >= list->size) \
 	{ \
-		list->size += sizeof *list->items * 64U; \
-		list->items = realloc(list->items, list->size); \
+		list->size += 64U; \
+		list->items = realloc(list->items, sizeof *list->items * list->size); \
 	} \
 	list->items[list->used] = item; \
 	return &list->items[list->used++]; \
 } \
 \
-static inline void X ## _list_del(struct X ## _list_t *list, T item) \
+static inline void X ## _list_del_item(struct X ## _list_t *list, T item) \
 { \
 	size_t i; \
 	for (i = 0; i < list->used; i++) \
@@ -44,6 +44,11 @@ static inline void X ## _list_del(struct X ## _list_t *list, T item) \
 			return; \
 		} \
 	} \
+} \
+\
+static inline void X ## _list_del_index(struct X ## _list_t *list, size_t index) \
+{ \
+	list->items[index] = list->items[--list->used]; \
 }
 
 #endif /* LIST_H */

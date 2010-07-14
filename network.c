@@ -8,10 +8,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include "client.h"
+#include "level.h"
 #include "packet.h"
 #include "player.h"
 #include "irc.h"
 #include "heartbeat.h"
+#include "network.h"
 
 bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
@@ -89,25 +91,30 @@ void net_init()
     heartbeat_start();
 }
 
-void net_close(struct client_t *c, bool remove_player, const char *reason)
+void net_close(struct client_t *c, const char *reason)
 {
+    char buf[64];
+
+    close(c->sock);
+
+    /* Mark client for deletion */
+	c->close = true;
+
 	if (c->player == NULL)
 	{
 		fprintf(stderr, "Closing connection: %s\n", reason);
 	}
 	else
 	{
+	    client_send_despawn(c, false);
+	    c->player->level->clients[c->player->levelid] = NULL;
+
+	    snprintf(buf, sizeof buf, "%s disconnected (%s)", c->player->username, reason);
+	    net_notify_all(buf);
+
 		fprintf(stderr, "Closing connection %s (%d): %s\n", c->player->username, c->player->globalid, reason);
+		player_del(c->player);
 	}
-
-	close(c->sock);
-
-	/* Mark client for deletion */
-	c->close = true;
-
-	client_send_despawn(c, false);
-
-	if (remove_player) player_del(c->player);
 }
 
 static void net_packetsend(struct client_t *c)
@@ -166,7 +173,7 @@ static void net_packetrecv(struct client_t *c)
 		}
 		else if (res == 0)
 		{
-			net_close(c, true, "read of 0 bytes");
+			net_close(c, "read of 0 bytes");
 			return;
 		}
 
@@ -177,7 +184,7 @@ static void net_packetrecv(struct client_t *c)
 			{
 			    char buf[64];
 			    snprintf(buf, sizeof buf, "unrecognised packet type 0x%02X!\n", p->buffer[0]);
-				net_close(c, true, buf);
+				net_close(c, buf);
 				return;
 			}
 		}
@@ -199,9 +206,10 @@ void net_run()
 
 	for (i = 0; i < clients; i++)
 	{
-		if (s_clients.items[i].close)
+		if (s_clients.items[i]->close)
 		{
-			client_list_del(&s_clients, s_clients.items[i]);
+		    free(s_clients.items[i]);
+			client_list_del_index(&s_clients, i);
 			/* Restart :/ */
 			i = -1;
 			clients = s_clients.used;
@@ -229,12 +237,12 @@ void net_run()
 	/* Add clients */
 	for (i = 0; i < clients; i++)
 	{
-		FD_SET(s_clients.items[i].sock, &read_fd);
-		FD_SET(s_clients.items[i].sock, &write_fd);
+		FD_SET(s_clients.items[i]->sock, &read_fd);
+		FD_SET(s_clients.items[i]->sock, &write_fd);
 	}
 
 	tv.tv_sec = 0;
-	tv.tv_usec = 0;
+	tv.tv_usec = 1000;
 
 	n = select(FD_SETSIZE, &read_fd, &write_fd, NULL, &tv);
 	if (n == -1)
@@ -247,7 +255,7 @@ void net_run()
 	{
 		while (1)
 		{
-		    struct client_t c;
+		    struct client_t *c;
 		    struct sockaddr_storage sin;
 		    socklen_t sin_len = sizeof sin;
 
@@ -255,9 +263,9 @@ void net_run()
 			int fd = accept(s_listenfd, (struct sockaddr *)&sin, &sin_len);
 			if (fd == -1) break;
 
-			memset(&c, 0, sizeof c);
-			c.sock = fd;
-			c.sin  = sin;
+            c = calloc(1, sizeof *c);
+			c->sock = fd;
+			c->sin  = sin;
 			client_list_add(&s_clients, c);
 		}
 	}
@@ -286,7 +294,7 @@ void net_run()
 
 	for (i = 0; i < clients; i++)
 	{
-		struct client_t *c = &s_clients.items[i];
+		struct client_t *c = s_clients.items[i];
 		if (FD_ISSET(c->sock, &write_fd))
 		{
 		    net_packetsend(c);
@@ -298,12 +306,12 @@ void net_run()
 	}
 }
 
-void net_notify_all(const char *message, bool thread)
+void net_notify_all(const char *message)
 {
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
-        struct client_t *c = &s_clients.items[i];
+        struct client_t *c = s_clients.items[i];
         client_add_packet(c, packet_send_message(0xFF, message));
     }
 }
