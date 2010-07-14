@@ -3,6 +3,9 @@
 #include <string.h>
 #include <limits.h>
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "client.h"
 #include "level.h"
 #include "packet.h"
@@ -481,19 +484,27 @@ CMD(undo)
 
         for (i = 0; i < n; i++)
         {
-            size_t len = strlen(namelist[i]->d_name + strlen(s_pattern)) + (i < n - 1 ? 2 : 0);
-            if (len >= sizeof buf - (bufp - buf))
-            {
-                client_notify(c, buf);
-                bufp = buf;
-            }
+        	struct stat statbuf;
+        	if (stat(namelist[i]->d_name, &statbuf) == 0)
+			{
+				int undo_actions = statbuf.st_size / (sizeof (unsigned) + sizeof (struct block_t));
+				char buf2[64];
+				snprintf(buf2, sizeof buf2, "%s (%d)", namelist[i]->d_name + strlen(s_pattern), undo_actions);
 
-            strcpy(bufp, namelist[i]->d_name + strlen(s_pattern));
-            bufp += len;
+	            size_t len = strlen(buf2) + (i < n - 1 ? 2 : 0);
+	            if (len >= sizeof buf - (bufp - buf))
+	            {
+	                client_notify(c, buf);
+	                bufp = buf;
+	            }
+
+	            strcpy(bufp, buf2);
+	            bufp += len;
+
+	            if (i < n - 1) strcpy(bufp - 2, ", ");
+	        }
 
             free(namelist[i]);
-
-            if (i < n - 1) strcpy(bufp - 2, ", ");
         }
 
         client_notify(c, buf);
