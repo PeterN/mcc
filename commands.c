@@ -392,6 +392,12 @@ CMD(setspawn)
     c->player->level->changed = true;
 }
 
+CMD(spawn)
+{
+	c->player->pos = c->player->level->spawn;
+	client_add_packet(c, packet_send_teleport_player(0xFF, &c->player->pos));
+}
+
 CMD(solid)
 {
     player_toggle_mode(c->player, MODE_PLACE_SOLID);
@@ -508,7 +514,7 @@ CMD(water)
 
 struct command_t s_commands[] = {
     { "ban", RANK_OP, &cmd_ban },
-    { "commands", RANK_GUEST, &cmd_commands },
+    { "commands", RANK_BANNED, &cmd_commands },
     { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid },
     { "z", RANK_ADV_BUILDER, &cmd_cuboid },
     { "exit", RANK_ADMIN, &cmd_exit },
@@ -527,6 +533,7 @@ struct command_t s_commands[] = {
     { "rules", RANK_BANNED, &cmd_rules },
     { "setrank", RANK_OP, &cmd_setrank },
     { "setspawn", RANK_OP, &cmd_setspawn },
+    { "spawn", RANK_GUEST, &cmd_spawn },
     { "solid", RANK_OP, &cmd_solid },
     { "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
     { "tp", RANK_BUILDER, &cmd_tp },
