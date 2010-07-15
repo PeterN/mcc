@@ -2,6 +2,7 @@
 #define MCC_H
 
 #include <stdbool.h>
+#include <time.h>
 
 struct server_t
 {
@@ -11,6 +12,9 @@ struct server_t
     int players;
     bool public;
     bool exit;
+    time_t start_time;
+    clock_t cpu_start;
+    double cpu_time;
 
     struct
     {

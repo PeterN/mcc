@@ -106,6 +106,19 @@ void net_close(struct client_t *c, const char *reason)
 	}
 	else
 	{
+		int i;
+		for (i = 0; i < s_clients.used; i++)
+		{
+			struct client_t *client = s_clients.items[i];
+			if (client->player != NULL && client->player->following == c->player)
+			{
+				snprintf(buf, sizeof buf, "Stopped following %s", c->player->username);
+				client_notify(client, buf);
+
+				client->player->following = NULL;
+			}
+		}
+
 	    client_send_despawn(c, false);
 	    c->player->level->clients[c->player->levelid] = NULL;
 

@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <time.h>
 #include "client.h"
 #include "level.h"
 #include "packet.h"
@@ -47,6 +49,11 @@ struct command_t
 struct command_t s_commands[];
 
 #define CMD(x) static void cmd_ ## x (struct client_t *c, int params, const char **param)
+
+CMD(afk)
+{
+
+}
 
 CMD(ban)
 {
@@ -142,6 +149,65 @@ CMD(fixed)
     client_notify(c, buf);
 }
 
+CMD(follow)
+{
+	char buf[64];
+
+	if (params > 2)
+	{
+		client_notify(c, "follow [<user>]");
+		return;
+	}
+
+	if (params == 1)
+	{
+		if (c->player->following == NULL)
+		{
+			client_notify(c, "Not following anyone");
+			return;
+		}
+
+		snprintf(buf, sizeof buf, "Stopped following %s", c->player->following->username);
+		client_notify(c, buf);
+
+	    client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->username, &c->player->following->pos));
+
+		c->player->following = NULL;
+		return;
+	}
+
+	struct player_t *p = player_get_by_name(param[1]);
+    if (p == NULL)
+    {
+        snprintf(buf, sizeof buf, "%s is offline", param[1]);
+        client_notify(c, buf);
+        return;
+    }
+    if (p->level != c->player->level)
+    {
+        snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+        client_notify(c, buf);
+        return;
+    }
+
+    if (!c->hidden)
+    {
+    	c->hidden = true;
+        client_send_despawn(c, true);
+    }
+
+	/* Despawn followed player to prevent following player jitter */
+    client_add_packet(c, packet_send_despawn_player(p->levelid));
+
+    snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
+    client_notify(c, buf);
+
+    snprintf(buf, sizeof buf, "Now following %s", p->username);
+    client_notify(c, buf);
+
+    c->player->following = p;
+}
+
 CMD(goto)
 {
     if (params != 2)
@@ -191,7 +257,13 @@ CMD(home)
     if (!level_get_by_name(name, &l))
     {
         l = malloc(sizeof *l);
-        level_init(l, 32, 32, 32, name);
+        if (!level_init(l, 32, 32, 32, name))
+        {
+        	fprintf(stderr, "Unable to create level\n");
+        	free(l);
+        	return;
+        }
+
         level_gen(l, 0);
         level_list_add(&s_levels, l);
     }
@@ -227,18 +299,18 @@ CMD(kick)
     }
 
     char buf[64];
-    snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
 
-    int i;
-    for (i = 0; i < s_clients.used; i++)
+
+    struct player_t *p = player_get_by_name(param[1]);
+    if (p == NULL)
     {
-        struct client_t *c = s_clients.items[i];
-        if (c->player == NULL) continue;
-        if (strcasecmp(c->player->username, param[1]) == 0)
-        {
-            net_close(c, buf);
-        }
+        snprintf(buf, sizeof buf, "%s is offline", param[1]);
+        client_notify(c, buf);
+        return;
     }
+
+    snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
+    net_close(p->client, buf);
 }
 
 CMD(lava)
@@ -322,11 +394,17 @@ CMD(newlvl)
     if (!level_get_by_name(name, NULL))
     {
         struct level_t *l = malloc(sizeof *l);
-        level_init(l, x, y, z, name);
-        level_gen(l, t);
-        level_list_add(&s_levels, l);
+        if (!level_init(l, x, y, z, name))
+        {
+        	client_notify(c, "Unable to create level. Too big?");
+        	free(l);
+        	return;
+        }
 
         client_notify(c, "Starting level creation");
+
+        level_gen(l, t);
+        level_list_add(&s_levels, l);
     }
     else
     {
@@ -334,6 +412,11 @@ CMD(newlvl)
         snprintf(buf, sizeof buf, "Level '%s' already exists", name);
         client_notify(c, buf);
     }
+}
+
+CMD(opglass)
+{
+	client_notify(c, "OpGlass not supported. Use /fixed with glass.");
 }
 
 CMD(rules)
@@ -385,7 +468,7 @@ CMD(setrank)
     }
 
     char buf[64];
-    snprintf(buf, sizeof buf, "%s rank set to %s", param[1], param[2]);
+    snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), p->username);
     net_notify_all(buf);
 }
 
@@ -393,6 +476,8 @@ CMD(setspawn)
 {
     c->player->level->spawn = c->player->pos;
     c->player->level->changed = true;
+
+    client_notify(c, "Spawn set to current position");
 }
 
 CMD(spawn)
@@ -410,6 +495,39 @@ CMD(solid)
     client_notify(c, buf);
 }
 
+CMD(summon)
+{
+	char buf[64];
+
+	if (params != 2)
+	{
+		client_notify(c, "summon <user>");
+		return;
+	}
+
+	struct player_t *p = player_get_by_name(param[1]);
+    if (p == NULL)
+    {
+        snprintf(buf, sizeof buf, "%s is offline", param[1]);
+        client_notify(c, buf);
+        return;
+    }
+    if (p->level != c->player->level)
+    {
+        snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+        client_notify(c, buf);
+        return;
+    }
+
+	p->pos = c->player->pos;
+	client_add_packet(p->client, packet_send_teleport_player(0xFF, &p->pos));
+
+	snprintf(buf, sizeof buf, "You were summoned by %s", c->player->username);
+	client_notify(p->client, buf);
+	snprintf(buf, sizeof buf, "%s summoned", p->username);
+	client_notify(c, buf);
+}
+
 static char s_pattern[256];
 static int undo_filename_filter(const struct dirent *d)
 {
@@ -425,6 +543,19 @@ CMD(teleporter)
     }
 
     level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3]);
+}
+
+CMD(time)
+{
+	struct timeval tv;
+	time_t curtime;
+
+	gettimeofday(&tv, NULL);
+	curtime = tv.tv_sec;
+
+	char buf[64];
+	strftime(buf, sizeof buf, "Server time is %H:%M:%S", localtime(&curtime));
+	client_notify(c, buf);
 }
 
 CMD(tp)
@@ -514,6 +645,40 @@ CMD(undo)
     player_undo(c, param[1], param[2], param[3]);
 }
 
+CMD(uptime)
+{
+	time_t uptime = time(NULL) - g_server.start_time;
+	char buf[64], *bufp = buf;
+
+	int seconds = uptime % 60;
+	int minutes = uptime / 60 % 60;
+	int hours   = uptime / 3600 % 24;
+	int days    = uptime / 86400;
+
+	bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "Server uptime is ");
+	if (days > 0)
+	{
+		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d days ", days);
+	}
+	if (hours > 0)
+	{
+		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d hours ", hours);
+	}
+	if (minutes > 0)
+	{
+		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d minutes ", minutes);
+	}
+	if (seconds > 0)
+	{
+		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d seconds ", seconds);
+	}
+
+	client_notify(c, buf);
+
+	snprintf(buf, sizeof buf, "Server CPU usage is %f%%", g_server.cpu_time);
+	client_notify(c, buf);
+}
+
 CMD(water)
 {
     player_toggle_mode(c->player, MODE_PLACE_WATER);
@@ -523,13 +688,40 @@ CMD(water)
     client_notify(c, buf);
 }
 
+CMD(whois)
+{
+	char buf[64];
+
+	if (params != 2)
+	{
+		client_notify(c, "whois <user>");
+		return;
+	}
+
+	struct player_t *p = player_get_by_name(param[1]);
+	if (p == NULL)
+	{
+		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+        client_notify(c, buf);
+        return;
+	}
+
+	//if (c->rank >= RANK_OP)
+	//{
+		//snprintf(buf, sizeof buf, "%s is on '%s'"
+	//}
+	//client_notify(c, buf);
+}
+
 struct command_t s_commands[] = {
+	{ "afk", RANK_GUEST, &cmd_afk },
     { "ban", RANK_OP, &cmd_ban },
     { "commands", RANK_BANNED, &cmd_commands },
     { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid },
     { "z", RANK_ADV_BUILDER, &cmd_cuboid },
     { "exit", RANK_ADMIN, &cmd_exit },
     { "fixed", RANK_OP, &cmd_fixed },
+	{ "follow", RANK_OP, &cmd_follow },
     { "goto", RANK_GUEST, &cmd_goto },
     { "hide", RANK_OP, &cmd_hide },
     { "home", RANK_GUEST, &cmd_home },
@@ -541,15 +733,20 @@ struct command_t s_commands[] = {
     { "mapinfo", RANK_GUEST, &cmd_mapinfo },
     { "motd", RANK_BANNED, &cmd_motd },
     { "newlvl", RANK_ADMIN, &cmd_newlvl },
+	{ "opglass", RANK_OP, &cmd_opglass },
     { "rules", RANK_BANNED, &cmd_rules },
     { "setrank", RANK_OP, &cmd_setrank },
     { "setspawn", RANK_OP, &cmd_setspawn },
     { "spawn", RANK_GUEST, &cmd_spawn },
     { "solid", RANK_OP, &cmd_solid },
+    { "summon", RANK_OP, &cmd_summon },
     { "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
+    { "time", RANK_GUEST, &cmd_time },
     { "tp", RANK_BUILDER, &cmd_tp },
     { "undo", RANK_OP, &cmd_undo },
+    { "uptime", RANK_GUEST, &cmd_uptime },
     { "water", RANK_BUILDER, &cmd_water },
+    { "whois", RANK_GUEST, &cmd_whois },
     { NULL, -1, NULL },
 };
 

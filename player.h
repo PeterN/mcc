@@ -50,6 +50,7 @@ struct player_t
 
     struct level_t *level, *new_level;
     struct client_t *client;
+    struct player_t *following;
 
     unsigned cuboid_start;
     enum blocktype_t cuboid_type;
@@ -74,6 +75,7 @@ void player_undo_log(struct player_t *player, unsigned index);
 void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp);
 
 enum rank_t rank_get_by_name(const char *rank);
+const char *rank_get_name(enum rank_t rank);
 
 static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 {

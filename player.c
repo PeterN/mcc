@@ -91,6 +91,8 @@ void player_move(struct player_t *player, struct position_t *pos)
 
 void player_send_position(struct player_t *player)
 {
+	if (player->client->hidden) return;
+
     int changed = 0;
     int dx = 0, dy = 0, dz = 0;
     if (player->pos.x != player->oldpos.x || player->pos.y != player->oldpos.y || player->pos.z != player->oldpos.z)
@@ -151,7 +153,15 @@ void player_send_positions()
     int i;
     for (i = 0; i < s_players.used; i++)
     {
-        player_send_position(s_players.items[i]);
+    	struct player_t *player = s_players.items[i];
+    	if (player->following != NULL)
+    	{
+    		player->pos = player->following->pos;
+    		client_add_packet(player->client, packet_send_teleport_player(0xFF, &player->pos));
+    		continue;
+    	}
+
+        player_send_position(player);
     }
 }
 
@@ -250,4 +260,18 @@ enum rank_t rank_get_by_name(const char *rank)
     if (!strcasecmp(rank, "op")) return RANK_OP;
     if (!strcasecmp(rank, "admin")) return RANK_ADMIN;
     return -1;
+}
+
+static const char *s_ranks[] = {
+	"banned",
+	"guest",
+	"builder",
+	"advbuilder",
+	"op",
+	"admin",
+};
+
+const char *rank_get_name(enum rank_t rank)
+{
+	return s_ranks[rank];
 }

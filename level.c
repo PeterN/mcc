@@ -22,7 +22,7 @@ bool level_t_compare(struct level_t **a, struct level_t **b)
     return *a == *b;
 }
 
-void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name)
+bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name)
 {
     memset(level, 0, sizeof *level);
 
@@ -32,8 +32,11 @@ void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const
 	level->z = z;
 
 	level->blocks = calloc(x * y * z, sizeof *level->blocks);
+	if (level->blocks == NULL) return false;
 
 	physics_list_init(&level->physics);
+
+	return true;
 }
 
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index)
@@ -133,7 +136,7 @@ bool level_send(struct client_t *c)
         net_notify_all(buf);
 
         /* Despawn this user for all users */
-        client_send_despawn(c->player->client, false);
+        if (!c->hidden) client_send_despawn(c->player->client, false);
         c->player->level->clients[c->player->levelid] = NULL;
 
         /* Despawn users for this user */
@@ -637,7 +640,12 @@ bool level_load(const char *name, struct level_t **level)
     gzread(gz, &x, sizeof x);
     gzread(gz, &y, sizeof y);
     gzread(gz, &z, sizeof z);
-    level_init(l, x, y, z, name);
+    if (!level_init(l, x, y, z, name))
+    {
+    	fprintf(stderr, "Unable to load level\n");
+    	free(l);
+    	return false;
+    }
 
     gzread(gz, &l->spawn, sizeof l->spawn);
 

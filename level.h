@@ -59,7 +59,7 @@ static inline unsigned level_get_index(struct level_t *level, unsigned x, unsign
 	return x + (z + y * level->z) * level->x;
 }
 
-void level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name);
+bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 bool level_send(struct client_t *client);
 void level_gen(struct level_t *level, int type);
