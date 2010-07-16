@@ -97,7 +97,7 @@ void client_process(struct client_t *c, char *message)
                 if (l != strlen(message))
                 {
                     message[l] = '\0';
-                    snprintf(buf, sizeof buf, "(%s" TAG_WHITE ": %s)", c->player->colourusername, message + l + 1);
+                    snprintf(buf, sizeof buf, "(%s:" TAG_WHITE " %s)", c->player->colourusername, message + l + 1);
                     if (!client_notify_by_username(message + 1, buf))
                     {
                         client_notify(c, "User is offline");
@@ -115,11 +115,11 @@ void client_process(struct client_t *c, char *message)
                 break;
 
 	        case '\'':
-                snprintf(buf, sizeof buf, "%s" TAG_WHITE ": %s", c->player->colourusername, message + 1);
+                snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message + 1);
                 break;
 
 	        default:
-                snprintf(buf, sizeof buf, "%s" TAG_WHITE ": %s", c->player->colourusername, message);
+                snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message);
                 break;
 	    }
 

@@ -58,7 +58,7 @@ enum blocktype_t
 	BOOKCASE,
 	STONEVINE,
 	OBSIDIAN,
-	ROCK_END,
+	BLOCK_END,
 
 	/*OP_GLASS = 100,
 	OPSIDIAN,
@@ -115,5 +115,6 @@ static inline enum blocktype_t block_get_blocktype(const struct block_t *block)
 
 const char *blocktype_get_name(enum blocktype_t type);
 enum blocktype_t blocktype_get_by_name(const char *name);
+struct block_t block_convert_from_mcs(uint8_t type);
 
 #endif /* BLOCK_H */

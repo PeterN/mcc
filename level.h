@@ -45,6 +45,8 @@ struct level_t
     int type;
     bool changed;
 	pthread_t thread;
+	bool thread_valid;
+	bool convert;
 	pthread_mutex_t mutex;
 };
 

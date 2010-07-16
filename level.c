@@ -627,12 +627,12 @@ void level_gen(struct level_t *level, int type)
     level->type = type;
 
     pthread_mutex_lock(&level->mutex);
-    if (level->thread != NULL)
+    if (level->thread_valid)
     {
         pthread_join(level->thread, NULL);
-        level->thread = NULL;
     }
     int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
+    level->thread_valid = (r == 0);
     if (r != 0)
     {
         LOG("Unable to create thread for level generation, server may pause\n");
@@ -656,18 +656,20 @@ void level_unload(struct level_t *level)
 
 static void *level_load_thread_abort(struct level_t *level)
 {
-    LOG("Unable to load level %s\n", level->name);
+    LOG("Unable to load level %s", level->name);
 
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
         struct client_t *c = s_clients.items[i];
+        printf("client %d: player %p\n", i, c->player);
         if (c->player == NULL) continue;
+        printf("level %p, new_level %p\n", level, c->player->new_level);
         if (c->player->new_level == level)
         {
             c->player->new_level = c->player->level;
             c->waiting_for_level = false;
-            LOG("Aborted level change for %s\n", c->player->username);
+            LOG("Aborted level change for %s", c->player->username);
         }
     }
 
@@ -679,28 +681,82 @@ static void *level_load_thread_abort(struct level_t *level)
 static void *level_load_thread(void *arg)
 {
     struct level_t *l = arg;
-    unsigned x, y, z;
     gzFile gz;
 
     char name[64];
     strncpy(name, l->name, sizeof name);
 
     char filename[64];
-    snprintf(filename, sizeof filename, "levels/%s.mcl", name);
+    snprintf(filename, sizeof filename, "levels/%s.%s", name, l->convert ? "lvl" : "mcl");
     lcase(filename);
 
     gz = gzopen(filename, "rb");
     if (gz == NULL) return level_load_thread_abort(l);
 
-    if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l);
-    if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l);
-    if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l);
-    if (!level_init(l, x, y, z, name)) return level_load_thread_abort(l);
+    if (l->convert)
+    {
+   	    int16_t x, y, z;
+    	int16_t version;
 
-    if (gzread(gz, &l->spawn, sizeof l->spawn) != sizeof l->spawn) return level_load_thread_abort(l);
+		if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l);
+		if (version == 1874)
+		{
+			if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l);
+		}
+		else
+		{
+			x = version;
+		}
+		if (gzread(gz, &z, sizeof z) != sizeof y) return level_load_thread_abort(l);
+		if (gzread(gz, &y, sizeof y) != sizeof z) return level_load_thread_abort(l);
+		if (!level_init(l, x, y, z, name)) return level_load_thread_abort(l);
+		if (gzread(gz, &l->spawn.x, sizeof l->spawn.x) != sizeof l->spawn.x) return level_load_thread_abort(l);
+		if (gzread(gz, &l->spawn.z, sizeof l->spawn.z) != sizeof l->spawn.z) return level_load_thread_abort(l);
+		if (gzread(gz, &l->spawn.y, sizeof l->spawn.y) != sizeof l->spawn.y) return level_load_thread_abort(l);
+		if (gzread(gz, &l->spawn.h, sizeof l->spawn.h) != sizeof l->spawn.h) return level_load_thread_abort(l);
+		if (gzread(gz, &l->spawn.p, sizeof l->spawn.p) != sizeof l->spawn.p) return level_load_thread_abort(l);
 
-    size_t s = sizeof *l->blocks * x * y *z;
-    if (gzread(gz, l->blocks, s) != s) return level_load_thread_abort(l);
+		l->spawn.x *= 32;
+		l->spawn.y *= 32;
+		l->spawn.z *= 32;
+
+		if (version == 1874)
+		{
+			uint8_t pervisit, perbuild;
+			if (gzread(gz, &pervisit, sizeof pervisit) != sizeof pervisit) return level_load_thread_abort(l);
+			if (gzread(gz, &perbuild, sizeof perbuild) != sizeof perbuild) return level_load_thread_abort(l);
+		}
+
+		size_t s = x * y * z;
+		uint8_t *blocks = malloc(s);
+		if (blocks == NULL) return level_load_thread_abort(l);
+		if (gzread(gz, blocks, s) != s)
+		{
+			free(blocks);
+			return level_load_thread_abort(l);
+		}
+
+		int i;
+		for (i = 0; i < s; i++)
+		{
+			l->blocks[i] = block_convert_from_mcs(blocks[i]);
+		}
+
+		free(blocks);
+    }
+    else
+	{
+		unsigned x, y, z;
+		if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l);
+		if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l);
+		if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l);
+		if (!level_init(l, x, y, z, name)) return level_load_thread_abort(l);
+
+		if (gzread(gz, &l->spawn, sizeof l->spawn) != sizeof l->spawn) return level_load_thread_abort(l);
+
+		size_t s = sizeof *l->blocks * x * y *z;
+		if (gzread(gz, l->blocks, s) != s) return level_load_thread_abort(l);
+	}
 
     gzclose(gz);
 
@@ -719,12 +775,22 @@ static void *level_load_thread(void *arg)
 
 bool level_load(const char *name, struct level_t **levelp)
 {
+	bool convert = false;
     char filename[64];
     snprintf(filename, sizeof filename, "levels/%s.mcl", name);
     lcase(filename);
 
     FILE *f = fopen(filename, "rb");
-    if (f == NULL) return false;
+    if (f == NULL)
+    {
+    	snprintf(filename, sizeof filename, "levels/%s.lvl", name);
+    	lcase(filename);
+
+    	f = fopen(filename, "rb");
+    	if (f == NULL) return false;
+
+    	convert = true;
+    }
     fclose(f);
 
     struct level_t *level = malloc(sizeof *level);
@@ -734,14 +800,15 @@ bool level_load(const char *name, struct level_t **levelp)
     if (levelp != NULL) *levelp = level;
 
     strncpy(level->name, name, sizeof level->name);
+    level->convert = convert;
 
     pthread_mutex_lock(&level->mutex);
-    if (level->thread != NULL)
+    if (level->thread_valid)
     {
         pthread_join(level->thread, NULL);
-        level->thread = NULL;
     }
     int r = pthread_create(&level->thread, NULL, &level_load_thread, level);
+    level->thread_valid = (r == 0);
     if (r != 0)
     {
         LOG("Unable to create thread for level loading, server may pause\n");
@@ -789,12 +856,12 @@ void *level_save_thread(void *arg)
 void level_save(struct level_t *l)
 {
     if (pthread_mutex_trylock(&l->mutex) != 0) return;
-    if (l->thread != NULL)
+    if (l->thread_valid)
     {
         pthread_join(l->thread, NULL);
-        l->thread = NULL;
     }
     int r = pthread_create(&l->thread, NULL, &level_save_thread, l);
+    l->thread_valid = (r == 0);
     if (r != 0)
     {
         LOG("Unable to create thread for level saving, server may pause\n");

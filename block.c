@@ -221,3 +221,29 @@ enum blocktype_t blocktype_get_by_name(const char *name)
 
 	return -1;
 }
+
+struct block_t block_convert_from_mcs(uint8_t type)
+{
+	static struct block_t b = { false, false, 0, false, 0, 0 };
+
+	b.fixed = false;
+	switch (type)
+	{
+		case 100: /* OP_GLASS */ b.type = GLASS; b.fixed = true; break;
+		case 101: /* OPSIDIAN */ b.type = OBSIDIAN; b.fixed = true; break;
+		case 102: /* OP_BRICK */ b.type = BRICK; b.fixed = true; break;
+		case 103: /* OP_STONE */ b.type = ROCK; b.fixed = true; break;
+		case 104: /* OP_COBBLESTONE */ b.type = STONE; b.fixed = true; break;
+		case 105: /* OP_AIR */ b.type = AIR; b.fixed = true; break;
+		case 106: /* OP_WATER */ b.type = WATER; b.fixed = true; break;
+
+		case 110: /* WOOD_FLOAT */ b.type = WOOD; break;
+		case 111: /* DOOR */ b.type = WOOD; break;
+		case 112: /* LAVA_FAST */ b.type = LAVA; break;
+		case 113: /* DOOR2 */ b.type = OBSIDIAN; break;
+		case 114: /* DOOR3 */ b.type = GLASS; break;
+
+		default: b.type = (type < BLOCK_END) ? type : ROCK; break;
+	}
+	return b;
+}

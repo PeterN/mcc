@@ -112,18 +112,17 @@ int main(int argc, char **argv)
         usleep(1000);
 	}
 
-	for (i = 0; i < s_levels.used; i++)
-	{
-	    struct level_t *l = s_levels.items[i];
-	    pthread_join(l->thread, NULL);
-	}
-
 	level_save_all();
 
+	/* Wait for threads to finish */
 	for (i = 0; i < s_levels.used; i++)
 	{
 	    struct level_t *l = s_levels.items[i];
-	    pthread_join(l->thread, NULL);
+	    if (l != NULL && l->thread_valid)
+	    {
+			pthread_join(l->thread, NULL);
+			l->thread_valid = false;
+	    }
 	}
 
 	playerdb_close();
