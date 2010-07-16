@@ -16,6 +16,8 @@ struct server_t
     clock_t cpu_start;
     double cpu_time;
 
+    FILE *logfile;
+
     struct
     {
         char *hostname;
@@ -27,5 +29,7 @@ struct server_t
 };
 
 extern struct server_t g_server;
+
+#define LOG(args...) fprintf(g_server.logfile, args); fflush(g_server.logfile)
 
 #endif /* MCC_H */

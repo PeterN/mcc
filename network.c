@@ -14,6 +14,7 @@
 #include "irc.h"
 #include "heartbeat.h"
 #include "network.h"
+#include "mcc.h"
 
 bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
@@ -102,7 +103,7 @@ void net_close(struct client_t *c, const char *reason)
 
 	if (c->player == NULL)
 	{
-		fprintf(stderr, "Closing connection: %s\n", reason);
+		LOG("Closing connection: %s\n", reason);
 	}
 	else
 	{
@@ -122,10 +123,10 @@ void net_close(struct client_t *c, const char *reason)
 	    client_send_despawn(c, false);
 	    c->player->level->clients[c->player->levelid] = NULL;
 
-	    snprintf(buf, sizeof buf, "%s disconnected (%s)", c->player->username, reason);
+	    snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected (%s)", c->player->colourusername, reason);
 	    net_notify_all(buf);
 
-		fprintf(stderr, "Closing connection %s (%d): %s\n", c->player->username, c->player->globalid, reason);
+		LOG("Closing connection %s (%d): %s\n", c->player->username, c->player->globalid, reason);
 		player_del(c->player);
 	}
 }
@@ -325,6 +326,8 @@ void net_notify_all(const char *message)
     for (i = 0; i < s_clients.used; i++)
     {
         struct client_t *c = s_clients.items[i];
-        client_add_packet(c, packet_send_message(0xFF, message));
+        client_add_packet(c, packet_send_message(0, message));
     }
+
+    LOG("%s\n", message);
 }

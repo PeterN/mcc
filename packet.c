@@ -135,16 +135,17 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	    return;
 	}
 
+	const char *type;
+
     struct player_t *player = player_get_by_name(username);
     if (player == NULL)
     {
-        snprintf(buf, sizeof buf, "%s connected\n", username);
+        type = "connected";
     }
     else
     {
-        net_close(player->client, "reconnected");
-
-        snprintf(buf, sizeof buf, "%s reconnected\n", username);
+        type = "reconnected";
+        net_close(player->client, type);
     }
 
     player = player_add(username);
@@ -158,6 +159,8 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
         net_close(c, "cannot get global id");
         return;
     }
+
+    snprintf(buf, sizeof buf, TAG_GREEN "+ %s" TAG_YELLOW " %s", player->colourusername, type);
 
     c->player = player;
     player->client = c;

@@ -34,13 +34,15 @@ struct player_t *player_get_by_name(const char *username)
 
 struct player_t *player_add(const char *username)
 {
-    int globalid = playerdb_get_globalid(username);
+    int globalid = playerdb_get_globalid(username, true);
     if (globalid == -1) return NULL;
 
     struct player_t *p = malloc(sizeof *p);
     memset(p, 0, sizeof *p);
-    p->username = strdup(username);
+    p->colourusername = malloc(strlen(username + 3));
+    p->username = p->colourusername + 2;
     p->rank = playerdb_get_rank(username);
+    sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
     p->globalid = globalid;
 
     player_list_add(&s_players, p);
@@ -188,7 +190,7 @@ void player_undo_log(struct player_t *player, unsigned index)
         player->undo_log = fopen(player->undo_log_name, "wb");
         if (player->undo_log == NULL)
         {
-            fprintf(stderr, "Unable to open undo log %s", player->undo_log_name);
+            LOG("Unable to open undo log %s", player->undo_log_name);
             return;
         }
     }
@@ -274,4 +276,19 @@ static const char *s_ranks[] = {
 const char *rank_get_name(enum rank_t rank)
 {
 	return s_ranks[rank];
+}
+
+enum colour_t rank_get_colour(enum rank_t rank)
+{
+    switch (rank)
+    {
+        case RANK_BANNED: return COLOUR_SILVER;
+        case RANK_GUEST: return COLOUR_SILVER;
+        case RANK_BUILDER: return COLOUR_LIME;
+        case RANK_ADV_BUILDER: return COLOUR_GREEN;
+        case RANK_OP: return COLOUR_TEAL;
+        case RANK_ADMIN: return COLOUR_MAROON;
+    }
+
+    return COLOUR_YELLOW;
 }

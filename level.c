@@ -9,6 +9,7 @@
 #include "block.h"
 #include "client.h"
 #include "cuboid.h"
+#include "mcc.h"
 #include "packet.h"
 #include "player.h"
 #include "playerdb.h"
@@ -26,7 +27,11 @@ bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const
 {
     memset(level, 0, sizeof *level);
 
-    strncpy(level->name, name, sizeof level->name);
+    if (name != NULL)
+    {
+        strncpy(level->name, name, sizeof level->name);
+    }
+
 	level->x = x;
 	level->y = y;
 	level->z = z;
@@ -86,14 +91,15 @@ int level_get_new_id(struct level_t *level, struct client_t *c)
 
 bool level_send(struct client_t *c)
 {
-    struct level_t *level = c->player->new_level;
-    unsigned length = level->x * level->y * level->z;
+    struct level_t *oldlevel = c->player->level;
+    struct level_t *newlevel = c->player->new_level;
+    unsigned length = newlevel->x * newlevel->y * newlevel->z;
     int x;
     int i;
     z_stream z;
 
     /* If we can't lock the mutex then the thread is already locked */
-    if (pthread_mutex_trylock(&level->mutex))
+    if (pthread_mutex_trylock(&newlevel->mutex))
     {
         if (!c->waiting_for_level)
         {
@@ -102,16 +108,22 @@ bool level_send(struct client_t *c)
         }
         return false;
     }
-    pthread_mutex_unlock(&level->mutex);
+    pthread_mutex_unlock(&newlevel->mutex);
 
-    int levelid = level_get_new_id(level, c);
-    if (levelid == -1)
+    int levelid;
+    if (oldlevel == newlevel)
     {
-        client_notify(c, "Uh, level is full, sorry...");
-        return false;
+        levelid = c->player->levelid;
     }
-
-    printf("%s assigned id %d\n", c->player->username, levelid);
+    else
+    {
+        levelid = level_get_new_id(newlevel, c);
+        if (levelid == -1)
+        {
+            client_notify(c, "Uh, level is full, sorry...");
+            return false;
+        }
+    }
 
     memset(&z, 0, sizeof z);
     if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
@@ -126,30 +138,40 @@ bool level_send(struct client_t *c)
     /* Serialize map data */
     for (x = 0; x < length; x++)
     {
-        *bufp++ = block_get_blocktype(&level->blocks[x]);
+        if (c->player->filter > 0)
+        {
+            *bufp++ = (newlevel->blocks[x].owner == c->player->filter) ? block_get_blocktype(&newlevel->blocks[x]) : AIR;
+        }
+        else
+        {
+            *bufp++ = block_get_blocktype(&newlevel->blocks[x]);
+        }
     }
 
-    if (c->player->level != NULL)
+    if (oldlevel != NULL)
     {
-        char buf[64];
-        snprintf(buf, sizeof buf, "%s moved to '%s'", c->player->username, c->player->new_level->name);
-        net_notify_all(buf);
+        if (oldlevel != newlevel)
+        {
+            char buf[64];
+            snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
+            net_notify_all(buf);
 
-        /* Despawn this user for all users */
-        if (!c->hidden) client_send_despawn(c->player->client, false);
-        c->player->level->clients[c->player->levelid] = NULL;
+            /* Despawn this user for all users */
+            if (!c->hidden) client_send_despawn(c->player->client, false);
+            oldlevel->clients[c->player->levelid] = NULL;
+        }
 
         /* Despawn users for this user */
         for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
         {
-            if (c->player->level->clients[i] != NULL && !c->player->level->clients[i]->hidden)
+            if (oldlevel->clients[i] != NULL && !oldlevel->clients[i]->hidden)
             {
                 client_add_packet(c, packet_send_despawn_player(i));
             }
         }
     }
 
-    c->player->level = level;
+    c->player->level = newlevel;
     c->player->levelid = levelid;
 
     client_add_packet(c, packet_send_level_initialize());
@@ -185,22 +207,28 @@ bool level_send(struct client_t *c)
 
     deflateEnd(&z);
 
-    client_add_packet(c, packet_send_level_finalize(level->x, level->y, level->z));
+    client_add_packet(c, packet_send_level_finalize(newlevel->x, newlevel->y, newlevel->z));
 
-    c->player->pos = level->spawn;
-    client_add_packet(c, packet_send_spawn_player(0xFF, c->player->username, &c->player->pos));
+    if (oldlevel != newlevel)
+    {
+        c->player->pos = newlevel->spawn;
+    }
+    client_add_packet(c, packet_send_spawn_player(0xFF, c->player->colourusername, &c->player->pos));
 
     for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
     {
-        if (level->clients[i] != NULL && level->clients[i] != c && !level->clients[i]->hidden)
+        if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden)
         {
-            client_add_packet(c, packet_send_spawn_player(i, level->clients[i]->player->username, &level->clients[i]->player->pos));
+            client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->colourusername, &newlevel->clients[i]->player->pos));
         }
     }
 
-    if (!c->hidden)
+    if (oldlevel != newlevel)
     {
-        client_send_spawn(c, false);
+        if (!c->hidden)
+        {
+            client_send_spawn(c, false);
+        }
     }
 
     c->waiting_for_level = false;
@@ -544,8 +572,6 @@ void *level_gen_thread(void *arg)
         }
     }
 
-    printf("Spawn point %d %d %d\n", level->spawn.x, level->spawn.y, level->spawn.z);
-
     level->spawn.h = 0;
     level->spawn.p = 0;
 
@@ -591,7 +617,7 @@ void *level_gen_thread(void *arg)
     snprintf(buf, sizeof buf, "Created level '%s'", level->name);
     net_notify_all(buf);
 
-    fputs(buf, stderr);
+    //LOG(buf);
 
     return NULL;
 }
@@ -601,10 +627,15 @@ void level_gen(struct level_t *level, int type)
     level->type = type;
 
     pthread_mutex_lock(&level->mutex);
+    if (level->thread != NULL)
+    {
+        pthread_join(level->thread, NULL);
+        level->thread = NULL;
+    }
     int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
     if (r != 0)
     {
-        fprintf(stderr, "Unable to create thread for level generation, server may pause\n");
+        LOG("Unable to create thread for level generation, server may pause\n");
         level_gen_thread(level);
     }
 }
@@ -615,7 +646,7 @@ void level_unload(struct level_t *level)
     snprintf(buf, sizeof buf, "Level '%s' unloaded", level->name);
     net_notify_all(buf);
 
-    fputs(buf, stderr);
+    //LOG(buf);
 
     physics_list_free(&level->physics);
 
@@ -623,56 +654,119 @@ void level_unload(struct level_t *level)
     free(level);
 }
 
-bool level_load(const char *name, struct level_t **level)
+static void *level_load_thread_abort(struct level_t *level)
 {
-    struct level_t *l;
+    LOG("Unable to load level %s\n", level->name);
+
+    int i;
+    for (i = 0; i < s_clients.used; i++)
+    {
+        struct client_t *c = s_clients.items[i];
+        if (c->player == NULL) continue;
+        if (c->player->new_level == level)
+        {
+            c->player->new_level = c->player->level;
+            c->waiting_for_level = false;
+            LOG("Aborted level change for %s\n", c->player->username);
+        }
+    }
+
+    pthread_mutex_unlock(&level->mutex);
+
+    return NULL;
+}
+
+static void *level_load_thread(void *arg)
+{
+    struct level_t *l = arg;
     unsigned x, y, z;
     gzFile gz;
+
+    char name[64];
+    strncpy(name, l->name, sizeof name);
 
     char filename[64];
     snprintf(filename, sizeof filename, "levels/%s.mcl", name);
     lcase(filename);
 
     gz = gzopen(filename, "rb");
-    if (gz == NULL) return false;
+    if (gz == NULL) return level_load_thread_abort(l);
 
-    l = malloc(sizeof *l);
-    gzread(gz, &x, sizeof x);
-    gzread(gz, &y, sizeof y);
-    gzread(gz, &z, sizeof z);
-    if (!level_init(l, x, y, z, name))
-    {
-    	fprintf(stderr, "Unable to load level\n");
-    	free(l);
-    	return false;
-    }
+    if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l);
+    if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l);
+    if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l);
+    if (!level_init(l, x, y, z, name)) return level_load_thread_abort(l);
 
-    gzread(gz, &l->spawn, sizeof l->spawn);
+    if (gzread(gz, &l->spawn, sizeof l->spawn) != sizeof l->spawn) return level_load_thread_abort(l);
 
-    gzread(gz, l->blocks, sizeof *l->blocks * x * y *z);
+    size_t s = sizeof *l->blocks * x * y *z;
+    if (gzread(gz, l->blocks, s) != s) return level_load_thread_abort(l);
 
     gzclose(gz);
 
-    level_list_add(&s_levels, l);
-
     char buf[64];
-    snprintf(buf, sizeof buf, "Level '%s' loaded", name);
+    snprintf(buf, sizeof buf, "Level '%s' loaded", l->name);
+
+    //LOG("%s\n", buf);
+
+    pthread_mutex_unlock(&l->mutex);
+    //if (level != NULL) *level = l;
+
     net_notify_all(buf);
 
-    fputs(buf, stderr);
+    return NULL;
+}
 
-    if (level != NULL) *level = l;
+bool level_load(const char *name, struct level_t **levelp)
+{
+    char filename[64];
+    snprintf(filename, sizeof filename, "levels/%s.mcl", name);
+    lcase(filename);
+
+    FILE *f = fopen(filename, "rb");
+    if (f == NULL) return false;
+    fclose(f);
+
+    struct level_t *level = malloc(sizeof *level);
+    memset(level, 0, sizeof *level);
+
+    level_list_add(&s_levels, level);
+    if (levelp != NULL) *levelp = level;
+
+    strncpy(level->name, name, sizeof level->name);
+
+    pthread_mutex_lock(&level->mutex);
+    if (level->thread != NULL)
+    {
+        pthread_join(level->thread, NULL);
+        level->thread = NULL;
+    }
+    int r = pthread_create(&level->thread, NULL, &level_load_thread, level);
+    if (r != 0)
+    {
+        LOG("Unable to create thread for level loading, server may pause\n");
+        level_load_thread(level);
+    }
+
     return true;
 }
 
-bool level_save(struct level_t *l)
+void *level_save_thread(void *arg)
 {
+    struct level_t *l = arg;
+
+    l->changed = false;
+
     char filename[64];
     snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
     lcase(filename);
 
     gzFile gz = gzopen(filename, "wb");
-    if (gz == NULL) return false;
+    if (gz == NULL)
+    {
+        pthread_mutex_unlock(&l->mutex);
+        return NULL;
+    }
 
     gzwrite(gz, &l->x, sizeof l->x);
     gzwrite(gz, &l->y, sizeof l->y);
@@ -681,11 +775,31 @@ bool level_save(struct level_t *l)
     gzwrite(gz, l->blocks, sizeof *l->blocks * l->x * l->y * l->z);
     gzclose(gz);
 
-    printf("Saved %s\n", filename);
+    //LOG("Level '%s' saved\n", l->name);
 
-    l->changed = false;
+    char buf[64];
+    snprintf(buf, sizeof buf, "Level '%s' saved", l->name);
+    net_notify_all(buf);
 
-    return true;
+    pthread_mutex_unlock(&l->mutex);
+
+    return NULL;
+}
+
+void level_save(struct level_t *l)
+{
+    if (pthread_mutex_trylock(&l->mutex) != 0) return;
+    if (l->thread != NULL)
+    {
+        pthread_join(l->thread, NULL);
+        l->thread = NULL;
+    }
+    int r = pthread_create(&l->thread, NULL, &level_save_thread, l);
+    if (r != 0)
+    {
+        LOG("Unable to create thread for level saving, server may pause\n");
+        level_save_thread(l);
+    }
 }
 
 bool level_get_by_name(const char *name, struct level_t **level)
@@ -745,7 +859,7 @@ void level_unload_empty()
         {
             const struct player_t *p = s_clients.items[j]->player;
             if (p == NULL) continue;
-            if (p->level == l)
+            if (p->level == l || p->new_level == l)
             {
                 player_on = true;
                 break;

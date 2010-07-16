@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 #include <time.h>
 #include "client.h"
 #include "level.h"
@@ -140,6 +141,35 @@ CMD(exit)
     g_server.exit = true;
 }
 
+CMD(filter)
+{
+    if (params > 2)
+    {
+        client_notify(c, "filter [<user>]");
+        return;
+    }
+
+
+    if (params == 2)
+    {
+        int filter = playerdb_get_globalid(param[1], false);
+        if (filter == -1)
+        {
+            client_notify(c, "User does not exist");
+            return;
+        }
+
+        c->player->filter = filter;
+    }
+    else
+    {
+        c->player->filter = -1;
+        client_notify(c, "Filtering disabled");
+    }
+
+    level_send(c);
+}
+
 CMD(fixed)
 {
     ToggleBit(c->player->flags, FLAG_PLACE_FIXED);
@@ -259,7 +289,7 @@ CMD(home)
         l = malloc(sizeof *l);
         if (!level_init(l, 32, 32, 32, name))
         {
-        	fprintf(stderr, "Unable to create level\n");
+        	LOG("Unable to create level\n");
         	free(l);
         	return;
         }
@@ -416,7 +446,7 @@ CMD(newlvl)
 
 CMD(opglass)
 {
-	client_notify(c, "OpGlass not supported. Use /fixed with glass.");
+	client_notify(c, "OpGlass not supported. Use /fixed with glass instead.");
 }
 
 CMD(rules)
@@ -616,7 +646,7 @@ CMD(undo)
         for (i = 0; i < n; i++)
         {
         	struct stat statbuf;
-        	if (stat(namelist[i]->d_name, &statbuf) == 0)
+        	//if (stat(namelist[i]->d_name, &statbuf) == 0)
 			{
 				int undo_actions = statbuf.st_size / (sizeof (unsigned) + sizeof (struct block_t));
 				char buf2[64];
@@ -677,6 +707,13 @@ CMD(uptime)
 
 	snprintf(buf, sizeof buf, "Server CPU usage is %f%%", g_server.cpu_time);
 	client_notify(c, buf);
+
+	struct rusage usage;
+	if (getrusage(RUSAGE_SELF, &usage) == 0)
+	{
+	    snprintf(buf, sizeof buf, "Server meory usage: %lu", usage.ru_ixrss);
+	    client_notify(c, buf);
+	}
 }
 
 CMD(water)
@@ -721,6 +758,7 @@ struct command_t s_commands[] = {
     { "z", RANK_ADV_BUILDER, &cmd_cuboid },
     { "exit", RANK_ADMIN, &cmd_exit },
     { "fixed", RANK_OP, &cmd_fixed },
+    { "filter", RANK_OP, &cmd_filter },
 	{ "follow", RANK_OP, &cmd_follow },
     { "goto", RANK_GUEST, &cmd_goto },
     { "hide", RANK_OP, &cmd_hide },

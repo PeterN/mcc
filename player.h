@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "block.h"
+#include "colour.h"
 #include "list.h"
 #include "position.h"
 
@@ -40,6 +41,7 @@ struct player_t
 {
     int globalid;
     int levelid;
+    char *colourusername;
     char *username;
     enum rank_t rank;
     enum mode_t mode;
@@ -51,6 +53,7 @@ struct player_t
     struct level_t *level, *new_level;
     struct client_t *client;
     struct player_t *following;
+    int filter;
 
     unsigned cuboid_start;
     enum blocktype_t cuboid_type;
@@ -76,6 +79,7 @@ void player_undo(struct client_t *c, const char *username, const char *levelname
 
 enum rank_t rank_get_by_name(const char *rank);
 const char *rank_get_name(enum rank_t rank);
+enum colour_t rank_get_colour(enum rank_t rank);
 
 static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 {

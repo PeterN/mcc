@@ -22,19 +22,22 @@ static int gettime()
 }
 
 #define TICK_INTERVAL 40
-#define MS_TO_TICKS(x) ((x) / (1000 / TICK_INTERVAL))
+#define MS_TO_TICKS(x) ((x) / TICK_INTERVAL)
 
 int main(int argc, char **argv)
 {
     int tick = 0;
 	int i;
 
+	g_server.logfile = fopen("log.txt", "a");
+    LOG("Server starting...\n");
+
     if (!level_load("main", NULL))
     {
         struct level_t *l = malloc(sizeof *l);
         if (!level_init(l, 128, 32, 128, "main"))
         {
-        	fprintf(stderr, "Unable to create main level, exiting.\n");
+            LOG("Unable to create main level, exiting.\n");
         	free(l);
         	return false;
         }
@@ -75,17 +78,17 @@ int main(int argc, char **argv)
         cur_ticks = gettime();
         if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
         {
-            next_tick = cur_ticks + TICK_INTERVAL;
+            next_tick = next_tick + TICK_INTERVAL;
 
             tick++;
 
 			if ((tick % MS_TO_TICKS(1000)) == 0)
 			{
 				clock_t c = clock();
-				g_server.cpu_time = ((double) (c - g_server.cpu_start)) / CLOCKS_PER_SEC;
+				g_server.cpu_time = ((double) (c - g_server.cpu_start)) / CLOCKS_PER_SEC * 100.0;
 				g_server.cpu_start = c;
 			}
-            if ((tick % MS_TO_TICKS(2500)) == 0) client_info();
+            //if ((tick % MS_TO_TICKS(2500)) == 0) client_info();
             if ((tick % MS_TO_TICKS(60000)) == 0) heartbeat_start();
             if ((tick % MS_TO_TICKS(20000)) == 0) level_save_all();
             if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
@@ -109,9 +112,23 @@ int main(int argc, char **argv)
         usleep(1000);
 	}
 
+	for (i = 0; i < s_levels.used; i++)
+	{
+	    struct level_t *l = s_levels.items[i];
+	    pthread_join(l->thread, NULL);
+	}
+
 	level_save_all();
 
+	for (i = 0; i < s_levels.used; i++)
+	{
+	    struct level_t *l = s_levels.items[i];
+	    pthread_join(l->thread, NULL);
+	}
+
 	playerdb_close();
+
+	LOG("Server exiting...\n");
 
 	return 0;
 }

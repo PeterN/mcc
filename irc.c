@@ -44,7 +44,7 @@ void irc_start()
     {
         if (!resolve(g_server.irc.hostname, g_server.irc.port, &s_irc_addr))
         {
-            fprintf(stderr, "Unable to resolve IRC server\n");
+            LOG("Unable to resolve IRC server\n");
             return;
         }
         s_irc_resolved = true;
@@ -134,7 +134,7 @@ void irc_run(bool can_write, bool can_read)
         }
         else if (res == 0)
         {
-            fprintf(stderr, "Closed IRC connection\n");
+            LOG("Closed IRC connection\n");
             close(s_irc_fd);
             s_irc_fd = -1;
             return;

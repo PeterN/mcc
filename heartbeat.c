@@ -24,7 +24,7 @@ void heartbeat_start()
     {
         if (!resolve("www.minecraft.net", 80, &s_heartbeat_addr))
         {
-            fprintf(stderr, "Unable to resolve heartbeat server\n");
+            LOG("Unable to resolve heartbeat server\n");
             return;
         }
         s_heartbeat_resolved = true;

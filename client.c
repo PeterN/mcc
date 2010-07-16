@@ -97,7 +97,7 @@ void client_process(struct client_t *c, char *message)
                 if (l != strlen(message))
                 {
                     message[l] = '\0';
-                    snprintf(buf, sizeof buf, "(%s: %s)", c->player->username, message + l + 1);
+                    snprintf(buf, sizeof buf, "(%s" TAG_WHITE ": %s)", c->player->colourusername, message + l + 1);
                     if (!client_notify_by_username(message + 1, buf))
                     {
                         client_notify(c, "User is offline");
@@ -111,15 +111,15 @@ void client_process(struct client_t *c, char *message)
 	        }
 
 	        case ';':
-                snprintf(buf, sizeof buf, "* %s %s", c->player->username, message + 1);
+                snprintf(buf, sizeof buf, "* %s %s", c->player->colourusername, message + 1);
                 break;
 
 	        case '\'':
-                snprintf(buf, sizeof buf, "%s: %s", c->player->username, message + 1);
+                snprintf(buf, sizeof buf, "%s" TAG_WHITE ": %s", c->player->colourusername, message + 1);
                 break;
 
 	        default:
-                snprintf(buf, sizeof buf, "%s: %s", c->player->username, message);
+                snprintf(buf, sizeof buf, "%s" TAG_WHITE ": %s", c->player->colourusername, message);
                 break;
 	    }
 
@@ -137,7 +137,7 @@ void client_send_spawn(const struct client_t *c, bool hiding)
     {
         if (level->clients[i] != NULL && level->clients[i] != c)
         {
-            client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->username, &c->player->pos));
+            client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->colourusername, &c->player->pos));
             //printf("Told %s (%d) about %s joining %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
         }
     }
