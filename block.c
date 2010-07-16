@@ -238,12 +238,12 @@ struct block_t block_convert_from_mcs(uint8_t type)
 		case 106: /* OP_WATER */ b.type = WATER; b.fixed = true; break;
 
 		case 110: /* WOOD_FLOAT */ b.type = WOOD; break;
-		case 111: /* DOOR */ b.type = WOOD; break;
+		case 111: /* DOOR */ b.type = TRUNK; break;
 		case 112: /* LAVA_FAST */ b.type = LAVA; break;
 		case 113: /* DOOR2 */ b.type = OBSIDIAN; break;
 		case 114: /* DOOR3 */ b.type = GLASS; break;
 
-		default: b.type = (type < BLOCK_END) ? type : ROCK; break;
+		default: b.type = (type < BLOCK_END) ? type : AIR; break;
 	}
 	return b;
 }

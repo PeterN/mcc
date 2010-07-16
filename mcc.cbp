@@ -93,10 +93,6 @@
 		</Unit>
 		<Unit filename="playerdb.h" />
 		<Unit filename="position.h" />
-		<Unit filename="timer.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="timer.h" />
 		<Unit filename="util.h" />
 		<Extensions>
 			<envvars />

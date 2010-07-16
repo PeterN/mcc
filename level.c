@@ -23,9 +23,13 @@ bool level_t_compare(struct level_t **a, struct level_t **b)
     return *a == *b;
 }
 
-bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name)
+bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name, bool zero)
 {
-    memset(level, 0, sizeof *level);
+    if (zero)
+    {
+        memset(level, 0, sizeof *level);
+        pthread_mutex_init(&level->mutex, NULL);
+    }
 
     if (name != NULL)
     {
@@ -656,20 +660,20 @@ void level_unload(struct level_t *level)
 
 static void *level_load_thread_abort(struct level_t *level)
 {
-    LOG("Unable to load level %s", level->name);
+    LOG("Unable to load level %s\n", level->name);
 
     int i;
     for (i = 0; i < s_clients.used; i++)
     {
         struct client_t *c = s_clients.items[i];
-        printf("client %d: player %p\n", i, c->player);
+        LOG("client %d: player %p\n", i, c->player);
         if (c->player == NULL) continue;
-        printf("level %p, new_level %p\n", level, c->player->new_level);
+        LOG("level %p, new_level %p\n", level, c->player->new_level);
         if (c->player->new_level == level)
         {
             c->player->new_level = c->player->level;
             c->waiting_for_level = false;
-            LOG("Aborted level change for %s", c->player->username);
+            LOG("Aborted level change for %s\n", c->player->username);
         }
     }
 
@@ -709,16 +713,16 @@ static void *level_load_thread(void *arg)
 		}
 		if (gzread(gz, &z, sizeof z) != sizeof y) return level_load_thread_abort(l);
 		if (gzread(gz, &y, sizeof y) != sizeof z) return level_load_thread_abort(l);
-		if (!level_init(l, x, y, z, name)) return level_load_thread_abort(l);
+		if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l);
 		if (gzread(gz, &l->spawn.x, sizeof l->spawn.x) != sizeof l->spawn.x) return level_load_thread_abort(l);
 		if (gzread(gz, &l->spawn.z, sizeof l->spawn.z) != sizeof l->spawn.z) return level_load_thread_abort(l);
 		if (gzread(gz, &l->spawn.y, sizeof l->spawn.y) != sizeof l->spawn.y) return level_load_thread_abort(l);
 		if (gzread(gz, &l->spawn.h, sizeof l->spawn.h) != sizeof l->spawn.h) return level_load_thread_abort(l);
 		if (gzread(gz, &l->spawn.p, sizeof l->spawn.p) != sizeof l->spawn.p) return level_load_thread_abort(l);
 
-		l->spawn.x *= 32;
-		l->spawn.y *= 32;
-		l->spawn.z *= 32;
+		l->spawn.x = l->spawn.x * 32 + 16;
+		l->spawn.y = l->spawn.y * 32 + 32;
+		l->spawn.z = l->spawn.z * 32 + 16;
 
 		if (version == 1874)
 		{
@@ -750,7 +754,7 @@ static void *level_load_thread(void *arg)
 		if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l);
 		if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l);
 		if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l);
-		if (!level_init(l, x, y, z, name)) return level_load_thread_abort(l);
+		if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l);
 
 		if (gzread(gz, &l->spawn, sizeof l->spawn) != sizeof l->spawn) return level_load_thread_abort(l);
 
@@ -795,6 +799,7 @@ bool level_load(const char *name, struct level_t **levelp)
 
     struct level_t *level = malloc(sizeof *level);
     memset(level, 0, sizeof *level);
+    pthread_mutex_init(&level->mutex, NULL);
 
     level_list_add(&s_levels, level);
     if (levelp != NULL) *levelp = level;
@@ -1034,18 +1039,21 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 
 		client_notify(client, "Cuboid end placed");
-		level_cuboid(level, client->player->cuboid_start, index, client->player->cuboid_type == -1 ? t : client->player->cuboid_type);
+		level_cuboid(level, client->player->cuboid_start, index, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type);
 		client->player->mode = MODE_NORMAL;
 		return;
     }
 
-    enum blocktype_t nt = t;
+    enum blocktype_t nt = client->player->bindings[t];
 
     if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
     else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
     else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
 
-    if (m == 0) nt = AIR;
+    if (m == 0) {
+        nt = AIR;
+        t = AIR;
+    }
 
     if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
         // || (b->owner != 0 && b->owner != client->player->globalid)))
@@ -1080,6 +1088,11 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
                 client_add_packet(c, packet_send_set_block(x, y, z, nt));
             }
         }
+    }
+    else if (nt != t)
+    {
+        /* Block hasn't changed but client thinks it has? */
+        client_add_packet(client, packet_send_set_block(x, y, z, nt));
     }
 }
 

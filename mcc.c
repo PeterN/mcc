@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     if (!level_load("main", NULL))
     {
         struct level_t *l = malloc(sizeof *l);
-        if (!level_init(l, 128, 32, 128, "main"))
+        if (!level_init(l, 128, 32, 128, "main", true))
         {
             LOG("Unable to create main level, exiting.\n");
         	free(l);
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
             cuboid_process();
             player_send_positions();
 
-            if ((tick % MS_TO_TICKS(1000)) == 0)
+            //if ((tick % MS_TO_TICKS(1000)) == 0)
             {
                 for (i = 0; i < s_clients.used; i++)
                 {

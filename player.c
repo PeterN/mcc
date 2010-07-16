@@ -45,6 +45,12 @@ struct player_t *player_add(const char *username)
     sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
     p->globalid = globalid;
 
+    int i;
+    for (i = 0; i < BLOCK_END; i++)
+    {
+        p->bindings[i] = i;
+    }
+
     player_list_add(&s_players, p);
     g_server.players++;
 

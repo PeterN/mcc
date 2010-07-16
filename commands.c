@@ -86,6 +86,50 @@ CMD(ban)
     net_notify_all(buf);
 }
 
+CMD(bind)
+{
+    char buf[64];
+    int i, j;
+
+    if (params > 3)
+    {
+        client_notify(c, "bind [<fromtype> [<totype>]]");
+        return;
+    }
+
+    switch (params)
+    {
+        case 1:
+            for (i = 0; i < BLOCK_END; i++)
+            {
+                if (c->player->bindings[i] != i)
+                {
+                    snprintf(buf, sizeof buf, "%s bound to %s", blocktype_get_name(i), blocktype_get_name(c->player->bindings[i]));
+                    client_notify(c, buf);
+                }
+            }
+            break;
+
+        case 2:
+            i = blocktype_get_by_name(param[1]);
+            if (i != -1)
+            {
+                c->player->bindings[i] = i;
+
+            }
+            break;
+
+        case 3:
+            i = blocktype_get_by_name(param[1]);
+            j = blocktype_get_by_name(param[2]);
+            if (i != -1 && j != -1)
+            {
+                c->player->bindings[i] = j;
+            }
+            break;
+    }
+}
+
 CMD(commands)
 {
     char buf[64];
@@ -287,7 +331,7 @@ CMD(home)
     if (!level_get_by_name(name, &l))
     {
         l = malloc(sizeof *l);
-        if (!level_init(l, 32, 32, 32, name))
+        if (!level_init(l, 32, 32, 32, name, true))
         {
         	LOG("Unable to create level\n");
         	free(l);
@@ -354,7 +398,7 @@ CMD(lava)
 
 static int level_filename_filter(const struct dirent *d)
 {
-    return strstr(d->d_name, ".mcl") != NULL;
+    return strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL;
 }
 
 CMD(levels)
@@ -376,6 +420,10 @@ CMD(levels)
 
     for (i = 0; i < n; i++)
     {
+        /* Chop name off at extension */
+        char *ext = strrchr(namelist[i]->d_name, '.');
+        if (ext != NULL) *ext = '\0';
+
         size_t len = strlen(namelist[i]->d_name) + (i < n - 1 ? 2 : 0);
         if (len >= sizeof buf - (bufp - buf))
         {
@@ -424,7 +472,7 @@ CMD(newlvl)
     if (!level_get_by_name(name, NULL))
     {
         struct level_t *l = malloc(sizeof *l);
-        if (!level_init(l, x, y, z, name))
+        if (!level_init(l, x, y, z, name, true))
         {
         	client_notify(c, "Unable to create level. Too big?");
         	free(l);
@@ -753,6 +801,7 @@ CMD(whois)
 struct command_t s_commands[] = {
 	{ "afk", RANK_GUEST, &cmd_afk },
     { "ban", RANK_OP, &cmd_ban },
+    { "bind", RANK_ADV_BUILDER, &cmd_bind },
     { "commands", RANK_BANNED, &cmd_commands },
     { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid },
     { "z", RANK_ADV_BUILDER, &cmd_cuboid },

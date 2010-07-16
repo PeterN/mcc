@@ -60,6 +60,8 @@ struct player_t
 
     FILE *undo_log;
     char undo_log_name[256];
+
+    enum blocktype_t bindings[BLOCK_END];
 };
 
 bool player_t_compare(struct player_t **a, struct player_t **b);
