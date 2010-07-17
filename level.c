@@ -91,8 +91,6 @@ int level_get_new_id(struct level_t *level, struct client_t *c)
     return -1;
 }
 
-
-
 bool level_send(struct client_t *c)
 {
     struct level_t *oldlevel = c->player->level;
@@ -144,11 +142,11 @@ bool level_send(struct client_t *c)
     {
         if (c->player->filter > 0)
         {
-            *bufp++ = (newlevel->blocks[x].owner == c->player->filter) ? block_get_blocktype(&newlevel->blocks[x]) : AIR;
+            *bufp++ = (newlevel->blocks[x].owner == c->player->filter) ? convert(newlevel, x, &newlevel->blocks[x]) : AIR;
         }
         else
         {
-            *bufp++ = block_get_blocktype(&newlevel->blocks[x]);
+            *bufp++ = convert(newlevel, x, &newlevel->blocks[x]);
         }
     }
 
@@ -760,9 +758,17 @@ static void *level_load_thread(void *arg)
 
 		size_t s = sizeof *l->blocks * x * y *z;
 		if (gzread(gz, l->blocks, s) != s) return level_load_thread_abort(l);
-	}
+    }
 
     gzclose(gz);
+
+    int count = l->x * l->y * l->z, i;
+    for (i = 0; i < count; i++)
+    {
+        struct block_t *b = &l->blocks[i];
+     	b->physics = blocktype_has_physics(b->type);
+        if (b->physics) physics_list_add(&l->physics, i);
+    }
 
     char buf[64];
     snprintf(buf, sizeof buf, "Level '%s' loaded", l->name);
@@ -1024,12 +1030,12 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
                  b->owner == 0 ? "none" : playerdb_get_username(b->owner)
         );
         client_notify(client, buf);
-        client_add_packet(client, packet_send_set_block(x, y, z, bt));
+        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
         return;
     }
     else if (client->player->mode == MODE_CUBOID)
     {
-    	client_add_packet(client, packet_send_set_block(x, y, z, bt));
+    	client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
 		if (client->player->cuboid_start == UINT_MAX)
 		{
@@ -1051,21 +1057,34 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
     else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
 
     if (m == 0) {
+        if (trigger(level, index, b))
+        {
+            LOG("Triggered!");
+            return;
+        }
+
         nt = AIR;
         t = AIR;
+    }
+
+    if (m == 1 && bt != AIR && bt != WATER && bt != LAVA && bt != WATERSTILL && bt != LAVASTILL)
+    {
+        client_notify(client, "Active physics block cannot be changed");
+        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+        return;
     }
 
     if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
         // || (b->owner != 0 && b->owner != client->player->globalid)))
     {
         client_notify(client, "Block cannot be changed");
-        client_add_packet(client, packet_send_set_block(x, y, z, bt));
+        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
         return;
     }
 
     if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid))
     {
-        client_add_packet(client, packet_send_set_block(x, y, z, bt));
+        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
         return;
     }
 
@@ -1073,26 +1092,43 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
     {
         player_undo_log(client->player, index);
 
+        bool oldphysics = b->physics;
+
         b->type = nt;
+        b->data = 0;
         b->fixed = HasBit(client->player->flags, FLAG_PLACE_FIXED);
         b->owner = (b->type == AIR && !b->fixed) ? 0 : client->player->globalid;
+        b->physics = blocktype_has_physics(nt);
+
+        if (oldphysics != b->physics)
+        {
+            if (oldphysics) physics_list_del_item(&level->physics, index);
+            if (b->physics) physics_list_add(&level->physics, index);
+        }
 
         level->changed = true;
+
+        enum blocktype_t pt = convert(level, index, b);
 
         for (i = 0; i < s_clients.used; i++)
         {
             struct client_t *c = s_clients.items[i];
             if (c->player == NULL) continue;
-            if ((client != c || (nt != t && m == 1)) && c->player->level == level)
+            if ((client != c || (pt != t && m == 1)) && c->player->level == level)
             {
-                client_add_packet(c, packet_send_set_block(x, y, z, nt));
+                client_add_packet(c, packet_send_set_block(x, y, z, pt));
             }
         }
     }
-    else if (nt != t)
+    else
     {
-        /* Block hasn't changed but client thinks it has? */
-        client_add_packet(client, packet_send_set_block(x, y, z, nt));
+        enum blocktype_t pt = convert(level, index, b);
+
+        if (pt != t)
+        {
+            /* Block hasn't changed but client thinks it has? */
+            client_add_packet(client, packet_send_set_block(x, y, z, pt));
+        }
     }
 }
 
@@ -1112,7 +1148,7 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
         if (c->player == NULL) continue;
         if (c->player->level == level)
         {
-            client_add_packet(c, packet_send_set_block(x, y, z, block->type));
+            client_add_packet(c, packet_send_set_block(x, y, z, convert(level, index, b)));
         }
     }
 }
@@ -1155,4 +1191,87 @@ void level_set_teleporter(struct level_t *level, const char *name, struct positi
 
     teleporter_list_add(&level->teleporters, t);
     level_mark_teleporter(level, pos);
+}
+
+static void level_run_physics(struct level_t *level)
+{
+    int i;
+    for (i = 0; i < level->physics.used; i++)
+    {
+        unsigned index = level->physics.items[i];
+        struct block_t *b = &level->blocks[index];
+
+        physics(level, index, b);
+    }
+
+    //LOG("%lu physics blocks, %lu block updates\n", level->physics.used, level->updates.used);
+
+    for (i = 0; i < level->updates.used; i++)
+    {
+        struct block_update_t *bu = &level->updates.items[i];
+        struct block_t *b = &level->blocks[bu->index];
+
+        enum blocktype_t pt1 = convert(level, bu->index, b);
+
+        if (bu->newtype != -1)
+        {
+            bool oldphysics = b->physics;
+
+            //LOG("%s changes to %s\n", blocktype_get_name(b->type), blocktype_get_name(bu->newtype));
+
+            b->type = bu->newtype;
+            b->physics = blocktype_has_physics(b->type);
+
+            if (oldphysics != b->physics)
+            {
+                if (oldphysics) physics_list_del_item(&level->physics, bu->index);
+                if (b->physics) physics_list_add(&level->physics, bu->index);
+            }
+
+            level->changed = true;
+        }
+
+        b->data = bu->newdata;
+
+        enum blocktype_t pt2 = convert(level, bu->index, b);
+        int16_t x, y, z;
+        level_get_xyz(level, bu->index, &x, &y, &z);
+
+        if (pt1 != pt2)
+        {
+            int j;
+            for (j = 0; j < s_clients.used; j++)
+            {
+                struct client_t *c = s_clients.items[j];
+                if (c->player == NULL) continue;
+                if (c->player->level == level)
+                {
+                    client_add_packet(c, packet_send_set_block(x, y, z, pt2));
+                }
+            }
+        }
+    }
+
+    level->updates.used = 0;
+}
+
+void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
+{
+    struct block_update_t bu;
+    bu.index = index;
+    bu.newtype = newtype;
+    bu.newdata = newdata;
+    block_update_list_add(&level->updates, bu);
+    //LOG("update @ %d (%d)\n", index, newtype);
+}
+
+void level_process()
+{
+    int i;
+    for (i = 0; i < s_levels.used; i++)
+    {
+        struct level_t *level = s_levels.items[i];
+        if (level == NULL) continue;
+        level_run_physics(level);
+    }
 }

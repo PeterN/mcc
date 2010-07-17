@@ -38,13 +38,13 @@ static void notify_file(struct client_t *c, const char *filename)
     fclose(f);
 }
 
-typedef void(*command_func)(struct client_t *c, int params, const char **param);
+typedef void(*command_func_t)(struct client_t *c, int params, const char **param);
 
 struct command_t
 {
     const char *command;
     enum rank_t rank;
-    command_func func;
+    command_func_t func;
 };
 
 struct command_t s_commands[];

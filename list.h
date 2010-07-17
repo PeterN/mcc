@@ -23,15 +23,14 @@ static inline void X ## _list_free(struct X ## _list_t *list) \
     free(list->items); \
 } \
 \
-static inline T * X ## _list_add(struct X ## _list_t *list, T item) \
+static inline void X ## _list_add(struct X ## _list_t *list, T item) \
 { \
 	if (list->used >= list->size) \
 	{ \
 		list->size += 64U; \
 		list->items = realloc(list->items, sizeof *list->items * list->size); \
 	} \
-	list->items[list->used] = item; \
-	return &list->items[list->used++]; \
+	list->items[list->used++] = item; \
 } \
 \
 static inline void X ## _list_del_item(struct X ## _list_t *list, T item) \

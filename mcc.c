@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
+#include <signal.h>
 #include "block.h"
 #include "mcc.h"
 #include "level.h"
@@ -19,6 +20,34 @@ static int gettime()
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+void mcc_exit()
+{
+    level_save_all();
+
+	/* Wait for threads to finish */
+	int i;
+	for (i = 0; i < s_levels.used; i++)
+	{
+	    struct level_t *l = s_levels.items[i];
+	    if (l != NULL && l->thread_valid)
+	    {
+			pthread_join(l->thread, NULL);
+			l->thread_valid = false;
+	    }
+	}
+
+	playerdb_close();
+
+	LOG("Server exiting...\n");
+}
+
+static void sighandler(int sig)
+{
+    mcc_exit();
+
+    exit(0);
 }
 
 #define TICK_INTERVAL 40
@@ -61,6 +90,10 @@ int main(int argc, char **argv)
 	g_server.irc.channel = "#mc2";
 	g_server.irc.pass = NULL;
 
+	signal(SIGINT, &sighandler);
+
+	blocktype_init();
+
 	playerdb_init();
 
 	net_init();
@@ -93,6 +126,8 @@ int main(int argc, char **argv)
             if ((tick % MS_TO_TICKS(20000)) == 0) level_save_all();
             if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
 
+            if ((tick % MS_TO_TICKS(200)) == 0) level_process();
+
             cuboid_process();
             player_send_positions();
 
@@ -112,22 +147,7 @@ int main(int argc, char **argv)
         usleep(1000);
 	}
 
-	level_save_all();
-
-	/* Wait for threads to finish */
-	for (i = 0; i < s_levels.used; i++)
-	{
-	    struct level_t *l = s_levels.items[i];
-	    if (l != NULL && l->thread_valid)
-	    {
-			pthread_join(l->thread, NULL);
-			l->thread_valid = false;
-	    }
-	}
-
-	playerdb_close();
-
-	LOG("Server exiting...\n");
+	mcc_exit();
 
 	return 0;
 }

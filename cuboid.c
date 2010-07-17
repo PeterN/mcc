@@ -22,7 +22,18 @@ void cuboid_process()
 
             if (bt != c->new_type)
             {
+                bool oldphysics = b->physics;
+
+                /* Handle physics */
                 b->type = c->new_type;
+                b->data = 0;
+                b->physics = blocktype_has_physics(c->new_type);
+
+                if (oldphysics != b->physics)
+                {
+                    if (oldphysics) physics_list_del_item(&c->level->physics, index);
+                    if (b->physics) physics_list_add(&c->level->physics, index);
+                }
 
                 int j;
                 for (j = 0; j < s_clients.used; j++)
@@ -31,7 +42,7 @@ void cuboid_process()
                     if (client->player == NULL) continue;
                     if (client->player->level == c->level)
                     {
-                        client_add_packet(client, packet_send_set_block(c->cx, c->cy, c->cz, c->new_type));
+                        client_add_packet(client, packet_send_set_block(c->cx, c->cy, c->cz, convert(c->level, index, b)));
                     }
                 }
 

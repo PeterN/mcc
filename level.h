@@ -37,6 +37,7 @@ struct level_t
 
 	struct block_t *blocks;
 	struct physics_list_t physics;
+	struct block_update_list_t updates;
     struct teleporter_list_t teleporters;
 
 	/* Max players on a level */
@@ -55,6 +56,7 @@ LIST(level, struct level_t *, level_t_compare)
 
 extern struct level_list_t s_levels;
 
+bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int16_t *y, int16_t *z);
 static inline unsigned level_get_index(struct level_t *level, unsigned x, unsigned y, unsigned z)
 {
 	//return x + (z * level->y + y) * level->x;
@@ -74,5 +76,7 @@ void level_change_block(struct level_t *level, struct client_t *c, int16_t x, in
 void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index);
 
 void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level);
+
+void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 
 #endif /* LEVEL_H */
