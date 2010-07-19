@@ -72,35 +72,53 @@ void physics(struct level_t *level, unsigned index, struct block_t *block)
     const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
     if (btd->physics_func != NULL)
     {
-        btd->physics_func(level, index, block);
+        if (btd->physics_func(level, index, block))
+        {
+        	physics_list_add(&level->physics, index);
+        }
     }
 }
 
-void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, int16_t z)
+void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, int16_t z, bool gravity)
 {
     // Test x,y,z are valid!
     if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
 
     unsigned index = level_get_index(l, x, y, z);
-    if ((l->blocks[index].type == WATER || l->blocks[index].type == LAVA) && !l->blocks[index].fixed)
-    {
-        level_addupdate(l, index2, l->blocks[index].type, 0);
-    }
+    if (l->blocks[index].fixed) return;
+
+	switch (l->blocks[index].type)
+	{
+		default: return;
+		case WATER:
+		case LAVA:
+			level_addupdate(l, index2, l->blocks[index].type, 0);
+			return;
+
+		case SAND:
+		case GRAVEL:
+			if (gravity)
+			{
+				level_addupdate(l, index2, l->blocks[index].type, 0);
+			}
+			return;
+	}
 }
 
-void physics_air(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_air(struct level_t *l, unsigned index, struct block_t *block)
 {
     int16_t x, y, z;
     level_get_xyz(l, index, &x, &y, &z);
 
-    if (l->blocks[index].fixed) return;
+    if (l->blocks[index].fixed) return false;
 
-    physics_air_sub(l, index, x, y + 1, z);
-    physics_air_sub(l, index, x - 1, y, z);
-    physics_air_sub(l, index, x + 1, y, z);
-    physics_air_sub(l, index, x, y, z - 1);
-    physics_air_sub(l, index, x, y, z + 1);
-    physics_remove(l, index);
+    physics_air_sub(l, index, x, y + 1, z, true);
+    physics_air_sub(l, index, x - 1, y, z, false);
+    physics_air_sub(l, index, x + 1, y, z, false);
+    physics_air_sub(l, index, x, y, z - 1, false);
+    physics_air_sub(l, index, x, y, z + 1, false);
+
+    return false;
 }
 
 void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
@@ -115,7 +133,7 @@ void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z
     }
 }
 
-void physics_active_water(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_active_water(struct level_t *l, unsigned index, struct block_t *block)
 {
     int16_t x, y, z;
     level_get_xyz(l, index, &x, &y, &z);
@@ -125,16 +143,12 @@ void physics_active_water(struct level_t *l, unsigned index, struct block_t *blo
     physics_active_water_sub(l, x + 1, y, z, block->type);
     physics_active_water_sub(l, x, y, z - 1, block->type);
     physics_active_water_sub(l, x, y, z + 1, block->type);
-    physics_remove(l, index);
+    return false;
 }
 
-void physics_gravity(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_gravity(struct level_t *l, unsigned index, struct block_t *block)
 {
-    if (l->blocks[index].fixed)
-    {
-        physics_remove(l, index);
-        return;
-    }
+    if (l->blocks[index].fixed) return false;
 
     int16_t x, y, z;
     level_get_xyz(l, index, &x, &y, &z);
@@ -142,10 +156,10 @@ void physics_gravity(struct level_t *l, unsigned index, struct block_t *block)
     y -= 1;
 
     // Test x,y,z are valid!
-    if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
+    if (y < 0) return false;
 
     unsigned index2 = level_get_index(l, x, y, z);
-    if (l->blocks[index2].fixed) return;
+    if (l->blocks[index2].fixed) return false;
 
     switch (l->blocks[index2].type)
     {
@@ -159,8 +173,10 @@ void physics_gravity(struct level_t *l, unsigned index, struct block_t *block)
         case REDMUSHROOM:
             level_addupdate(l, index2, block->type, 0);
             level_addupdate(l, index, AIR, 0);
-            break;
+			break;
     }
+
+    return false;
 }
 
 enum blocktype_t convert_active_sponge(struct level_t *level, unsigned index, const struct block_t *block)
@@ -185,7 +201,7 @@ void physics_active_sponge_sub(struct level_t *l, int16_t x, int16_t y, int16_t 
     }
 }
 
-void physics_active_sponge(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_active_sponge(struct level_t *l, unsigned index, struct block_t *block)
 {
     int16_t x, y, z;
     level_get_xyz(l, index, &x, &y, &z);
@@ -209,6 +225,8 @@ void physics_active_sponge(struct level_t *l, unsigned index, struct block_t *bl
 
         //}
     //}
+
+    return false;
 }
 
 enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, const struct block_t *block)
@@ -216,7 +234,7 @@ enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, con
     return STAIRCASESTEP;
 }
 
-void physics_stair(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_stair(struct level_t *l, unsigned index, struct block_t *block)
 {
     int16_t x, y, z;
     level_get_xyz(l, index, &x, &y, &z);
@@ -230,11 +248,12 @@ void physics_stair(struct level_t *l, unsigned index, struct block_t *block)
         {
             level_addupdate(l, index, AIR, 0);
             level_addupdate(l, index2, STAIRCASEFULL, 0);
-            return;
+            return false;
         }
     }
 
     level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
+    return false;
 }
 
 enum blocktype_t convert_door(struct level_t *level, unsigned index, const struct block_t *block)
@@ -291,7 +310,7 @@ bool trigger_door(struct level_t *l, unsigned index, struct block_t *block)
     return true;
 }
 
-void physics_door(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_door(struct level_t *l, unsigned index, struct block_t *block)
 {
     if (block->data > 0)
     {
@@ -311,7 +330,11 @@ void physics_door(struct level_t *l, unsigned index, struct block_t *block)
         level_addupdate(l, index, -1, block->data - 1);
 
         //LOG("Door physics: %d\n", block->data);
+
+		return true;
     }
+
+    return false;
 }
 
 enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const struct block_t *block)
@@ -355,7 +378,7 @@ int physics_wire_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum bl
     return 0;
 }
 
-void physics_wire(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_wire(struct level_t *l, unsigned index, struct block_t *block)
 {
     if (block->data == 2)
     {
@@ -387,9 +410,11 @@ void physics_wire(struct level_t *l, unsigned index, struct block_t *block)
         }
         //LOG("Door physics: %d\n", block->data);
     }
+
+    return true;
 }
 
-void physics_wire3d(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_wire3d(struct level_t *l, unsigned index, struct block_t *block)
 {
     if (block->data == 2)
     {
@@ -414,7 +439,7 @@ void physics_wire3d(struct level_t *l, unsigned index, struct block_t *block)
                 {
                     if (dx == 0 && dy == 0 && dz == 0) continue;
                     n += physics_wire_sub(l, x + dx, y + dy, z + dz, block->type);
-                    if (n > 2) return;
+                    if (n > 2) return true;
                 }
             }
         }
@@ -425,6 +450,8 @@ void physics_wire3d(struct level_t *l, unsigned index, struct block_t *block)
         }
         //LOG("Door physics: %d\n", block->data);
     }
+
+    return true;
 }
 
 enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const struct block_t *block)
@@ -462,7 +489,7 @@ void physics_explosion_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, e
     level_addupdate(l, index, type, magnitude);
 }
 
-void physics_explosion(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_explosion(struct level_t *l, unsigned index, struct block_t *block)
 {
     int iter = GetBits(block->data, 8, 4);
 
@@ -497,6 +524,8 @@ void physics_explosion(struct level_t *l, unsigned index, struct block_t *block)
         int vis = (rand() % 10 < 3) << 12;
         level_addupdate(l, index, -1, vis | ((block->data & 0xFF) - 1));
     }
+
+    return true;
 }
 
 enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const struct block_t *block)
@@ -535,9 +564,9 @@ void physics_fuse_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum b
     }
 }
 
-void physics_fuse(struct level_t *l, unsigned index, struct block_t *block)
+bool physics_fuse(struct level_t *l, unsigned index, struct block_t *block)
 {
-    if (block->data == 0) return;
+    if (block->data == 0) return false;
     if (block->data == 1)
     {
         enum blocktype_t tnt = blocktype_get_by_name("active_tnt");
@@ -557,10 +586,12 @@ void physics_fuse(struct level_t *l, unsigned index, struct block_t *block)
         }
 
         level_addupdate(l, index, AIR, 0);
+        return false;
     }
     else
     {
         level_addupdate(l, index, -1, block->data - 1);
+        return true;
     }
 }
 

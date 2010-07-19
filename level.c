@@ -802,6 +802,15 @@ static void *level_load_thread(void *arg)
 		}
 
 		free(blocks);
+
+		int count = l->x * l->y * l->z;
+		for (i = 0; i < count; i++)
+		{
+			struct block_t *b = &l->blocks[i];
+			if (b->type == AIR || b->type == WATER || b->type == LAVA) continue;
+			b->physics = blocktype_has_physics(b->type);
+			if (b->physics) physics_list_add(&l->physics, i);
+		}
     }
     else
 	{
@@ -848,18 +857,16 @@ static void *level_load_thread(void *arg)
                 user_list_add(&l->userbuild, u);
             }
 		}
+
+		int count = l->x * l->y * l->z;
+		for (i = 0; i < count; i++)
+		{
+			struct block_t *b = &l->blocks[i];
+			if (b->physics) physics_list_add(&l->physics, i);
+		}
     }
 
     gzclose(gz);
-
-    int count = l->x * l->y * l->z;
-    for (i = 0; i < count; i++)
-    {
-        struct block_t *b = &l->blocks[i];
-        if (b->type == AIR || b->type == WATER || b->type == LAVA) continue;
-     	b->physics = blocktype_has_physics(b->type);
-        if (b->physics) physics_list_add(&l->physics, i);
-    }
 
     char buf[64];
     snprintf(buf, sizeof buf, "Level '%s' loaded", l->name);
@@ -1348,47 +1355,96 @@ static int gettime()
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-void physics_remove(struct level_t *level, unsigned index)
+/*void physics_remove(struct level_t *level, unsigned index)
 {
     physics_list_add(&level->physics_remove, index);
+}*/
+
+static void level_run_physics(struct level_t *level)
+{
+	/* Don't run physics if updates are being done */
+	if (level->physics_done == 1) return;
+
+	if (level->physics_iter == 0)
+	{
+		level->physics_runtime = 0;
+	}
+
+    int s = gettime();
+
+	//LOG("%lu physics blocks, iterator at %d\n", level->physics.used, level->physics_iter);
+	for (; level->physics_iter < level->physics2.used; level->physics_iter++)
+	{
+		unsigned index = level->physics2.items[level->physics_iter];
+		struct block_t *b = &level->blocks[index];
+
+		physics(level, index, b);
+
+		if (gettime() - s > 40) {
+			level->physics_runtime += gettime() - s;
+			return;
+		}
+	}
+
+	/* Process the list of physics blocks to remove */
+	//LOG("%lu blocks to remove...\n", level->physics_remove.used);
+	/*if (level->physics_remove.used > 0)
+	{
+		qsort(level->physics_remove.items, level->physics_remove.used, sizeof (unsigned), &unsigned_cmp);
+
+		level->physics_runtime += gettime() - s;
+		level->physics_remove.used = 0;
+	}*/
+
+	/*
+	int i;
+	for (i = 0; i < level->physics_remove.used; i++)
+	{
+		unsigned index = level->physics_remove.items[i];
+		physics_list_del_item(&level->physics, index);
+		level->blocks[index].physics = false;
+		if (i % 10000 == 0) { LOG("@ %d\n", i); }
+	}
+
+	level->physics_runtime += gettime() - s;
+	level->physics_remove.used = 0;
+	*/
+
+	/*if (i > 0) { LOG("Removed %d physics blocks\n", i); }*/
+
+	level->physics_done = 1;
+
+	LOG("Physics ran in %d (%lu blocks)\n", level->physics_runtime, level->physics2.used);
 }
 
-static void level_run_physics(struct level_t *level, bool update)
+static void level_run_updates(struct level_t *level)
 {
-    int s = gettime();
+	/* Don't run updates until physics are complete */
+	if (level->physics_done == 0) return;
+
+    //LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
+
     if (level->updates_iter == 0)
     {
-        LOG("%lu physics blocks, iterator at %d\n", level->physics.used, level->physics_iter);
-        for (; level->physics_iter < level->physics.used; level->physics_iter++)
-        {
-            unsigned index = level->physics.items[level->physics_iter];
-            struct block_t *b = &level->blocks[index];
-
-            physics(level, index, b);
-
-            if (gettime() - s > 40) return;
-        }
-
-        /* Process the list of physics blocks to remove */
-        LOG("%lu blocks to remove...\n", level->physics_remove.used);
-        int i;
-        for (i = 0; i < level->physics_remove.used; i++)
-        {
-            unsigned index = level->physics_remove.items[i];
-            physics_list_del_item(&level->physics, index);
-            level->blocks[index].physics = false;
-            if (i % 10000 == 0) { LOG("@ %d\n", i); }
-        }
-        level->physics_remove.used = 0;
-
-        if (i > 0) { LOG("Removed %d physics blocks\n", i); }
+		level->updates_runtime = 0;
     }
 
-    if (!update) return;
+    int s = gettime();
 
-    level->physics_iter = 0;
+	/* Swap physics list */
+	unsigned *p = level->physics2.items;
+	level->physics2.items = level->physics.items;
+	level->physics.items = p;
 
-    LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
+	size_t u = level->physics2.used;
+	level->physics2.used = level->physics.used;
+	level->physics.used = u;
+
+	u = level->physics2.size;
+	level->physics2.size = level->physics.size;
+	level->physics.size = u;
+
+	level->physics.used = 0;
 
     int n = 50;
     for (; level->updates_iter < level->updates.used; level->updates_iter++)
@@ -1400,18 +1456,18 @@ static void level_run_physics(struct level_t *level, bool update)
 
         if (bu->newtype != -1)
         {
-            bool oldphysics = b->physics;
+           // bool oldphysics = b->physics;
 
             //LOG("%s changes to %s\n", blocktype_get_name(b->type), blocktype_get_name(bu->newtype));
 
             b->type = bu->newtype;
             b->physics = blocktype_has_physics(b->type);
 
-            if (oldphysics != b->physics)
-            {
-                if (oldphysics) physics_list_del_item(&level->physics, bu->index);
+            //if (oldphysics != b->physics)
+            //{
+                //if (oldphysics) physics_list_del_item(&level->physics2, bu->index);
                 if (b->physics) physics_list_add(&level->physics, bu->index);
-            }
+            //}
 
             level->changed = true;
         }
@@ -1437,15 +1493,27 @@ static void level_run_physics(struct level_t *level, bool update)
 
             /* Max changes */
             n--;
-            if (n == 0) return;
+            if (n == 0) {
+            	level->updates_runtime += gettime() - s;
+            	return;
+            }
         }
 
         /* Max iterations, or 40 ms */
         //if (gettime() - s > 40) return;
     }
 
+    level->updates_runtime += gettime() - s;
+
+    LOG("Updates ran in %d (%lu blocks)\n", level->updates_runtime, level->updates.used);
+
+	LOG("Hmm (%lu / %lu blocks)\n", level->physics.used, level->physics2.used);
+
     level->updates.used = 0;
     level->updates_iter = 0;
+    level->physics_iter = 0;
+
+    level->physics_done = 0;
 }
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
@@ -1465,7 +1533,7 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
     //LOG("update @ %d (%d)\n", index, newtype);
 }
 
-void level_process(bool update)
+void level_process_physics()
 {
     int i;
     for (i = 0; i < s_levels.used; i++)
@@ -1480,6 +1548,25 @@ void level_process(bool update)
         if (pthread_mutex_trylock(&level->mutex) != 0) continue;
         pthread_mutex_unlock(&level->mutex);
 
-        level_run_physics(level, update);
+        level_run_physics(level);
+    }
+}
+
+void level_process_updates()
+{
+    int i;
+    for (i = 0; i < s_levels.used; i++)
+    {
+        struct level_t *level = s_levels.items[i];
+        if (level == NULL) continue;
+
+        /* Don't run physics for empty levels, else it will never unload */
+        if (level_is_empty(level)) continue;
+
+        /* Test if another thread is accessing... */
+        if (pthread_mutex_trylock(&level->mutex) != 0) continue;
+        pthread_mutex_unlock(&level->mutex);
+
+        level_run_updates(level);
     }
 }

@@ -48,12 +48,13 @@ struct level_t
 	struct user_list_t userbuild;
 
 	struct block_t *blocks;
-	struct physics_list_t physics, physics_remove;
+	struct physics_list_t physics, physics2;
 	struct block_update_list_t updates;
     struct teleporter_list_t teleporters;
 
-    int physics_iter;
+    int physics_iter, physics_done;
     int updates_iter;
+    int physics_runtime, updates_runtime;
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
@@ -93,5 +94,9 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
 void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level);
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
+void physics_remove(struct level_t *level, unsigned index);
+
+void level_proces_physics();
+void level_proces_updates();
 
 #endif /* LEVEL_H */

@@ -98,7 +98,7 @@ struct block_t
 
 typedef enum blocktype_t(*convert_func_t)(struct level_t *level, unsigned index, const struct block_t *block);
 typedef bool(*trigger_func_t)(struct level_t *l, unsigned index, struct block_t *block);
-typedef void(*physics_func_t)(struct level_t *l, unsigned index, struct block_t *block);
+typedef bool(*physics_func_t)(struct level_t *l, unsigned index, struct block_t *block);
 
 struct blocktype_desc_t
 {
