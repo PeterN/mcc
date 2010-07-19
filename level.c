@@ -1374,7 +1374,9 @@ static void level_run_physics(struct level_t *level, bool update)
         int i;
         for (i = 0; i < level->physics_remove.used; i++)
         {
-            physics_list_del_item(&level->physics, level->physics_remove.items[i]);
+            unsigned index = level->physics_remove.items[i];
+            physics_list_del_item(&level->physics, index);
+            level->blocks[index].physics = false;
             if (i % 10000 == 0) { LOG("@ %d\n", i); }
         }
         level->physics_remove.used = 0;
