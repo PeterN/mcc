@@ -32,9 +32,9 @@ struct player_t *player_get_by_name(const char *username)
 	return NULL;
 }
 
-struct player_t *player_add(const char *username)
+struct player_t *player_add(const char *username, bool *newuser)
 {
-    int globalid = playerdb_get_globalid(username, true);
+    int globalid = playerdb_get_globalid(username, true, newuser);
     if (globalid == -1) return NULL;
 
     struct player_t *p = malloc(sizeof *p);
@@ -165,6 +165,7 @@ void player_send_positions()
     	if (player->following != NULL)
     	{
     		player->pos = player->following->pos;
+    		player->pos.y -= 8;
     		client_add_packet(player->client, packet_send_teleport_player(0xFF, &player->pos));
     		continue;
     	}
@@ -297,4 +298,54 @@ enum colour_t rank_get_colour(enum rank_t rank)
     }
 
     return COLOUR_YELLOW;
+}
+
+void player_list(struct client_t *c, const struct level_t *l)
+{
+    char buf[64];
+    int i;
+    for (i = 0; i < 3; i++)
+    {
+        bool added = false;
+        char *bufp = buf;
+        memset(buf, 0, sizeof buf);
+
+        switch (i) {
+            case 0: snprintf(buf, sizeof buf, TAG_TEAL "Ops: "); break;
+            case 1: snprintf(buf, sizeof buf, TAG_GREEN "Builders: "); break;
+            case 2: snprintf(buf, sizeof buf, TAG_SILVER "Guests: "); break;
+        }
+        bufp += strlen(buf);
+
+        int j;
+        for (j = 0; j < s_players.used; j++)
+        {
+            const struct player_t *p = s_players.items[j];
+            if (p == NULL) continue;
+            if (l != NULL && p->level != l) continue;
+
+            if (i == 0 && p->rank != RANK_ADMIN && p->rank != RANK_OP) continue;
+            if (i == 1 && p->rank != RANK_ADV_BUILDER && p->rank != RANK_BUILDER) continue;
+            if (i == 2 && p->rank != RANK_GUEST && p->rank != RANK_BANNED) continue;
+
+            size_t len = strlen(p->colourusername) + 1;
+            if (len >= sizeof buf - (bufp - buf))
+	        {
+	            client_notify(c, buf);
+	            LOG("%s\n", buf);
+	            bufp = buf;
+	            memset(buf, 0, sizeof buf);
+	        }
+
+	        strcpy(bufp, p->colourusername);
+            bufp += len - 1;
+            *bufp = ' ';
+            bufp++;
+
+            added = true;
+        }
+        LOG("%s\n", buf);
+
+        if (added) client_notify(c, buf);
+    }
 }

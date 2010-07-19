@@ -91,6 +91,32 @@ int level_get_new_id(struct level_t *level, struct client_t *c)
     return -1;
 }
 
+static bool level_user_can_visit(const struct level_t *l, const struct player_t *p)
+{
+    if (p->rank >= l->rankvisit) return true;
+
+    int i;
+    for (i = 0; i < l->uservisit.used; i++)
+    {
+        if (l->uservisit.items[i] == p->globalid) return true;
+    }
+
+    return false;
+}
+
+static bool level_user_can_build(const struct level_t *l, const struct player_t *p)
+{
+    if (p->rank >= l->rankbuild) return true;
+
+    int i;
+    for (i = 0; i < l->userbuild.used; i++)
+    {
+        if (l->userbuild.items[i] == p->globalid) return true;
+    }
+
+    return false;
+}
+
 bool level_send(struct client_t *c)
 {
     struct level_t *oldlevel = c->player->level;
@@ -105,12 +131,20 @@ bool level_send(struct client_t *c)
     {
         if (!c->waiting_for_level)
         {
-            client_notify(c, "Please wait for level generation to complete");
+            client_notify(c, "Please wait for level operation to complete");
             c->waiting_for_level = true;
         }
         return false;
     }
     pthread_mutex_unlock(&newlevel->mutex);
+
+    if (!level_user_can_visit(newlevel, c->player))
+    {
+        c->waiting_for_level = false;
+        c->player->new_level = oldlevel;
+        client_notify(c, "You do not have sufficient permission to join level");
+        return false;
+    }
 
     int levelid;
     if (oldlevel == newlevel)
@@ -122,6 +156,8 @@ bool level_send(struct client_t *c)
         levelid = level_get_new_id(newlevel, c);
         if (levelid == -1)
         {
+            c->waiting_for_level = false;
+            c->player->new_level = oldlevel;
             client_notify(c, "Uh, level is full, sorry...");
             return false;
         }
@@ -451,7 +487,7 @@ void *level_gen_thread(void *arg)
         {
             for (x = 0; x < mx; x++)
             {
-                int h = hm[x + z * dmx] * my / 4 + my * 3 / 8;
+                int h = hm[x + z * dmx] * my / 2 + my / 4;
 
                 for (y = 0; y < h; y++)
                 {
@@ -468,12 +504,20 @@ void *level_gen_thread(void *arg)
         }
 
         block.type = AIR;
-        for (i = 0; i < my / 4; i++)
+        for (i = 0; i < 5; i++)
         {
             level_gen_heightmap(cmh, mx, mz, level->type - 2);
             level_gen_heightmap(cmd, mx, mz, level->type - 2);
 
             int base = cmd[0] * my;
+
+            /*switch (i % 4)
+            {
+                case 0: block.type = ROCK; break;
+                case 1: block.type = DIRT; break;
+                case 2: block.type = AIR; break;
+                case 3: block.type = AIR; break;
+            }*/
 
             for (z = 0; z < mz; z++)
             {
@@ -482,13 +526,16 @@ void *level_gen_thread(void *arg)
                     //int h = hm[x + z * dmx] * my / 2 + my / 3;
                     float ch = cmh[x + z * dmx];
                     float cd = cmd[x + z * dmx];
-                    if (fabsf(ch) < 0.25f)
+                    int h = hm[x + z * dmx] * my / 2 + my / 4;
+                    //if (fabsf(ch) < 0.25f)
                     {
                         //block.type = i % 3 ? AIR : ROCK;
                         //int cdi = h - cd * my / 4;
                         //int chi = cdi + (ch - 0.5f) * my / 4;
-                        int cdi = base + cd * my / 8;// / 1.5f;
-                        int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
+                        //int cdi = base + cd * my / 8;// / 1.5f;
+                        //int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
+                        int cdi = cd * h * 1.2;
+                        int chi = ch * h * 1.2;
                         if (cdi > chi) {
                             cdi = cdi ^ chi;
                             chi = cdi ^ chi;
@@ -566,7 +613,7 @@ void *level_gen_thread(void *arg)
     level->spawn.z = mz * 16;
     for (y = my - 5; y > 0; y--)
     {
-        unsigned index = level_get_index(level, x, y, z);
+        unsigned index = level_get_index(level, mx / 2, y, mz / 2);
         if (level->blocks[index].type != AIR)
         {
             level->spawn.y = (y + 4) * 32;
@@ -651,14 +698,15 @@ void level_unload(struct level_t *level)
     //LOG(buf);
 
     physics_list_free(&level->physics);
+    block_update_list_free(&level->updates);
 
     free(level->blocks);
     free(level);
 }
 
-static void *level_load_thread_abort(struct level_t *level)
+static void *level_load_thread_abort(struct level_t *level, const char *reason)
 {
-    LOG("Unable to load level %s\n", level->name);
+    LOG("Unable to load level %s: %s\n", level->name, reason);
 
     int i;
     for (i = 0; i < s_clients.used; i++)
@@ -682,6 +730,7 @@ static void *level_load_thread_abort(struct level_t *level)
 
 static void *level_load_thread(void *arg)
 {
+    int i;
     struct level_t *l = arg;
     gzFile gz;
 
@@ -693,30 +742,30 @@ static void *level_load_thread(void *arg)
     lcase(filename);
 
     gz = gzopen(filename, "rb");
-    if (gz == NULL) return level_load_thread_abort(l);
+    if (gz == NULL) return level_load_thread_abort(l, "gzopen failed");
 
     if (l->convert)
     {
    	    int16_t x, y, z;
     	int16_t version;
 
-		if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l);
+		if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l, "version/x");
 		if (version == 1874)
 		{
-			if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l);
+			if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l, "x");
 		}
 		else
 		{
 			x = version;
 		}
-		if (gzread(gz, &z, sizeof z) != sizeof y) return level_load_thread_abort(l);
-		if (gzread(gz, &y, sizeof y) != sizeof z) return level_load_thread_abort(l);
-		if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l);
-		if (gzread(gz, &l->spawn.x, sizeof l->spawn.x) != sizeof l->spawn.x) return level_load_thread_abort(l);
-		if (gzread(gz, &l->spawn.z, sizeof l->spawn.z) != sizeof l->spawn.z) return level_load_thread_abort(l);
-		if (gzread(gz, &l->spawn.y, sizeof l->spawn.y) != sizeof l->spawn.y) return level_load_thread_abort(l);
-		if (gzread(gz, &l->spawn.h, sizeof l->spawn.h) != sizeof l->spawn.h) return level_load_thread_abort(l);
-		if (gzread(gz, &l->spawn.p, sizeof l->spawn.p) != sizeof l->spawn.p) return level_load_thread_abort(l);
+		if (gzread(gz, &z, sizeof z) != sizeof y) return level_load_thread_abort(l, "z");
+		if (gzread(gz, &y, sizeof y) != sizeof z) return level_load_thread_abort(l, "y");
+		if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l, "level_init failed");
+		if (gzread(gz, &l->spawn.x, sizeof l->spawn.x) != sizeof l->spawn.x) return level_load_thread_abort(l, "spawn.x");
+		if (gzread(gz, &l->spawn.z, sizeof l->spawn.z) != sizeof l->spawn.z) return level_load_thread_abort(l, "spawn.z");
+		if (gzread(gz, &l->spawn.y, sizeof l->spawn.y) != sizeof l->spawn.y) return level_load_thread_abort(l, "spawn.y");
+		if (gzread(gz, &l->spawn.h, sizeof l->spawn.h) != sizeof l->spawn.h) return level_load_thread_abort(l, "spawn.h");
+		if (gzread(gz, &l->spawn.p, sizeof l->spawn.p) != sizeof l->spawn.p) return level_load_thread_abort(l, "spawn.p");
 
 		l->spawn.x = l->spawn.x * 32 + 16;
 		l->spawn.y = l->spawn.y * 32 + 32;
@@ -724,18 +773,26 @@ static void *level_load_thread(void *arg)
 
 		if (version == 1874)
 		{
-			uint8_t pervisit, perbuild;
-			if (gzread(gz, &pervisit, sizeof pervisit) != sizeof pervisit) return level_load_thread_abort(l);
-			if (gzread(gz, &perbuild, sizeof perbuild) != sizeof perbuild) return level_load_thread_abort(l);
+			if (gzread(gz, &l->rankvisit, sizeof l->rankvisit) != sizeof l->rankvisit) return level_load_thread_abort(l, "rankvisit");
+			if (gzread(gz, &l->rankbuild, sizeof l->rankbuild) != sizeof l->rankbuild) return level_load_thread_abort(l, "rankbuild");
+
+			/* MCSharp uses a different set of permission values for levels for some reason */
+			if (l->rankvisit <= 3) l->rankvisit++;
+			if (l->rankbuild <= 3) l->rankbuild++;
+		}
+		else
+		{
+		    l->rankvisit = RANK_GUEST;
+		    l->rankbuild = RANK_GUEST;
 		}
 
 		size_t s = x * y * z;
 		uint8_t *blocks = malloc(s);
-		if (blocks == NULL) return level_load_thread_abort(l);
+		if (blocks == NULL) return level_load_thread_abort(l, "malloc blocks failed");
 		if (gzread(gz, blocks, s) != s)
 		{
 			free(blocks);
-			return level_load_thread_abort(l);
+			return level_load_thread_abort(l, "blocks");
 		}
 
 		int i;
@@ -748,24 +805,58 @@ static void *level_load_thread(void *arg)
     }
     else
 	{
-		unsigned x, y, z;
-		if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l);
-		if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l);
-		if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l);
-		if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l);
+	    unsigned header, version;
+	    if (gzread(gz, &header, sizeof header) != sizeof version) return level_load_thread_abort(l, "header");
+	    if (header != 'MCLV') return level_load_thread_abort(l, "invalid header");
+	    if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l, "version");
 
-		if (gzread(gz, &l->spawn, sizeof l->spawn) != sizeof l->spawn) return level_load_thread_abort(l);
+		unsigned x, y, z;
+		if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l, "x");
+		if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l, "y");
+		if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l, "z");
+		if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l, "level init failed");
+		if (gzread(gz, &l->spawn, sizeof l->spawn) != sizeof l->spawn) return level_load_thread_abort(l, "spawn");
 
 		size_t s = sizeof *l->blocks * x * y *z;
-		if (gzread(gz, l->blocks, s) != s) return level_load_thread_abort(l);
+		if (gzread(gz, l->blocks, s) != s) return level_load_thread_abort(l, "blocks");
+
+		if (version == 0)
+		{
+		    l->owner = 0;
+		    l->rankvisit = RANK_GUEST;
+		    l->rankbuild = RANK_GUEST;
+		}
+		else
+		{
+            if (gzread(gz, &l->owner, sizeof l->owner) != sizeof l->owner) return level_load_thread_abort(l, "owner");
+            if (gzread(gz, &l->rankvisit, sizeof l->rankvisit) != sizeof l->rankvisit) return level_load_thread_abort(l, "rankvisit");
+            if (gzread(gz, &l->rankbuild, sizeof l->rankbuild) != sizeof l->rankbuild) return level_load_thread_abort(l, "rankbuild");
+
+            size_t n;
+            unsigned u;
+            if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "uservisit count");
+            for (i = 0; i < n; i++)
+            {
+                if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "uservisit");
+                user_list_add(&l->uservisit, u);
+            }
+
+            if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "userbuild count");
+            for (i = 0; i < n; i++)
+            {
+                if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userbuild");
+                user_list_add(&l->userbuild, u);
+            }
+		}
     }
 
     gzclose(gz);
 
-    int count = l->x * l->y * l->z, i;
+    int count = l->x * l->y * l->z;
     for (i = 0; i < count; i++)
     {
         struct block_t *b = &l->blocks[i];
+        if (b->type == AIR || b->type == WATER || b->type == LAVA) continue;
      	b->physics = blocktype_has_physics(b->type);
         if (b->physics) physics_list_add(&l->physics, i);
     }
@@ -846,11 +937,34 @@ void *level_save_thread(void *arg)
         return NULL;
     }
 
+    unsigned header  = 'MCLV';
+    unsigned version = 1;
+    gzwrite(gz, &header, sizeof header);
+    gzwrite(gz, &version, sizeof version);
+
     gzwrite(gz, &l->x, sizeof l->x);
     gzwrite(gz, &l->y, sizeof l->y);
     gzwrite(gz, &l->z, sizeof l->z);
     gzwrite(gz, &l->spawn, sizeof l->spawn);
     gzwrite(gz, l->blocks, sizeof *l->blocks * l->x * l->y * l->z);
+
+    gzwrite(gz, &l->owner, sizeof l->owner);
+    gzwrite(gz, &l->rankvisit, sizeof l->rankvisit);
+    gzwrite(gz, &l->rankbuild, sizeof l->rankbuild);
+
+    int i;
+    gzwrite(gz, &l->uservisit.used, sizeof l->uservisit.used);
+    for (i = 0; i < l->uservisit.used; i++)
+    {
+        gzwrite(gz, &l->uservisit.items[i], sizeof l->uservisit.items[i]);
+    }
+
+    gzwrite(gz, &l->userbuild.used, sizeof l->userbuild.used);
+    for (i = 0; i < l->userbuild.used; i++)
+    {
+        gzwrite(gz, &l->userbuild.items[i], sizeof l->userbuild.items[i]);
+    }
+
     gzclose(gz);
 
     //LOG("Level '%s' saved\n", l->name);
@@ -918,6 +1032,17 @@ void level_save_all()
     }
 }
 
+static bool level_is_empty(const struct level_t *l)
+{
+    int i;
+    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+    {
+        if (l->clients[i] != NULL) return false;
+    }
+
+    return true;
+}
+
 void level_unload_empty()
 {
     int i, j;
@@ -932,29 +1057,20 @@ void level_unload_empty()
         if (pthread_mutex_trylock(&l->mutex) != 0) continue;
         pthread_mutex_unlock(&l->mutex);
 
-        bool player_on = false;
-        for (j = 0; j < s_clients.used; j++)
-        {
-            const struct player_t *p = s_clients.items[j]->player;
-            if (p == NULL) continue;
-            if (p->level == l || p->new_level == l)
-            {
-                player_on = true;
-                break;
-            }
-        }
+        if (!level_is_empty(l)) continue;
 
+        bool cuboid = false;
         for (j = 0; j < s_cuboids.used; j++)
         {
             const struct cuboid_t *c = &s_cuboids.items[j];
             if (c->level == l)
             {
-                player_on = true;
+                cuboid = true;
                 break;
             }
         }
 
-        if (player_on) continue;
+        if (cuboid) continue;
 
         level_unload(l);
         //level_list_del(&s_levels, l);
@@ -974,7 +1090,7 @@ bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int1
     return true;
 }
 
-static void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t type)
+static void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t old_type, enum blocktype_t new_type, const struct player_t *p)
 {
     struct cuboid_t c;
 
@@ -987,11 +1103,14 @@ static void level_cuboid(struct level_t *level, unsigned start, unsigned end, en
 	if (c.ez < c.sz) { t = c.sz; c.sz = c.ez; c.ez = t; }
 
 	c.cx = c.sx;
-	c.cy = c.sy;
+	c.cy = c.ey;
 	c.cz = c.sz;
 	c.level = level;
 	c.count = 0;
-	c.new_type = type;
+	c.old_type = old_type;
+	c.new_type = new_type;
+	c.owner = p->globalid;
+	c.fixed = HasBit(p->flags, FLAG_PLACE_FIXED);
 
 	cuboid_list_add(&s_cuboids, c);
 }
@@ -1033,7 +1152,15 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
         return;
     }
-    else if (client->player->mode == MODE_CUBOID)
+
+    if (!level_user_can_build(level, client->player))
+    {
+        client_notify(client, "You do not have sufficient permission to build on this level");
+        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+        return;
+    }
+
+    if (client->player->mode == MODE_CUBOID)
     {
     	client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
@@ -1045,7 +1172,23 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 
 		client_notify(client, "Cuboid end placed");
-		level_cuboid(level, client->player->cuboid_start, index, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type);
+		level_cuboid(level, client->player->cuboid_start, index, -1, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type, client->player);
+		client->player->mode = MODE_NORMAL;
+		return;
+    }
+    else if (client->player->mode == MODE_REPLACE)
+    {
+    	client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+
+		if (client->player->cuboid_start == UINT_MAX)
+		{
+			client->player->cuboid_start = index;
+			client_notify(client, "Replace start placed");
+			return;
+		}
+
+		client_notify(client, "Replace end placed");
+		level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type, client->player);
 		client->player->mode = MODE_NORMAL;
 		return;
     }
@@ -1056,22 +1199,26 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
     else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
     else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
 
-    if (m == 0) {
-        if (trigger(level, index, b))
-        {
-            LOG("Triggered!");
-            return;
+    /* Client thinks it has changed to air */
+    if (m == 0) t = AIR;
+    if (!HasBit(client->player->flags, FLAG_PAINT))
+    {
+        if (m == 0) {
+            if (trigger(level, index, b))
+            {
+                LOG("Triggered!");
+                return;
+            }
+
+            nt = AIR;
         }
 
-        nt = AIR;
-        t = AIR;
-    }
-
-    if (m == 1 && bt != AIR && bt != WATER && bt != LAVA && bt != WATERSTILL && bt != LAVASTILL)
-    {
-        client_notify(client, "Active physics block cannot be changed");
-        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-        return;
+        if (m == 1 && bt != AIR && bt != WATER && bt != LAVA && bt != WATERSTILL && bt != LAVASTILL)
+        {
+            client_notify(client, "Active physics block cannot be changed");
+            client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+            return;
+        }
     }
 
     if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
@@ -1114,7 +1261,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
         {
             struct client_t *c = s_clients.items[i];
             if (c->player == NULL) continue;
-            if ((client != c || (pt != t && m == 1)) && c->player->level == level)
+            if ((client != c || pt != t) && c->player->level == level)
             {
                 client_add_packet(c, packet_send_set_block(x, y, z, pt));
             }
@@ -1193,22 +1340,58 @@ void level_set_teleporter(struct level_t *level, const char *name, struct positi
     level_mark_teleporter(level, pos);
 }
 
-static void level_run_physics(struct level_t *level)
+static int gettime()
 {
-    int i;
-    for (i = 0; i < level->physics.used; i++)
-    {
-        unsigned index = level->physics.items[i];
-        struct block_t *b = &level->blocks[index];
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
 
-        physics(level, index, b);
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+void physics_remove(struct level_t *level, unsigned index)
+{
+    physics_list_add(&level->physics_remove, index);
+}
+
+static void level_run_physics(struct level_t *level, bool update)
+{
+    int s = gettime();
+    if (level->updates_iter == 0)
+    {
+        LOG("%lu physics blocks, iterator at %d\n", level->physics.used, level->physics_iter);
+        for (; level->physics_iter < level->physics.used; level->physics_iter++)
+        {
+            unsigned index = level->physics.items[level->physics_iter];
+            struct block_t *b = &level->blocks[index];
+
+            physics(level, index, b);
+
+            if (gettime() - s > 40) return;
+        }
+
+        /* Process the list of physics blocks to remove */
+        LOG("%lu blocks to remove...\n", level->physics_remove.used);
+        int i;
+        for (i = 0; i < level->physics_remove.used; i++)
+        {
+            physics_list_del_item(&level->physics, level->physics_remove.items[i]);
+            if (i % 10000 == 0) { LOG("@ %d\n", i); }
+        }
+        level->physics_remove.used = 0;
+
+        if (i > 0) { LOG("Removed %d physics blocks\n", i); }
     }
 
-    //LOG("%lu physics blocks, %lu block updates\n", level->physics.used, level->updates.used);
+    if (!update) return;
 
-    for (i = 0; i < level->updates.used; i++)
+    level->physics_iter = 0;
+
+    LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
+
+    int n = 50;
+    for (; level->updates_iter < level->updates.used; level->updates_iter++)
     {
-        struct block_update_t *bu = &level->updates.items[i];
+        struct block_update_t *bu = &level->updates.items[level->updates_iter];
         struct block_t *b = &level->blocks[bu->index];
 
         enum blocktype_t pt1 = convert(level, bu->index, b);
@@ -1249,14 +1432,29 @@ static void level_run_physics(struct level_t *level)
                     client_add_packet(c, packet_send_set_block(x, y, z, pt2));
                 }
             }
+
+            /* Max changes */
+            n--;
+            if (n == 0) return;
         }
+
+        /* Max iterations, or 40 ms */
+        //if (gettime() - s > 40) return;
     }
 
     level->updates.used = 0;
+    level->updates_iter = 0;
 }
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
 {
+    /* Time sink? */
+    int i;
+    for (i = 0; i < level->updates.used; i++)
+    {
+        if (index == level->updates.items[i].index) return;
+    }
+
     struct block_update_t bu;
     bu.index = index;
     bu.newtype = newtype;
@@ -1265,13 +1463,21 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
     //LOG("update @ %d (%d)\n", index, newtype);
 }
 
-void level_process()
+void level_process(bool update)
 {
     int i;
     for (i = 0; i < s_levels.used; i++)
     {
         struct level_t *level = s_levels.items[i];
         if (level == NULL) continue;
-        level_run_physics(level);
+
+        /* Don't run physics for empty levels, else it will never unload */
+        if (level_is_empty(level)) continue;
+
+        /* Test if another thread is accessing... */
+        if (pthread_mutex_trylock(&level->mutex) != 0) continue;
+        pthread_mutex_unlock(&level->mutex);
+
+        level_run_physics(level, update);
     }
 }

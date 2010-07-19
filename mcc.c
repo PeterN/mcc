@@ -111,7 +111,7 @@ int main(int argc, char **argv)
         cur_ticks = gettime();
         if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
         {
-            next_tick = next_tick + TICK_INTERVAL;
+            next_tick = cur_ticks + TICK_INTERVAL;
 
             tick++;
 
@@ -123,10 +123,10 @@ int main(int argc, char **argv)
 			}
             //if ((tick % MS_TO_TICKS(2500)) == 0) client_info();
             if ((tick % MS_TO_TICKS(60000)) == 0) heartbeat_start();
-            if ((tick % MS_TO_TICKS(20000)) == 0) level_save_all();
+            if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
             if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
 
-            if ((tick % MS_TO_TICKS(200)) == 0) level_process();
+            level_process((tick % MS_TO_TICKS(240)) == 0);
 
             cuboid_process();
             player_send_positions();
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
             }
         }
 
-        usleep(1000);
+        usleep(1);
 	}
 
 	mcc_exit();

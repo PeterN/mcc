@@ -30,6 +30,6 @@ struct server_t
 
 extern struct server_t g_server;
 
-#define LOG(args...) fprintf(g_server.logfile, "%lu: ", time(NULL)); fprintf(g_server.logfile, args); fflush(g_server.logfile)
+#define LOG(args...) { fprintf(g_server.logfile, "%lu: ", time(NULL)); fprintf(g_server.logfile, args); fflush(g_server.logfile); }
 
 #endif /* MCC_H */

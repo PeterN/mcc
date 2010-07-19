@@ -25,6 +25,7 @@ enum rank_t
 enum
 {
     FLAG_PLACE_FIXED,
+    FLAG_PAINT,
 };
 
 enum mode_t
@@ -32,6 +33,7 @@ enum mode_t
     MODE_NORMAL,
     MODE_INFO,
     MODE_CUBOID,
+    MODE_REPLACE,
     MODE_PLACE_SOLID,
     MODE_PLACE_WATER,
     MODE_PLACE_LAVA,
@@ -57,6 +59,7 @@ struct player_t
 
     unsigned cuboid_start;
     enum blocktype_t cuboid_type;
+    enum blocktype_t replace_type;
 
     FILE *undo_log;
     char undo_log_name[256];
@@ -67,7 +70,7 @@ struct player_t
 bool player_t_compare(struct player_t **a, struct player_t **b);
 LIST(player, struct player_t *, player_t_compare);
 
-struct player_t *player_add(const char *username);
+struct player_t *player_add(const char *username, bool *newuser);
 void player_del(struct player_t *player);
 struct player_t *player_get_by_name(const char *username);
 

@@ -103,7 +103,7 @@ void net_close(struct client_t *c, const char *reason)
 
 	if (c->player == NULL)
 	{
-		LOG("Closing connection: %s\n", reason);
+		LOG("Closing connection: %s\n", reason == NULL ? "closed" : reason);
 	}
 	else
 	{
@@ -123,7 +123,14 @@ void net_close(struct client_t *c, const char *reason)
 	    client_send_despawn(c, false);
 	    c->player->level->clients[c->player->levelid] = NULL;
 
-	    snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected (%s)", c->player->colourusername, reason);
+        if (reason == NULL)
+        {
+            snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected", c->player->colourusername);
+        }
+	    else
+	    {
+	        snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected (%s)", c->player->colourusername, reason);
+	    }
 	    net_notify_all(buf);
 
 		LOG("Closing connection %s (%d): %s\n", c->player->username, c->player->globalid, reason);
@@ -142,7 +149,7 @@ static void net_packetsend(struct client_t *c)
     {
         p = c->packet_send;
 
-        res = send(c->sock, p->buffer, p->loc - p->buffer, 0);
+        res = send(c->sock, p->buffer, p->loc - p->buffer, MSG_NOSIGNAL);
         if (res == -1)
         {
             //if (errno != EWOULDBLOCK)
@@ -187,7 +194,8 @@ static void net_packetrecv(struct client_t *c)
 		}
 		else if (res == 0)
 		{
-			net_close(c, "read of 0 bytes");
+		    /* Normal disconnect? */
+			net_close(c, NULL);
 			return;
 		}
 

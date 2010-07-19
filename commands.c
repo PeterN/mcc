@@ -17,7 +17,7 @@
 #include "mcc.h"
 #include "network.h"
 
-static void notify_file(struct client_t *c, const char *filename)
+void notify_file(struct client_t *c, const char *filename)
 {
     char buf[64];
     FILE *f = fopen(filename, "r");
@@ -157,6 +157,8 @@ CMD(commands)
 
 CMD(cuboid)
 {
+    char buf[64];
+
 	if (params > 2)
 	{
 		client_notify(c, "cuboid [<type>]");
@@ -169,13 +171,18 @@ CMD(cuboid)
 	if (params == 2)
 	{
 		c->player->cuboid_type = blocktype_get_by_name(param[1]);
+		if (c->player->cuboid_type == -1)
+        {
+            snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+            return;
+        }
 	}
 	else
 	{
 		c->player->cuboid_type = -1;
 	}
 
-    char buf[64];
+
     snprintf(buf, sizeof buf, "Place corners of cuboid");
     client_notify(c, buf);
 }
@@ -196,7 +203,7 @@ CMD(filter)
 
     if (params == 2)
     {
-        int filter = playerdb_get_globalid(param[1], false);
+        int filter = playerdb_get_globalid(param[1], false, NULL);
         if (filter == -1)
         {
             client_notify(c, "User does not exist");
@@ -330,19 +337,27 @@ CMD(home)
 
     if (!level_get_by_name(name, &l))
     {
+        client_notify(c, "Creating your home level...");
+
         l = malloc(sizeof *l);
-        if (!level_init(l, 32, 32, 32, name, true))
+        if (!level_init(l, 64, 32, 64, name, true))
         {
         	LOG("Unable to create level\n");
         	free(l);
         	return;
         }
 
+        l->owner = c->player->globalid;
+        l->rankvisit = RANK_GUEST;
+        l->rankbuild = RANK_OP;
+        user_list_add(&l->uservisit, l->owner);
+        user_list_add(&l->userbuild, l->owner);
+
         level_gen(l, 0);
         level_list_add(&s_levels, l);
     }
 
-    /* Don't resend the level if play is already on it */
+    /* Don't resend the level if player is already on it */
     if (player_change_level(c->player, l)) level_send(c);
 }
 
@@ -444,8 +459,13 @@ CMD(levels)
 
 CMD(mapinfo)
 {
+    const struct level_t *l = c->player->level;
     char buf[64];
-    snprintf(buf, sizeof buf, "Level '%s': %d x %d x %d", c->player->level->name, c->player->level->x, c->player->level->y, c->player->level->z);
+    snprintf(buf, sizeof buf, "Level: %s  Owner: %s", l->name, playerdb_get_username(l->owner));
+    client_notify(c, buf);
+    snprintf(buf, sizeof buf, "Extents: %d x %d x %d", l->x, l->y, l->z);
+    client_notify(c, buf);
+    snprintf(buf, sizeof buf, "Visit permission: %s  Build permission: %s", rank_get_name(l->rankvisit), rank_get_name(l->rankbuild));
     client_notify(c, buf);
 }
 
@@ -481,6 +501,11 @@ CMD(newlvl)
 
         client_notify(c, "Starting level creation");
 
+        /* No owner, but only ops+ can go in initially */
+        l->owner = 0;
+        l->rankvisit = RANK_OP;
+        l->rankbuild = RANK_OP;
+
         level_gen(l, t);
         level_list_add(&s_levels, l);
     }
@@ -495,6 +520,75 @@ CMD(newlvl)
 CMD(opglass)
 {
 	client_notify(c, "OpGlass not supported. Use /fixed with glass instead.");
+}
+
+CMD(paint)
+{
+    ToggleBit(c->player->flags, FLAG_PAINT);
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Paint %s", HasBit(c->player->flags, FLAG_PAINT) ? "on" : "off");
+    client_notify(c, buf);
+}
+
+CMD(players)
+{
+    if (params > 2)
+    {
+        client_notify(c, "players [<level>]");
+        return;
+    }
+
+    struct level_t *l = NULL;
+    if (params == 2)
+    {
+        if (!level_get_by_name(param[1], &l))
+        {
+            client_notify(c, "Unknown level");
+            return;
+        }
+    }
+
+    player_list(c, NULL);
+
+}
+
+CMD(replace)
+{
+    char buf[64];
+
+	if (params > 3)
+	{
+		client_notify(c, "replace <oldtype> [<newtype>]");
+		return;
+	}
+
+	c->player->replace_type = blocktype_get_by_name(param[1]);
+	if (c->player->replace_type == -1)
+	{
+        snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
+        return;
+	}
+
+	if (params == 3)
+	{
+		c->player->cuboid_type = blocktype_get_by_name(param[2]);
+		if (c->player->cuboid_type == -1)
+        {
+            snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+            return;
+        }
+	}
+	else
+	{
+		c->player->cuboid_type = -1;
+	}
+
+    c->player->mode = MODE_REPLACE;
+	c->player->cuboid_start = UINT_MAX;
+
+    snprintf(buf, sizeof buf, "Place corners of cuboid");
+    client_notify(c, buf);
 }
 
 CMD(rules)
@@ -552,6 +646,12 @@ CMD(setrank)
 
 CMD(setspawn)
 {
+    if (c->player->rank < RANK_OP && c->player->globalid != c->player->level->owner)
+    {
+        client_notify(c, "You do not have permission to change spawn here");
+        return;
+    }
+
     c->player->level->spawn = c->player->pos;
     c->player->level->changed = true;
 
@@ -821,9 +921,12 @@ struct command_t s_commands[] = {
     { "motd", RANK_BANNED, &cmd_motd },
     { "newlvl", RANK_ADMIN, &cmd_newlvl },
 	{ "opglass", RANK_OP, &cmd_opglass },
+	{ "paint", RANK_BUILDER, &cmd_paint },
+	{ "players", RANK_GUEST, &cmd_players },
+	{ "replace", RANK_ADV_BUILDER, &cmd_replace },
     { "rules", RANK_BANNED, &cmd_rules },
     { "setrank", RANK_OP, &cmd_setrank },
-    { "setspawn", RANK_OP, &cmd_setspawn },
+    { "setspawn", RANK_BUILDER, &cmd_setspawn },
     { "spawn", RANK_GUEST, &cmd_spawn },
     { "solid", RANK_OP, &cmd_solid },
     { "summon", RANK_OP, &cmd_summon },

@@ -99,10 +99,12 @@ void playerdb_close()
     sqlite3_close(s_db);
 }
 
-int playerdb_get_globalid(const char *username, bool add)
+int playerdb_get_globalid(const char *username, bool add, bool *added)
 {
     int i;
     int res;
+
+    if (added != NULL) added = false;
 
     for (i = 0; i < (add ? 2 : 1); i++)
     {
@@ -133,6 +135,8 @@ int playerdb_get_globalid(const char *username, bool add)
 				LOG("Unable to create new user '%s'\n", username);
 				return -1;
 			}
+
+			if (added != NULL) *added = true;
 		}
     }
 

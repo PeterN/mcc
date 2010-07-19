@@ -16,6 +16,8 @@ struct cuboid_t
     enum blocktype_t old_type;
     enum blocktype_t new_type;
     struct level_t *level;
+    unsigned owner;
+    bool fixed;
     int count;
 };
 

@@ -12,6 +12,12 @@
 
 struct client_t;
 
+static inline bool user_compare(unsigned *a, unsigned *b)
+{
+	return *a == *b;
+}
+LIST(user, unsigned, user_compare)
+
 struct teleporter_t
 {
     char name[32];
@@ -35,10 +41,19 @@ struct level_t
 
 	struct position_t spawn;
 
+    unsigned owner;
+	uint8_t rankvisit;
+	uint8_t rankbuild;
+	struct user_list_t uservisit;
+	struct user_list_t userbuild;
+
 	struct block_t *blocks;
-	struct physics_list_t physics;
+	struct physics_list_t physics, physics_remove;
 	struct block_update_list_t updates;
     struct teleporter_list_t teleporters;
+
+    int physics_iter;
+    int updates_iter;
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];

@@ -5,6 +5,7 @@
 #include "packet.h"
 #include "network.h"
 #include "client.h"
+#include "commands.h"
 #include "player.h"
 #include "level.h"
 #include "mcc.h"
@@ -148,7 +149,8 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
         net_close(player->client, type);
     }
 
-    player = player_add(username);
+    bool newuser;
+    player = player_add(username, &newuser);
 
     /* No longer need these */
 	free(username);
@@ -183,6 +185,11 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
     net_notify_all(buf);
 
     if (player_change_level(c->player, l)) level_send(c);
+
+    if (newuser)
+    {
+        notify_file(c, "rules.txt");
+    }
 }
 
 void packet_recv_set_block(struct client_t *c, struct packet_t *p)
