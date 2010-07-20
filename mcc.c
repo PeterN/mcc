@@ -58,6 +58,8 @@ int main(int argc, char **argv)
     int tick = 0;
 	int i;
 
+	//config_read(&g_server);
+
 	g_server.logfile = fopen("log.txt", "a");
     LOG("Server starting...\n");
 
@@ -72,6 +74,10 @@ int main(int argc, char **argv)
         }
 
         level_gen(l, 1);
+
+        l->rankbuild = RANK_GUEST;
+        l->rankvisit = RANK_GUEST;
+
         level_list_add(&s_levels, l);
     }
 
@@ -79,7 +85,7 @@ int main(int argc, char **argv)
 	g_server.motd = "Test server for Just Another Minecraft Server";
 	g_server.max_players = 20;
 	g_server.players = 0;
-	g_server.public = true;
+	g_server.public = false;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
@@ -101,6 +107,8 @@ int main(int argc, char **argv)
 
 	int cur_ticks = gettime();
 	int next_tick = cur_ticks + TICK_INTERVAL;
+
+	module_load("./spleef.so");
 
 	while (!g_server.exit)
 	{

@@ -26,6 +26,7 @@ enum
 {
     FLAG_PLACE_FIXED,
     FLAG_PAINT,
+    FLAG_DISOWN,
 };
 
 enum mode_t

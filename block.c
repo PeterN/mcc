@@ -170,7 +170,7 @@ void physics_gravity(struct level_t *l, unsigned index, const struct block_t *bl
     }
 }
 
-enum blocktype_t convert_active_sponge(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_active_sponge(struct level_t *level, unsigned index, const struct block_t *block)
 {
     return AIR;
 }
@@ -218,7 +218,7 @@ void physics_active_sponge(struct level_t *l, unsigned index, const struct block
     //}
 }
 
-enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, const struct block_t *block)
 {
     return STAIRCASESTEP;
 }
@@ -243,22 +243,22 @@ void physics_stair(struct level_t *l, unsigned index, const struct block_t *bloc
     level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
 }
 
-enum blocktype_t convert_door(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_door(struct level_t *level, unsigned index, const struct block_t *block)
 {
     return block->data ? AIR : TRUNK;
 }
 
-enum blocktype_t convert_door_obsidian(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_door_obsidian(struct level_t *level, unsigned index, const struct block_t *block)
 {
     return block->data ? AIR : OBSIDIAN;
 }
 
-enum blocktype_t convert_door_glass(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_door_glass(struct level_t *level, unsigned index, const struct block_t *block)
 {
     return block->data ? AIR : GLASS;
 }
 
-enum blocktype_t convert_door_stair(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_door_stair(struct level_t *level, unsigned index, const struct block_t *block)
 {
     return block->data ? AIR : STAIRCASESTEP;
 }
@@ -321,14 +321,14 @@ void physics_door(struct level_t *l, unsigned index, const struct block_t *block
     }
 }
 
-enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const struct block_t *block)
 {
     int16_t x, y, z;
     level_get_xyz(level, index, &x, &y, &z);
     return (x + y + z) % 2 ? TRUNK : WOOD;
 }
 
-enum blocktype_t convert_wire(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_wire(struct level_t *level, unsigned index, const struct block_t *block)
 {
     switch (block->data)
     {
@@ -446,7 +446,7 @@ void physics_wire3d(struct level_t *l, unsigned index, const struct block_t *blo
     }
 }
 
-enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const struct block_t *block)
 {
     return TNT;
 }
@@ -458,7 +458,7 @@ bool trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t 
     return true;
 }
 
-enum blocktype_t convert_explosion(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_explosion(struct level_t *level, unsigned index, const struct block_t *block)
 {
     /* Flicker */
     return HasBit(block->data, 12) ? AIR : LAVA;
@@ -518,7 +518,7 @@ void physics_explosion(struct level_t *l, unsigned index, const struct block_t *
     }
 }
 
-enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const const struct block_t *block)
+enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const struct block_t *block)
 {
     if (block->data == 0) return DARKGREY;
 

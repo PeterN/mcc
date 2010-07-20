@@ -1,6 +1,7 @@
 #ifndef MCC_H
 #define MCC_H
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
 

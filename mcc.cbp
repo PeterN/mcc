@@ -39,6 +39,7 @@
 			<Add library="pthread" />
 			<Add library="sqlite3" />
 			<Add library="rt" />
+			<Add library="dl" />
 		</Linker>
 		<Unit filename="bitstuff.h" />
 		<Unit filename="block.c">
@@ -57,6 +58,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="commands.h" />
+		<Unit filename="config.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="cuboid.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -78,6 +82,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="mcc.h" />
+		<Unit filename="module.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="module.h" />
 		<Unit filename="network.c">
 			<Option compilerVar="CC" />
 		</Unit>

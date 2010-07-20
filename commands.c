@@ -38,23 +38,32 @@ void notify_file(struct client_t *c, const char *filename)
     fclose(f);
 }
 
-typedef void(*command_func_t)(struct client_t *c, int params, const char **param);
+typedef bool(*command_func_t)(struct client_t *c, int params, const char **param);
 
 struct command_t
 {
     const char *command;
     enum rank_t rank;
     command_func_t func;
+    const char *help;
 };
 
 struct command_t s_commands[];
 
-#define CMD(x) static void cmd_ ## x (struct client_t *c, int params, const char **param)
+#define CMD(x) static bool cmd_ ## x (struct client_t *c, int params, const char **param)
+
+static const char help_afk[] =
+"/afk [<message>]\n"
+"Mark yourself AFK";
 
 CMD(afk)
 {
-
+	return true;
 }
+
+static const char help_ban[] =
+"/ban <user>\n"
+"Ban user";
 
 CMD(ban)
 {
@@ -62,17 +71,13 @@ CMD(ban)
     struct player_t *p;
     int oldrank;
 
-    if (params != 2)
-    {
-        client_notify(c, "ban <user>");
-        return;
-    }
+    if (params != 2) return true;
 
     oldrank = playerdb_get_rank(param[1]);
     if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
     {
         client_notify(c, "Cannot ban op or admin");
-        return;
+        return false;
     }
 
     playerdb_set_rank(param[1], RANK_BANNED);
@@ -84,18 +89,21 @@ CMD(ban)
 
     snprintf(buf, sizeof buf, "%s banned", param[1]);
     net_notify_all(buf);
+    return false;
 }
+
+static const char help_bind[] =
+"/bind [<fromtype> [<totype>]]\n"
+"Bind a block, so that placing <fromtype> actually places <totype>. "
+"Use /bind on its own to list your binds, or without a <totype> to "
+"reset a bind.";
 
 CMD(bind)
 {
     char buf[64];
     int i, j;
 
-    if (params > 3)
-    {
-        client_notify(c, "bind [<fromtype> [<totype>]]");
-        return;
-    }
+    if (params > 3) return true;
 
     switch (params)
     {
@@ -128,7 +136,12 @@ CMD(bind)
             }
             break;
     }
+    return false;
 }
+
+static const char help_commands[] =
+"/commands\n"
+"List all commands available to you.";
 
 CMD(commands)
 {
@@ -153,17 +166,20 @@ CMD(commands)
     }
 
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_cuboid[] =
+"/cuboid [<type>]\n"
+"Place a cuboid, using two corners specified after using the command. "
+"Cuboid will be of the <type> given, or the type held when placing the final corner.";
 
 CMD(cuboid)
 {
     char buf[64];
 
-	if (params > 2)
-	{
-		client_notify(c, "cuboid [<type>]");
-		return;
-	}
+	if (params > 2) return true;
 
 	c->player->mode = MODE_CUBOID;
 	c->player->cuboid_start = UINT_MAX;
@@ -174,7 +190,7 @@ CMD(cuboid)
 		if (c->player->cuboid_type == -1)
         {
             snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
-            return;
+            return false;
         }
 	}
 	else
@@ -185,21 +201,45 @@ CMD(cuboid)
 
     snprintf(buf, sizeof buf, "Place corners of cuboid");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_disown[] =
+"/disown\n"
+"Toggle disown mode. When enabled, any blocks placed will have their owner reset to none. "
+"Useful for clearing up some blocks.";
+
+CMD(disown)
+{
+    ToggleBit(c->player->flags, FLAG_DISOWN);
+
+    char buf[64];
+    snprintf(buf, sizeof buf, "Disown %s", HasBit(c->player->flags, FLAG_DISOWN) ? "on" : "off");
+    client_notify(c, buf);
+
+    return false;
+}
+
+static const char help_exit[] =
+"/exit\n"
+"Exit and shut down the server.";
 
 CMD(exit)
 {
     g_server.exit = true;
+
+    return false;
 }
+
+static const char help_filter[] =
+"/filter [<user>]\n"
+"Filter the current level to only show blocks placed by the <user> given. "
+"If no <user> is specified, filtering is reset so all blocks are shown.";
 
 CMD(filter)
 {
-    if (params > 2)
-    {
-        client_notify(c, "filter [<user>]");
-        return;
-    }
-
+    if (params > 2) return true;
 
     if (params == 2)
     {
@@ -207,7 +247,7 @@ CMD(filter)
         if (filter == -1)
         {
             client_notify(c, "User does not exist");
-            return;
+            return false;
         }
 
         c->player->filter = filter;
@@ -219,7 +259,14 @@ CMD(filter)
     }
 
     level_send(c);
+
+    return false;
 }
+
+static const char help_fixed[] =
+"/fixed\n"
+"Toggle fixed mode. When enabled, fixed blocks will not be subject "
+"to physics and cannot be removed by other players.";
 
 CMD(fixed)
 {
@@ -228,24 +275,27 @@ CMD(fixed)
     char buf[64];
     snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, FLAG_PLACE_FIXED) ? "on" : "off");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_follow[] =
+"/follow [<user>]\n"
+"Enables hidden mode and follows the specified <user>. "
+"If no <user> specified, following is disabled.";
 
 CMD(follow)
 {
 	char buf[64];
 
-	if (params > 2)
-	{
-		client_notify(c, "follow [<user>]");
-		return;
-	}
+	if (params > 2) return true;
 
 	if (params == 1)
 	{
 		if (c->player->following == NULL)
 		{
 			client_notify(c, "Not following anyone");
-			return;
+			return false;
 		}
 
 		snprintf(buf, sizeof buf, "Stopped following %s", c->player->following->username);
@@ -254,7 +304,7 @@ CMD(follow)
 	    client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->username, &c->player->following->pos));
 
 		c->player->following = NULL;
-		return;
+		return false;
 	}
 
 	struct player_t *p = player_get_by_name(param[1]);
@@ -262,13 +312,13 @@ CMD(follow)
     {
         snprintf(buf, sizeof buf, "%s is offline", param[1]);
         client_notify(c, buf);
-        return;
+        return false;
     }
     if (p->level != c->player->level)
     {
         snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
         client_notify(c, buf);
-        return;
+        return false;
     }
 
     if (!c->hidden)
@@ -287,15 +337,17 @@ CMD(follow)
     client_notify(c, buf);
 
     c->player->following = p;
+
+    return false;
 }
+
+static const char help_goto[] =
+"/goto <level>\n"
+"Switch to the named level.";
 
 CMD(goto)
 {
-    if (params != 2)
-    {
-        client_notify(c, "goto <name>");
-        return;
-    }
+    if (params != 2) return true;
 
     struct level_t *l;
     if (level_get_by_name(param[1], &l))
@@ -308,7 +360,13 @@ CMD(goto)
         snprintf(buf, sizeof buf, "Cannot go to level '%s'", param[1]);
         client_notify(c, buf);
     }
+
+    return false;
 }
+
+static const char help_hide[] =
+"/hide\n"
+"Toggle hidden mode.";
 
 CMD(hide)
 {
@@ -326,7 +384,13 @@ CMD(hide)
     char buf[64];
     snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_home[] =
+"/home\n"
+"Go to your home level. If you are a new player, a blank level will be created.";
 
 CMD(home)
 {
@@ -344,12 +408,12 @@ CMD(home)
         {
         	LOG("Unable to create level\n");
         	free(l);
-        	return;
+        	return false;
         }
 
         l->owner = c->player->globalid;
         l->rankvisit = RANK_GUEST;
-        l->rankbuild = RANK_OP;
+        l->rankbuild = RANK_ADMIN;
         user_list_add(&l->uservisit, l->owner);
         user_list_add(&l->userbuild, l->owner);
 
@@ -359,16 +423,25 @@ CMD(home)
 
     /* Don't resend the level if player is already on it */
     if (player_change_level(c->player, l)) level_send(c);
+
+    return false;
 }
+
+static const char help_identify[] =
+"/identify <password>\n"
+"Identify your account so that you may use privileged commands.";
 
 CMD(identify)
 {
-    if (params != 2)
-    {
-        client_notify(c, "identify <password>");
-        return;
-    }
+    if (params != 2) return true;
+
+    return false;
 }
+
+static const char help_info[] =
+"/info\n"
+"Enable block info mode. When enabled, destroying or building a block will "
+"give block information instead.";
 
 CMD(info)
 {
@@ -377,30 +450,37 @@ CMD(info)
     char buf[64];
     snprintf(buf, sizeof buf, "Block info %s", (c->player->mode == MODE_INFO) ? "on" : "off");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_kick[] =
+"/kick <user>\n"
+"Kicks the specified <user> from the server.";
 
 CMD(kick)
 {
-    if (params != 2)
-    {
-        client_notify(c, "kick <user>");
-        return;
-    }
+    if (params != 2) return true;
 
     char buf[64];
-
 
     struct player_t *p = player_get_by_name(param[1]);
     if (p == NULL)
     {
         snprintf(buf, sizeof buf, "%s is offline", param[1]);
         client_notify(c, buf);
-        return;
+        return false;
     }
 
     snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
     net_close(p->client, buf);
+
+    return false;
 }
+
+static const char help_lava[] =
+"/lava\n"
+"Toggle lava mode. Any block placed will be converted to static lava.";
 
 CMD(lava)
 {
@@ -409,12 +489,18 @@ CMD(lava)
     char buf[64];
     snprintf(buf, sizeof buf, "Lava %s", (c->player->mode == MODE_PLACE_LAVA) ? "on" : "off");
     client_notify(c, buf);
+
+    return false;
 }
 
 static int level_filename_filter(const struct dirent *d)
 {
     return strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL;
 }
+
+static const char help_levels[] =
+"/levels\n"
+"List all levels known by the server.";
 
 CMD(levels)
 {
@@ -430,7 +516,7 @@ CMD(levels)
     if (n < 0)
     {
         client_notify(c, "Unable to get list of levels");
-        return;
+        return false;
     }
 
     for (i = 0; i < n; i++)
@@ -455,7 +541,13 @@ CMD(levels)
     }
 
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_mapinfo[] =
+"/mapinfo\n"
+"List information about the current level.";
 
 CMD(mapinfo)
 {
@@ -467,21 +559,52 @@ CMD(mapinfo)
     client_notify(c, buf);
     snprintf(buf, sizeof buf, "Visit permission: %s  Build permission: %s", rank_get_name(l->rankvisit), rank_get_name(l->rankbuild));
     client_notify(c, buf);
+
+	return false;
 }
+
+static const char help_module_load[] =
+"/module_load <name>\n"
+"Load a module.";
+
+CMD(module_load)
+{
+	if (params != 2) return true;
+
+	module_load(param[1]);
+	return false;
+}
+
+static const char help_module_unload[] =
+"/module_unload <name>\n"
+"Unload a module.";
+
+CMD(module_unload)
+{
+	if (params != 2) return true;
+
+	module_load(param[1]);
+	return false;
+}
+
+static const char help_motd[] =
+"/motd\n"
+"Display the server's Message of the Day.";
 
 CMD(motd)
 {
     notify_file(c, "motd.txt");
+    return false;
 }
+
+static const char help_newlvl[] =
+"/newlvl <name> <x> <y> <z> <type>\n"
+"Create a new level. <y> is height. "
+"Type: 0=flat 1=flat/adminium 2=smooth 6=rough";
 
 CMD(newlvl)
 {
-    if (params != 6)
-    {
-        client_notify(c, "newlvl <name> <x> <y> <z> <type>");
-        client_notify(c, " type: 0=flat 1=flat/adminium 2=smooth 6=rough");
-        return;
-    }
+    if (params != 6) return true;
 
     const char *name = param[1];
     int x = strtol(param[2], NULL, 10);
@@ -496,7 +619,7 @@ CMD(newlvl)
         {
         	client_notify(c, "Unable to create level. Too big?");
         	free(l);
-        	return;
+        	return false;
         }
 
         client_notify(c, "Starting level creation");
@@ -515,12 +638,24 @@ CMD(newlvl)
         snprintf(buf, sizeof buf, "Level '%s' already exists", name);
         client_notify(c, buf);
     }
+
+    return false;
 }
+
+static const char help_opglass[] =
+"/opglass\n"
+"OpGlass not supported. Use /fixed with glass instead.";
 
 CMD(opglass)
 {
 	client_notify(c, "OpGlass not supported. Use /fixed with glass instead.");
+	return false;
 }
+
+static const char help_paint[] =
+"/paint\n"
+"Toggle paint mode. When enabled, any removed block will instead "
+"be replaced by the currently held block.";
 
 CMD(paint)
 {
@@ -529,15 +664,17 @@ CMD(paint)
     char buf[64];
     snprintf(buf, sizeof buf, "Paint %s", HasBit(c->player->flags, FLAG_PAINT) ? "on" : "off");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_players[] =
+"/players [<level>]\n"
+"List all players connected. If <level> is specified, only players on that level are listed.";
 
 CMD(players)
 {
-    if (params > 2)
-    {
-        client_notify(c, "players [<level>]");
-        return;
-    }
+    if (params > 2) return false;
 
     struct level_t *l = NULL;
     if (params == 2)
@@ -545,29 +682,29 @@ CMD(players)
         if (!level_get_by_name(param[1], &l))
         {
             client_notify(c, "Unknown level");
-            return;
+            return false;
         }
     }
 
-    player_list(c, NULL);
-
+    player_list(c, l);
+    return false;
 }
+
+static const char help_replace[] =
+"/replace <oldtype> [<newtype>]\n"
+"";
 
 CMD(replace)
 {
     char buf[64];
 
-	if (params > 3)
-	{
-		client_notify(c, "replace <oldtype> [<newtype>]");
-		return;
-	}
+	if (params > 3) return true;
 
 	c->player->replace_type = blocktype_get_by_name(param[1]);
 	if (c->player->replace_type == -1)
 	{
         snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
-        return;
+        return false;
 	}
 
 	if (params == 3)
@@ -576,7 +713,7 @@ CMD(replace)
 		if (c->player->cuboid_type == -1)
         {
             snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
-            return;
+            return false;
         }
 	}
 	else
@@ -589,12 +726,23 @@ CMD(replace)
 
     snprintf(buf, sizeof buf, "Place corners of cuboid");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_rules[] =
+"/rules\n"
+"Display the server rules.";
 
 CMD(rules)
 {
     notify_file(c, "rules.txt");
+    return false;
 }
+
+static const char help_setrank[] =
+"/setrank <name> <rank>\n"
+"Sets a user's rank.";
 
 CMD(setrank)
 {
@@ -602,34 +750,30 @@ CMD(setrank)
     int newrank;
     struct player_t *p;
 
-    if (params != 3)
-    {
-        client_notify(c, "setrank <name> <rank>");
-        return;
-    }
+    if (params != 3) return true;
 
     newrank = rank_get_by_name(param[2]);
     if (newrank == -1 && c->player->rank == RANK_ADMIN)
     {
         client_notify(c, "Invalid rank: banned guest builder advbuilder op admin");
-        return;
+        return false;
     }
     if ((newrank == -1 || newrank >= RANK_OP) && c->player->rank == RANK_OP)
     {
         client_notify(c, "Invalid rank: banned guest builder advbuilder");
-        return;
+        return false;
     }
 
     oldrank = playerdb_get_rank(param[1]);
     if (oldrank == newrank)
     {
         client_notify(c, "User already at rank");
-        return;
+        return false;
     }
     if (c->player->rank != RANK_ADMIN && oldrank == RANK_ADMIN)
     {
         client_notify(c, "Cannot demote admin");
-        return;
+        return false;
     }
 
     playerdb_set_rank(param[1], newrank);
@@ -642,27 +786,45 @@ CMD(setrank)
     char buf[64];
     snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), p->username);
     net_notify_all(buf);
+
+    return false;
 }
+
+static const char help_setspawn[] =
+"/setspawn\n"
+"Sets the spawn location for the level to your current position.";
 
 CMD(setspawn)
 {
     if (c->player->rank < RANK_OP && c->player->globalid != c->player->level->owner)
     {
         client_notify(c, "You do not have permission to change spawn here");
-        return;
+        return false;
     }
 
     c->player->level->spawn = c->player->pos;
     c->player->level->changed = true;
 
     client_notify(c, "Spawn set to current position");
+
+    return false;
 }
+
+static const char help_spawn[] =
+"/spawn\n"
+"Move back the level spawn location.";
 
 CMD(spawn)
 {
 	c->player->pos = c->player->level->spawn;
 	client_add_packet(c, packet_send_teleport_player(0xFF, &c->player->pos));
+
+	return false;
 }
+
+static const char help_solid[] =
+"/solid\n"
+"Toggle solid mode. Any block placed will be replaced with adminium.";
 
 CMD(solid)
 {
@@ -671,30 +833,32 @@ CMD(solid)
     char buf[64];
     snprintf(buf, sizeof buf, "Solid %s", (c->player->mode == MODE_PLACE_SOLID) ? "on" : "off");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_summon[] =
+"/summon <user>\n"
+"Summons the specified <user> to your current location.";
 
 CMD(summon)
 {
 	char buf[64];
 
-	if (params != 2)
-	{
-		client_notify(c, "summon <user>");
-		return;
-	}
+	if (params != 2) return true;
 
 	struct player_t *p = player_get_by_name(param[1]);
     if (p == NULL)
     {
         snprintf(buf, sizeof buf, "%s is offline", param[1]);
         client_notify(c, buf);
-        return;
+        return false;
     }
     if (p->level != c->player->level)
     {
         snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
         client_notify(c, buf);
-        return;
+        return false;
     }
 
 	p->pos = c->player->pos;
@@ -704,6 +868,8 @@ CMD(summon)
 	client_notify(p->client, buf);
 	snprintf(buf, sizeof buf, "%s summoned", p->username);
 	client_notify(c, buf);
+
+	return false;
 }
 
 static char s_pattern[256];
@@ -712,16 +878,21 @@ static int undo_filename_filter(const struct dirent *d)
     return strncmp(d->d_name, s_pattern, strlen(s_pattern)) == 0;
 }
 
+static const char help_teleporter[] =
+"/teleporter <name> [<dest> [<level>]]\n";
+
 CMD(teleporter)
 {
-    if (params < 2 || params > 5)
-    {
-        client_notify(c, "teleporter <name> [<dest> [<level>]]");
-        return;
-    }
+    if (params < 2 || params > 5) return true;
 
     level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3]);
+
+    return false;
 }
+
+static const char help_time[] =
+"/time\n"
+"Displays time at the server.";
 
 CMD(time)
 {
@@ -734,44 +905,48 @@ CMD(time)
 	char buf[64];
 	strftime(buf, sizeof buf, "Server time is %H:%M:%S", localtime(&curtime));
 	client_notify(c, buf);
+
+	return false;
 }
+
+static const char help_tp[] =
+"/tp <user>\n"
+"Teleport to the <user> specified.";
 
 CMD(tp)
 {
     char buf[64];
 
-    if (params != 2)
-    {
-        client_notify(c, "tp <user>");
-        return;
-    }
+    if (params != 2) return true;
 
     const struct player_t *p = player_get_by_name(param[1]);
     if (p == NULL)
     {
         snprintf(buf, sizeof buf, "%s is offline", param[1]);
         client_notify(c, buf);
-        return;
+        return false;
     }
     if (p->level != c->player->level)
     {
         snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
         client_notify(c, buf);
-        return;
+        return false;
     }
 
     client_add_packet(c, packet_send_teleport_player(0xFF, &p->pos));
+
+    return false;
 }
+
+static const char help_undo[] =
+"/undo <user> <level> [<time>]\n"
+"Undo user actions for the specified <user> and <level>.";
 
 CMD(undo)
 {
     char buf[64];
 
-    if (params < 3 || params > 4)
-    {
-        client_notify(c, "undo <user> <level> [<time>]");
-        return;
-    }
+    if (params < 3 || params > 4) return true;
 
     if (params == 3)
     {
@@ -788,7 +963,7 @@ CMD(undo)
         if (n < 0)
         {
             client_notify(c, "Unable to get list of undo logs");
-            return;
+            return false;
         }
 
         for (i = 0; i < n; i++)
@@ -817,11 +992,16 @@ CMD(undo)
         }
 
         client_notify(c, buf);
-        return;
+        return false;
     }
 
     player_undo(c, param[1], param[2], param[3]);
+    return false;
 }
+
+static const char help_uptime[] =
+"/uptime\n"
+"Display server uptime and load.";
 
 CMD(uptime)
 {
@@ -859,10 +1039,16 @@ CMD(uptime)
 	struct rusage usage;
 	if (getrusage(RUSAGE_SELF, &usage) == 0)
 	{
-	    snprintf(buf, sizeof buf, "Server meory usage: %lu", usage.ru_ixrss);
+	    snprintf(buf, sizeof buf, "Server memory usage: %lu", usage.ru_ixrss);
 	    client_notify(c, buf);
 	}
+
+	return false;
 }
+
+static const char help_water[] =
+"/water\n"
+"Toggle water mode. Any block placed will be converted to static water.";
 
 CMD(water)
 {
@@ -871,24 +1057,26 @@ CMD(water)
     char buf[64];
     snprintf(buf, sizeof buf, "Water %s", (c->player->mode == MODE_PLACE_WATER) ? "on" : "off");
     client_notify(c, buf);
+
+    return false;
 }
+
+static const char help_whois[] =
+"/whois <user>\n"
+"Display information about the specified <user>.";
 
 CMD(whois)
 {
 	char buf[64];
 
-	if (params != 2)
-	{
-		client_notify(c, "whois <user>");
-		return;
-	}
+	if (params != 2) return true;
 
 	struct player_t *p = player_get_by_name(param[1]);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
         client_notify(c, buf);
-        return;
+        return false;
 	}
 
 	//if (c->rank >= RANK_OP)
@@ -896,48 +1084,53 @@ CMD(whois)
 		//snprintf(buf, sizeof buf, "%s is on '%s'"
 	//}
 	//client_notify(c, buf);
+
+	return false;
 }
 
 struct command_t s_commands[] = {
-	{ "afk", RANK_GUEST, &cmd_afk },
-    { "ban", RANK_OP, &cmd_ban },
-    { "bind", RANK_ADV_BUILDER, &cmd_bind },
-    { "commands", RANK_BANNED, &cmd_commands },
-    { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid },
-    { "z", RANK_ADV_BUILDER, &cmd_cuboid },
-    { "exit", RANK_ADMIN, &cmd_exit },
-    { "fixed", RANK_OP, &cmd_fixed },
-    { "filter", RANK_OP, &cmd_filter },
-	{ "follow", RANK_OP, &cmd_follow },
-    { "goto", RANK_GUEST, &cmd_goto },
-    { "hide", RANK_OP, &cmd_hide },
-    { "home", RANK_GUEST, &cmd_home },
-    { "identify", RANK_GUEST, &cmd_identify },
-    { "info", RANK_BUILDER, &cmd_info },
-    { "kick", RANK_OP, &cmd_kick },
-    { "lava", RANK_BUILDER, &cmd_lava },
-    { "levels", RANK_GUEST, &cmd_levels },
-    { "mapinfo", RANK_GUEST, &cmd_mapinfo },
-    { "motd", RANK_BANNED, &cmd_motd },
-    { "newlvl", RANK_ADMIN, &cmd_newlvl },
-	{ "opglass", RANK_OP, &cmd_opglass },
-	{ "paint", RANK_BUILDER, &cmd_paint },
-	{ "players", RANK_GUEST, &cmd_players },
-	{ "replace", RANK_ADV_BUILDER, &cmd_replace },
-    { "rules", RANK_BANNED, &cmd_rules },
-    { "setrank", RANK_OP, &cmd_setrank },
-    { "setspawn", RANK_BUILDER, &cmd_setspawn },
-    { "spawn", RANK_GUEST, &cmd_spawn },
-    { "solid", RANK_OP, &cmd_solid },
-    { "summon", RANK_OP, &cmd_summon },
-    { "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
-    { "time", RANK_GUEST, &cmd_time },
-    { "tp", RANK_BUILDER, &cmd_tp },
-    { "undo", RANK_OP, &cmd_undo },
-    { "uptime", RANK_GUEST, &cmd_uptime },
-    { "water", RANK_BUILDER, &cmd_water },
-    { "whois", RANK_GUEST, &cmd_whois },
-    { NULL, -1, NULL },
+	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
+    { "ban", RANK_OP, &cmd_ban, help_ban },
+    { "bind", RANK_ADV_BUILDER, &cmd_bind, help_bind },
+    { "commands", RANK_BANNED, &cmd_commands, help_commands },
+    { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
+    { "disown", RANK_OP, &cmd_disown, help_disown },
+    { "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
+    { "exit", RANK_ADMIN, &cmd_exit, help_exit },
+    { "fixed", RANK_OP, &cmd_fixed, help_fixed },
+    { "filter", RANK_OP, &cmd_filter, help_filter },
+	{ "follow", RANK_OP, &cmd_follow, help_follow },
+    { "goto", RANK_GUEST, &cmd_goto, help_goto },
+    { "hide", RANK_OP, &cmd_hide, help_hide },
+    { "home", RANK_GUEST, &cmd_home, help_home },
+    { "identify", RANK_GUEST, &cmd_identify, help_identify },
+    { "info", RANK_BUILDER, &cmd_info, help_info },
+    { "kick", RANK_OP, &cmd_kick, help_kick },
+    { "lava", RANK_BUILDER, &cmd_lava, help_lava },
+    { "levels", RANK_GUEST, &cmd_levels, help_levels },
+    { "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
+    { "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
+    { "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
+    { "motd", RANK_BANNED, &cmd_motd, help_motd },
+    { "newlvl", RANK_ADMIN, &cmd_newlvl, help_newlvl },
+	{ "opglass", RANK_OP, &cmd_opglass, help_opglass },
+	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
+	{ "players", RANK_GUEST, &cmd_players, help_players },
+	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
+    { "rules", RANK_BANNED, &cmd_rules, help_rules },
+    { "setrank", RANK_OP, &cmd_setrank, help_setrank },
+    { "setspawn", RANK_BUILDER, &cmd_setspawn, help_setspawn },
+    { "spawn", RANK_GUEST, &cmd_spawn, help_spawn },
+    { "solid", RANK_OP, &cmd_solid, help_solid },
+    { "summon", RANK_OP, &cmd_summon, help_summon },
+	{ "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
+    { "time", RANK_GUEST, &cmd_time, help_time },
+    { "tp", RANK_BUILDER, &cmd_tp, help_tp },
+    { "undo", RANK_OP, &cmd_undo, help_undo },
+    { "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
+    { "water", RANK_BUILDER, &cmd_water, help_water },
+    { "whois", RANK_GUEST, &cmd_whois, help_whois },
+    { NULL, -1, NULL, NULL },
 };
 
 bool command_process(struct client_t *client, int params, const char **param)
@@ -947,7 +1140,10 @@ bool command_process(struct client_t *client, int params, const char **param)
     {
         if (client->player->rank >= comp->rank && strcasecmp(param[0], comp->command) == 0)
         {
-            comp->func(client, params, param);
+            if (comp->func(client, params, param))
+            {
+            	client_notify(client, comp->help);
+            }
             return true;
         }
     }
