@@ -14,58 +14,58 @@ struct level_t;
 
 enum rank_t
 {
-    RANK_BANNED,
-    RANK_GUEST,
-    RANK_BUILDER,
-    RANK_ADV_BUILDER,
-    RANK_OP,
-    RANK_ADMIN,
+	RANK_BANNED,
+	RANK_GUEST,
+	RANK_BUILDER,
+	RANK_ADV_BUILDER,
+	RANK_OP,
+	RANK_ADMIN,
 };
 
 enum
 {
-    FLAG_PLACE_FIXED,
-    FLAG_PAINT,
-    FLAG_DISOWN,
+	FLAG_PLACE_FIXED,
+	FLAG_PAINT,
+	FLAG_DISOWN,
 };
 
 enum mode_t
 {
-    MODE_NORMAL,
-    MODE_INFO,
-    MODE_CUBOID,
-    MODE_REPLACE,
-    MODE_PLACE_SOLID,
-    MODE_PLACE_WATER,
-    MODE_PLACE_LAVA,
+	MODE_NORMAL,
+	MODE_INFO,
+	MODE_CUBOID,
+	MODE_REPLACE,
+	MODE_PLACE_SOLID,
+	MODE_PLACE_WATER,
+	MODE_PLACE_LAVA,
 };
 
 struct player_t
 {
-    int globalid;
-    int levelid;
-    char *colourusername;
-    char *username;
-    enum rank_t rank;
-    enum mode_t mode;
-    uint8_t flags;
+	int globalid;
+	int levelid;
+	char *colourusername;
+	char *username;
+	enum rank_t rank;
+	enum mode_t mode;
+	uint8_t flags;
 
-    struct position_t pos;
-    struct position_t oldpos;
+	struct position_t pos;
+	struct position_t oldpos;
 
-    struct level_t *level, *new_level;
-    struct client_t *client;
-    struct player_t *following;
-    int filter;
+	struct level_t *level, *new_level;
+	struct client_t *client;
+	struct player_t *following;
+	int filter;
 
-    unsigned cuboid_start;
-    enum blocktype_t cuboid_type;
-    enum blocktype_t replace_type;
+	unsigned cuboid_start;
+	enum blocktype_t cuboid_type;
+	enum blocktype_t replace_type;
 
-    FILE *undo_log;
-    char undo_log_name[256];
+	FILE *undo_log;
+	char undo_log_name[256];
 
-    enum blocktype_t bindings[BLOCK_END];
+	enum blocktype_t bindings[BLOCK_END];
 };
 
 bool player_t_compare(struct player_t **a, struct player_t **b);
@@ -89,7 +89,7 @@ enum colour_t rank_get_colour(enum rank_t rank);
 
 static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 {
-    player->mode = (player->mode == mode) ? MODE_NORMAL : mode;
+	player->mode = (player->mode == mode) ? MODE_NORMAL : mode;
 }
 
 void player_send_positions();

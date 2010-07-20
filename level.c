@@ -20,21 +20,21 @@ struct level_list_t s_levels;
 
 bool level_t_compare(struct level_t **a, struct level_t **b)
 {
-    return *a == *b;
+	return *a == *b;
 }
 
 bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name, bool zero)
 {
-    if (zero)
-    {
-        memset(level, 0, sizeof *level);
-        pthread_mutex_init(&level->mutex, NULL);
-    }
+	if (zero)
+	{
+		memset(level, 0, sizeof *level);
+		pthread_mutex_init(&level->mutex, NULL);
+	}
 
-    if (name != NULL)
-    {
-        strncpy(level->name, name, sizeof level->name);
-    }
+	if (name != NULL)
+	{
+		strncpy(level->name, name, sizeof level->name);
+	}
 
 	level->x = x;
 	level->y = y;
@@ -70,684 +70,684 @@ void level_set_block(struct level_t *level, struct block_t *block, unsigned inde
 
 void level_set_block_if(struct level_t *level, struct block_t *block, unsigned index, enum blocktype_t type)
 {
-    if (level->blocks[index].type == type)
-    {
-        level_set_block(level, block, index);
-    }
+	if (level->blocks[index].type == type)
+	{
+		level_set_block(level, block, index);
+	}
 }
 
 int level_get_new_id(struct level_t *level, struct client_t *c)
 {
-    int i;
-    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-    {
-        if (level->clients[i] == NULL)
-        {
-            level->clients[i] = c;
-            return i;
-        }
-    }
+	int i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		if (level->clients[i] == NULL)
+		{
+			level->clients[i] = c;
+			return i;
+		}
+	}
 
-    return -1;
+	return -1;
 }
 
 static bool level_user_can_visit(const struct level_t *l, const struct player_t *p)
 {
-    if (p->rank >= l->rankvisit) return true;
+	if (p->rank >= l->rankvisit) return true;
 
-    int i;
-    for (i = 0; i < l->uservisit.used; i++)
-    {
-        if (l->uservisit.items[i] == p->globalid) return true;
-    }
+	int i;
+	for (i = 0; i < l->uservisit.used; i++)
+	{
+		if (l->uservisit.items[i] == p->globalid) return true;
+	}
 
-    return false;
+	return false;
 }
 
 static bool level_user_can_build(const struct level_t *l, const struct player_t *p)
 {
-    if (p->rank >= l->rankbuild) return true;
+	if (p->rank >= l->rankbuild) return true;
 
-    int i;
-    for (i = 0; i < l->userbuild.used; i++)
-    {
-        if (l->userbuild.items[i] == p->globalid) return true;
-    }
+	int i;
+	for (i = 0; i < l->userbuild.used; i++)
+	{
+		if (l->userbuild.items[i] == p->globalid) return true;
+	}
 
-    return false;
+	return false;
 }
 
 bool level_send(struct client_t *c)
 {
-    struct level_t *oldlevel = c->player->level;
-    struct level_t *newlevel = c->player->new_level;
-    unsigned length = newlevel->x * newlevel->y * newlevel->z;
-    int x;
-    int i;
-    z_stream z;
+	struct level_t *oldlevel = c->player->level;
+	struct level_t *newlevel = c->player->new_level;
+	unsigned length = newlevel->x * newlevel->y * newlevel->z;
+	int x;
+	int i;
+	z_stream z;
 
-    /* If we can't lock the mutex then the thread is already locked */
-    if (pthread_mutex_trylock(&newlevel->mutex))
-    {
-        if (!c->waiting_for_level)
-        {
-            client_notify(c, "Please wait for level operation to complete");
-            c->waiting_for_level = true;
-        }
-        return false;
-    }
-    pthread_mutex_unlock(&newlevel->mutex);
+	/* If we can't lock the mutex then the thread is already locked */
+	if (pthread_mutex_trylock(&newlevel->mutex))
+	{
+		if (!c->waiting_for_level)
+		{
+			client_notify(c, "Please wait for level operation to complete");
+			c->waiting_for_level = true;
+		}
+		return false;
+	}
+	pthread_mutex_unlock(&newlevel->mutex);
 
-    if (!level_user_can_visit(newlevel, c->player))
-    {
-        c->waiting_for_level = false;
-        c->player->new_level = oldlevel;
-        client_notify(c, "You do not have sufficient permission to join level");
-        return false;
-    }
+	if (!level_user_can_visit(newlevel, c->player))
+	{
+		c->waiting_for_level = false;
+		c->player->new_level = oldlevel;
+		client_notify(c, "You do not have sufficient permission to join level");
+		return false;
+	}
 
-    int levelid;
-    if (oldlevel == newlevel)
-    {
-        levelid = c->player->levelid;
-    }
-    else
-    {
-        levelid = level_get_new_id(newlevel, c);
-        if (levelid == -1)
-        {
-            c->waiting_for_level = false;
-            c->player->new_level = oldlevel;
-            client_notify(c, "Uh, level is full, sorry...");
-            return false;
-        }
-    }
+	int levelid;
+	if (oldlevel == newlevel)
+	{
+		levelid = c->player->levelid;
+	}
+	else
+	{
+		levelid = level_get_new_id(newlevel, c);
+		if (levelid == -1)
+		{
+			c->waiting_for_level = false;
+			c->player->new_level = oldlevel;
+			client_notify(c, "Uh, level is full, sorry...");
+			return false;
+		}
+	}
 
-    memset(&z, 0, sizeof z);
-    if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
+	memset(&z, 0, sizeof z);
+	if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
 
-    uint8_t *buffer = malloc(4 + length);
-    uint8_t *bufp = buffer;
-    *bufp++ = (length >> 24) & 0xFF;
-    *bufp++ = (length >> 16) & 0xFF;
-    *bufp++ = (length >>  8) & 0xFF;
-    *bufp++ =  length        & 0xFF;
+	uint8_t *buffer = malloc(4 + length);
+	uint8_t *bufp = buffer;
+	*bufp++ = (length >> 24) & 0xFF;
+	*bufp++ = (length >> 16) & 0xFF;
+	*bufp++ = (length >>  8) & 0xFF;
+	*bufp++ =  length		& 0xFF;
 
-    /* Serialize map data */
-    for (x = 0; x < length; x++)
-    {
-        if (c->player->filter > 0)
-        {
-            *bufp++ = (newlevel->blocks[x].owner == c->player->filter) ? convert(newlevel, x, &newlevel->blocks[x]) : AIR;
-        }
-        else
-        {
-            *bufp++ = convert(newlevel, x, &newlevel->blocks[x]);
-        }
-    }
+	/* Serialize map data */
+	for (x = 0; x < length; x++)
+	{
+		if (c->player->filter > 0)
+		{
+			*bufp++ = (newlevel->blocks[x].owner == c->player->filter) ? convert(newlevel, x, &newlevel->blocks[x]) : AIR;
+		}
+		else
+		{
+			*bufp++ = convert(newlevel, x, &newlevel->blocks[x]);
+		}
+	}
 
-    if (oldlevel != NULL)
-    {
-        if (oldlevel != newlevel)
-        {
-            char buf[64];
-            snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
-            net_notify_all(buf);
+	if (oldlevel != NULL)
+	{
+		if (oldlevel != newlevel)
+		{
+			char buf[64];
+			snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
+			net_notify_all(buf);
 
-            /* Despawn this user for all users */
-            if (!c->hidden) client_send_despawn(c->player->client, false);
-            oldlevel->clients[c->player->levelid] = NULL;
-        }
+			/* Despawn this user for all users */
+			if (!c->hidden) client_send_despawn(c->player->client, false);
+			oldlevel->clients[c->player->levelid] = NULL;
+		}
 
-        /* Despawn users for this user */
-        for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-        {
-            if (oldlevel->clients[i] != NULL && !oldlevel->clients[i]->hidden)
-            {
-                client_add_packet(c, packet_send_despawn_player(i));
-            }
-        }
-    }
+		/* Despawn users for this user */
+		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+		{
+			if (oldlevel->clients[i] != NULL && !oldlevel->clients[i]->hidden)
+			{
+				client_add_packet(c, packet_send_despawn_player(i));
+			}
+		}
+	}
 
-    c->player->level = newlevel;
-    c->player->levelid = levelid;
+	c->player->level = newlevel;
+	c->player->levelid = levelid;
 
-    client_add_packet(c, packet_send_level_initialize());
+	client_add_packet(c, packet_send_level_initialize());
 
-    uint8_t outbuf[1024];
-    length += 4;
+	uint8_t outbuf[1024];
+	length += 4;
 
-    z.next_in = buffer;
-    z.avail_in = length;
+	z.next_in = buffer;
+	z.avail_in = length;
 
-    do
-    {
-        z.next_out = outbuf;
-        z.avail_out = sizeof outbuf;
+	do
+	{
+		z.next_out = outbuf;
+		z.avail_out = sizeof outbuf;
 
-        int r = deflate(&z, Z_FINISH);
-        unsigned n = sizeof outbuf - z.avail_out;
-        if (n != 0)
-        {
-            client_add_packet(c, packet_send_level_data_chunk(n, outbuf, (length - z.avail_in) * 100 / length));
-        }
+		int r = deflate(&z, Z_FINISH);
+		unsigned n = sizeof outbuf - z.avail_out;
+		if (n != 0)
+		{
+			client_add_packet(c, packet_send_level_data_chunk(n, outbuf, (length - z.avail_in) * 100 / length));
+		}
 
-        if (r == Z_STREAM_END) break;
-        if (r != Z_OK)
-        {
-            free(buffer);
-            return false;
-        }
-    }
-    while (z.avail_in > 0 || z.avail_out == 0);
+		if (r == Z_STREAM_END) break;
+		if (r != Z_OK)
+		{
+			free(buffer);
+			return false;
+		}
+	}
+	while (z.avail_in > 0 || z.avail_out == 0);
 
-    free(buffer);
+	free(buffer);
 
-    deflateEnd(&z);
+	deflateEnd(&z);
 
-    client_add_packet(c, packet_send_level_finalize(newlevel->x, newlevel->y, newlevel->z));
+	client_add_packet(c, packet_send_level_finalize(newlevel->x, newlevel->y, newlevel->z));
 
-    if (oldlevel != newlevel)
-    {
-        c->player->pos = newlevel->spawn;
-    }
-    client_add_packet(c, packet_send_spawn_player(0xFF, c->player->colourusername, &c->player->pos));
+	if (oldlevel != newlevel)
+	{
+		c->player->pos = newlevel->spawn;
+	}
+	client_add_packet(c, packet_send_spawn_player(0xFF, c->player->colourusername, &c->player->pos));
 
-    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-    {
-        if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden)
-        {
-            client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->colourusername, &newlevel->clients[i]->player->pos));
-        }
-    }
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden)
+		{
+			client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->colourusername, &newlevel->clients[i]->player->pos));
+		}
+	}
 
-    if (oldlevel != newlevel)
-    {
-        if (!c->hidden)
-        {
-            client_send_spawn(c, false);
-        }
-    }
+	if (oldlevel != newlevel)
+	{
+		if (!c->hidden)
+		{
+			client_send_spawn(c, false);
+		}
+	}
 
-    c->waiting_for_level = false;
+	c->waiting_for_level = false;
 
-    return true;
+	return true;
 }
 
 static const float _amplitudes[][7] = {
-    {16000,   256,   128,    64,    32,    16,    16},
-    /* Very smooth */
-    {16000,  5600,  1968,   688,   240,    16,    16},
-    /* Smooth */
-    {16000, 16000,  6448,  3200,  1024,   128,    16},
-    /* Rough */
-    {16000, 19200, 12800,  8000,  3200,   256,    64},
-    /* Very Rough */
-    {24000, 16000, 19200, 16000,  8000,   512,   320},
-    /* Huh */
-    {1, 1, 1, 1, 1, 1, 1},
+	{16000,   256,   128,	64,	32,	16,	16},
+	/* Very smooth */
+	{16000,  5600,  1968,   688,   240,	16,	16},
+	/* Smooth */
+	{16000, 16000,  6448,  3200,  1024,   128,	16},
+	/* Rough */
+	{16000, 19200, 12800,  8000,  3200,   256,	64},
+	/* Very Rough */
+	{24000, 16000, 19200, 16000,  8000,   512,   320},
+	/* Huh */
+	{1, 1, 1, 1, 1, 1, 1},
 };
 
 static float random_height(int max)
 {
-    return ((float)rand() / INT_MAX - 0.5f) * max;
+	return ((float)rand() / INT_MAX - 0.5f) * max;
 }
 
 static bool level_apply_noise(float *map, int mx, int mz, int log_frequency, int amplitude)
 {
-    int size_min = mx < mz ? mx : mz;
-    int step = size_min >> log_frequency;
-    int x, z;
-    int dmx = mx + 1;
+	int size_min = mx < mz ? mx : mz;
+	int step = size_min >> log_frequency;
+	int x, z;
+	int dmx = mx + 1;
 
-    if (step == 0) return false;
+	if (step == 0) return false;
 
-    if (log_frequency == 0)
-    {
-        for (z = 0; z <= mz; z += step)
-        {
-            for (x = 0; x <= mx; x += step)
-            {
-                float h = (amplitude > 0) ? random_height(amplitude) : 0;
-                map[x + z * dmx] = h;
-            }
-        }
-        return true;
-    }
+	if (log_frequency == 0)
+	{
+		for (z = 0; z <= mz; z += step)
+		{
+			for (x = 0; x <= mx; x += step)
+			{
+				float h = (amplitude > 0) ? random_height(amplitude) : 0;
+				map[x + z * dmx] = h;
+			}
+		}
+		return true;
+	}
 
-    for (z = 0; z <= mz; z += 2 * step)
-    {
-        for (x = 0; x < mx; x += 2 * step)
-        {
-            float h0 = map[x + z * dmx];
-            float h2 = map[x + step + step + z * dmx];
-            float h1 = (h0 + h2) / 2.0f;
-            map[x + step + z * dmx] = h1;
-        }
-    }
+	for (z = 0; z <= mz; z += 2 * step)
+	{
+		for (x = 0; x < mx; x += 2 * step)
+		{
+			float h0 = map[x + z * dmx];
+			float h2 = map[x + step + step + z * dmx];
+			float h1 = (h0 + h2) / 2.0f;
+			map[x + step + z * dmx] = h1;
+		}
+	}
 
-    for (z = 0; z < mz; z += 2 * step)
-    {
-        for (x = 0; x <= mx; x += step)
-        {
-            float h0 = map[x + z * dmx];
-            float h2 = map[x + (z + step + step) * dmx];
-            float h1 = (h0 + h2) / 2.0f;
-            map[x + (z + step) * dmx] = h1;
-        }
-    }
+	for (z = 0; z < mz; z += 2 * step)
+	{
+		for (x = 0; x <= mx; x += step)
+		{
+			float h0 = map[x + z * dmx];
+			float h2 = map[x + (z + step + step) * dmx];
+			float h1 = (h0 + h2) / 2.0f;
+			map[x + (z + step) * dmx] = h1;
+		}
+	}
 
-    for (z = 0; z <= mz; z += step)
-    {
-        for (x = 0; x <= mx; x += step)
-        {
-            map[x + z * dmx] += random_height(amplitude);
-        }
-    }
+	for (z = 0; z <= mz; z += step)
+	{
+		for (x = 0; x <= mx; x += step)
+		{
+			map[x + z * dmx] += random_height(amplitude);
+		}
+	}
 
-    return (step > 1);
+	return (step > 1);
 }
 
 static void level_normalize(float *map, int mx, int mz)
 {
-    int x, z;
-    float hmin = 0.0f;
-    float hmax = 0.0f;
-    int dmx = mx + 1;
+	int x, z;
+	float hmin = 0.0f;
+	float hmax = 0.0f;
+	int dmx = mx + 1;
 
-    for (z = 0; z <= mz; z++)
-    {
-        for (x = 0; x <= mx; x++)
-        {
-            float h = map[x + z * dmx];
-            if (h < hmin) hmin = h;
-            if (h > hmax) hmax = h;
-        }
-    }
+	for (z = 0; z <= mz; z++)
+	{
+		for (x = 0; x <= mx; x++)
+		{
+			float h = map[x + z * dmx];
+			if (h < hmin) hmin = h;
+			if (h > hmax) hmax = h;
+		}
+	}
 
-    for (z = 0; z <= mz; z++)
-    {
-        for (x = 0; x <= mx; x++)
-        {
-            float h = map[x + z * dmx];
-            h -= hmin;
-            h /= (hmax - hmin);
-            h = h < 0.0 ? 0.0 : h >= 1.0f ? 1.0f : h;//(asin(h * 2.0f - 1.0f) / M_PI + 0.5f);
-            if (h < 0.5) {
-                h = sin((h - 0.25f) * 2 * M_PI) / 4.0f + 0.25f;
-            }
-            else
-            {
-                h = sin((h - 0.75f) * 2 * M_PI) / 4.0f + 0.75f;
-            }
-            map[x + z * dmx] = h;
-        }
-    }
+	for (z = 0; z <= mz; z++)
+	{
+		for (x = 0; x <= mx; x++)
+		{
+			float h = map[x + z * dmx];
+			h -= hmin;
+			h /= (hmax - hmin);
+			h = h < 0.0 ? 0.0 : h >= 1.0f ? 1.0f : h;//(asin(h * 2.0f - 1.0f) / M_PI + 0.5f);
+			if (h < 0.5) {
+				h = sin((h - 0.25f) * 2 * M_PI) / 4.0f + 0.25f;
+			}
+			else
+			{
+				h = sin((h - 0.75f) * 2 * M_PI) / 4.0f + 0.75f;
+			}
+			map[x + z * dmx] = h;
+		}
+	}
 }
 
 /*
 static void level_smooth_slopes(float *map, int mx, int mz, float dh_max)
 {
-    int x, z;
-    int dmx = mx + 1;
-    for (z = 0; z <= mz; z++)
-    {
-        for (x = 0; x <= mx; x++)
-        {
-            float h_max = map[(x > 0 ? x - 1 : 0) + z * dmx];
-            float h_max2 = map[x + (z > 0 ? z - 1 : 0) * dmx];
-            if (h_max2 < h_max) h_max = h_max2;
-            h_max += 1.0f / dh_max;
-            if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
-        }
-    }
-    for (z = mz; z >= 0; z--)
-    {
-        for (x = mx; x >= 0; x--)
-        {
-            float h_max = map[(x < mx ? x + 1 : x) + z * dmx];
-            float h_max2 = map[x + (z < mz ? z + 1 : z) * dmx];
-            if (h_max2 < h_max) h_max = h_max2;
-            h_max += 1.0f / dh_max;
-            if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
-        }
-    }
+	int x, z;
+	int dmx = mx + 1;
+	for (z = 0; z <= mz; z++)
+	{
+		for (x = 0; x <= mx; x++)
+		{
+			float h_max = map[(x > 0 ? x - 1 : 0) + z * dmx];
+			float h_max2 = map[x + (z > 0 ? z - 1 : 0) * dmx];
+			if (h_max2 < h_max) h_max = h_max2;
+			h_max += 1.0f / dh_max;
+			if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
+		}
+	}
+	for (z = mz; z >= 0; z--)
+	{
+		for (x = mx; x >= 0; x--)
+		{
+			float h_max = map[(x < mx ? x + 1 : x) + z * dmx];
+			float h_max2 = map[x + (z < mz ? z + 1 : z) * dmx];
+			if (h_max2 < h_max) h_max = h_max2;
+			h_max += 1.0f / dh_max;
+			if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
+		}
+	}
 }
 */
 
 static void level_gen_heightmap(float *map, int mx, int mz, int type)
 {
-    unsigned iteration_round = 0;
-    bool continue_iteration;
-    int log_size_min;
-    int log_frequency_min;
-    int log_frequency;
-    int amplitude;
-    int size_min = mx < mz ? mx : mz;
+	unsigned iteration_round = 0;
+	bool continue_iteration;
+	int log_size_min;
+	int log_frequency_min;
+	int log_frequency;
+	int amplitude;
+	int size_min = mx < mz ? mx : mz;
 
-    for (log_size_min = 6; (1U << log_size_min) < size_min; log_size_min++) { }
-    log_frequency_min = log_size_min - 6;
+	for (log_size_min = 6; (1U << log_size_min) < size_min; log_size_min++) { }
+	log_frequency_min = log_size_min - 6;
 
-    do {
-        log_frequency = iteration_round - log_frequency_min;
-        if (log_frequency >= 0) {
-            amplitude = _amplitudes[type][log_frequency];
-        } else {
-            amplitude = 0;
-        }
+	do {
+		log_frequency = iteration_round - log_frequency_min;
+		if (log_frequency >= 0) {
+			amplitude = _amplitudes[type][log_frequency];
+		} else {
+			amplitude = 0;
+		}
 
-        continue_iteration = level_apply_noise(map, mx, mz, iteration_round, amplitude);
-        iteration_round++;
-    } while (continue_iteration);
+		continue_iteration = level_apply_noise(map, mx, mz, iteration_round, amplitude);
+		iteration_round++;
+	} while (continue_iteration);
 
-    level_normalize(map, mx, mz);
+	level_normalize(map, mx, mz);
 }
 
 void *level_gen_thread(void *arg)
 {
-    int i;
-    struct level_t *level = arg;
-    struct block_t block;
-    int x, y, z;
-    int mx = level->x;
-    int my = level->y;
-    int mz = level->z;
+	int i;
+	struct level_t *level = arg;
+	struct block_t block;
+	int x, y, z;
+	int mx = level->x;
+	int my = level->y;
+	int mz = level->z;
 
-    memset(&block, 0, sizeof block);
+	memset(&block, 0, sizeof block);
 
-    if (level->type == 0 || level->type == 1)
-    {
-        for (z = 0; z < mz; z++)
-        {
-            for (x = 0; x < mx; x++)
-            {
-                int h = my / 2 + 1;
+	if (level->type == 0 || level->type == 1)
+	{
+		for (z = 0; z < mz; z++)
+		{
+			for (x = 0; x < mx; x++)
+			{
+				int h = my / 2 + 1;
 
-                for (y = 0; y < h; y++)
-                {
-                    block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : GRASS;
-                    if (level->type == 1 && y == h - 2) block.type = ADMINIUM;
-                    level_set_block(level, &block, level_get_index(level, x, y, z));
-                }
-            }
-        }
-    }
-    else
-    {
-        float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
-        float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
-        float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);
+				for (y = 0; y < h; y++)
+				{
+					block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : GRASS;
+					if (level->type == 1 && y == h - 2) block.type = ADMINIUM;
+					level_set_block(level, &block, level_get_index(level, x, y, z));
+				}
+			}
+		}
+	}
+	else
+	{
+		float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
+		float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
+		float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);
 
-        level_gen_heightmap(hm, mx, mz, level->type - 2);
-        //level_smooth_slopes(hm, mx, mz, my);
+		level_gen_heightmap(hm, mx, mz, level->type - 2);
+		//level_smooth_slopes(hm, mx, mz, my);
 
-        int dmx = mx + 1;
+		int dmx = mx + 1;
 
-        for (z = 0; z < mz; z++)
-        {
-            for (x = 0; x < mx; x++)
-            {
-                int h = hm[x + z * dmx] * my / 2 + my / 4;
+		for (z = 0; z < mz; z++)
+		{
+			for (x = 0; x < mx; x++)
+			{
+				int h = hm[x + z * dmx] * my / 2 + my / 4;
 
-                for (y = 0; y < h; y++)
-                {
-                    block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y < my / 2) ? SAND : GRASS;
-                    level_set_block(level, &block, level_get_index(level, x, y, z));
-                }
+				for (y = 0; y < h; y++)
+				{
+					block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y < my / 2) ? SAND : GRASS;
+					level_set_block(level, &block, level_get_index(level, x, y, z));
+				}
 
-                block.type = WATER;
-                for (; y < my / 2; y++)
-                {
-                    level_set_block(level, &block, level_get_index(level, x, y, z));
-                }
-            }
-        }
+				block.type = WATER;
+				for (; y < my / 2; y++)
+				{
+					level_set_block(level, &block, level_get_index(level, x, y, z));
+				}
+			}
+		}
 
-        block.type = AIR;
-        for (i = 0; i < 5; i++)
-        {
-            level_gen_heightmap(cmh, mx, mz, level->type - 2);
-            level_gen_heightmap(cmd, mx, mz, level->type - 2);
+		block.type = AIR;
+		for (i = 0; i < 5; i++)
+		{
+			level_gen_heightmap(cmh, mx, mz, level->type - 2);
+			level_gen_heightmap(cmd, mx, mz, level->type - 2);
 
-            int base = cmd[0] * my;
+			int base = cmd[0] * my;
 
-            /*switch (i % 4)
-            {
-                case 0: block.type = ROCK; break;
-                case 1: block.type = DIRT; break;
-                case 2: block.type = AIR; break;
-                case 3: block.type = AIR; break;
-            }*/
+			/*switch (i % 4)
+			{
+				case 0: block.type = ROCK; break;
+				case 1: block.type = DIRT; break;
+				case 2: block.type = AIR; break;
+				case 3: block.type = AIR; break;
+			}*/
 
-            for (z = 0; z < mz; z++)
-            {
-                for (x = 0; x < mx; x++)
-                {
-                    //int h = hm[x + z * dmx] * my / 2 + my / 3;
-                    float ch = cmh[x + z * dmx];
-                    float cd = cmd[x + z * dmx];
-                    int h = hm[x + z * dmx] * my / 2 + my / 4;
-                    //if (fabsf(ch) < 0.25f)
-                    {
-                        //block.type = i % 3 ? AIR : ROCK;
-                        //int cdi = h - cd * my / 4;
-                        //int chi = cdi + (ch - 0.5f) * my / 4;
-                        //int cdi = base + cd * my / 8;// / 1.5f;
-                        //int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
-                        int cdi = cd * h * 1.2;
-                        int chi = ch * h * 1.2;
-                        if (cdi > chi) {
-                            cdi = cdi ^ chi;
-                            chi = cdi ^ chi;
-                            cdi = cdi ^ chi;
-                        }
-                        for (y = cdi; y < chi; y++)
-                        {
-                            unsigned index;
-                            if (y < 0 || y >= my) continue;
-                            index = level_get_index(level, x, y, z);
-                            //if (block.type == ROCK && (level->blocks[index].type == AIR || level->blocks[index].type == WATER))
-                            //{
-                                level_set_block(level, &block, index);
-                            //}
-                        }
-                    }
-                }
-            }
-        }
+			for (z = 0; z < mz; z++)
+			{
+				for (x = 0; x < mx; x++)
+				{
+					//int h = hm[x + z * dmx] * my / 2 + my / 3;
+					float ch = cmh[x + z * dmx];
+					float cd = cmd[x + z * dmx];
+					int h = hm[x + z * dmx] * my / 2 + my / 4;
+					//if (fabsf(ch) < 0.25f)
+					{
+						//block.type = i % 3 ? AIR : ROCK;
+						//int cdi = h - cd * my / 4;
+						//int chi = cdi + (ch - 0.5f) * my / 4;
+						//int cdi = base + cd * my / 8;// / 1.5f;
+						//int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
+						int cdi = cd * h * 1.2;
+						int chi = ch * h * 1.2;
+						if (cdi > chi) {
+							cdi = cdi ^ chi;
+							chi = cdi ^ chi;
+							cdi = cdi ^ chi;
+						}
+						for (y = cdi; y < chi; y++)
+						{
+							unsigned index;
+							if (y < 0 || y >= my) continue;
+							index = level_get_index(level, x, y, z);
+							//if (block.type == ROCK && (level->blocks[index].type == AIR || level->blocks[index].type == WATER))
+							//{
+								level_set_block(level, &block, index);
+							//}
+						}
+					}
+				}
+			}
+		}
 
-        free(hm);
-        free(cmd);
-        free(cmh);
+		free(hm);
+		free(cmd);
+		free(cmh);
 
-        block.type = WATER;
-        for (i = 0; i < 100; i++)
-        {
-            for (z = 0; z < mz; z++)
-            {
-                for (x = 0; x < mx; x++)
-                {
-                    for (y = my / 2 - 1; y > 1; y--)
-                    {
-                        unsigned index = level_get_index(level, x, y, z);
-                        if (y > my / 2 - 3 && level->blocks[index].type == AIR)
-                        {
-                            if (x == 0 || x == mx - 1 || z == 0 || z == mz - 1)
-                            {
-                                level_set_block(level, &block, index);
-                            }
-                        }
-                        else if (level->blocks[index].type == WATER)
-                        {
-                            level_set_block_if(level, &block, level_get_index(level, x, y - 1, z), AIR);
-                            if (x > 0) level_set_block_if(level, &block, level_get_index(level, x - 1, y, z), AIR);
-                            if (x < mx - 1) level_set_block_if(level, &block, level_get_index(level, x + 1, y, z), AIR);
-                            if (z > 0) level_set_block_if(level, &block, level_get_index(level, x, y, z - 1), AIR);
-                            if (z < mz - 1) level_set_block_if(level, &block, level_get_index(level, x, y, z + 1), AIR);
-                        }
-                    }
-                }
-            }
-        }
+		block.type = WATER;
+		for (i = 0; i < 100; i++)
+		{
+			for (z = 0; z < mz; z++)
+			{
+				for (x = 0; x < mx; x++)
+				{
+					for (y = my / 2 - 1; y > 1; y--)
+					{
+						unsigned index = level_get_index(level, x, y, z);
+						if (y > my / 2 - 3 && level->blocks[index].type == AIR)
+						{
+							if (x == 0 || x == mx - 1 || z == 0 || z == mz - 1)
+							{
+								level_set_block(level, &block, index);
+							}
+						}
+						else if (level->blocks[index].type == WATER)
+						{
+							level_set_block_if(level, &block, level_get_index(level, x, y - 1, z), AIR);
+							if (x > 0) level_set_block_if(level, &block, level_get_index(level, x - 1, y, z), AIR);
+							if (x < mx - 1) level_set_block_if(level, &block, level_get_index(level, x + 1, y, z), AIR);
+							if (z > 0) level_set_block_if(level, &block, level_get_index(level, x, y, z - 1), AIR);
+							if (z < mz - 1) level_set_block_if(level, &block, level_get_index(level, x, y, z + 1), AIR);
+						}
+					}
+				}
+			}
+		}
 
-        /* Grow grass on soil */
-        for (z = 0; z < mz; z++)
-        {
-            for (x = 0; x < mx; x++)
-            {
-                for (y = my - 1; y > 0; y--)
-                {
-                    unsigned index = level_get_index(level, x, y, z);
-                    if (level->blocks[index].type == DIRT)
-                    {
-                        level->blocks[index].type = GRASS;
-                        break;
-                    }
-                    if (level->blocks[index].type != AIR) break;
-                }
-            }
-        }
-    }
+		/* Grow grass on soil */
+		for (z = 0; z < mz; z++)
+		{
+			for (x = 0; x < mx; x++)
+			{
+				for (y = my - 1; y > 0; y--)
+				{
+					unsigned index = level_get_index(level, x, y, z);
+					if (level->blocks[index].type == DIRT)
+					{
+						level->blocks[index].type = GRASS;
+						break;
+					}
+					if (level->blocks[index].type != AIR) break;
+				}
+			}
+		}
+	}
 
-    level->spawn.x = mx * 16;
-    level->spawn.z = mz * 16;
-    for (y = my - 5; y > 0; y--)
-    {
-        unsigned index = level_get_index(level, mx / 2, y, mz / 2);
-        if (level->blocks[index].type != AIR)
-        {
-            level->spawn.y = (y + 4) * 32;
-            break;
-        }
-    }
+	level->spawn.x = mx * 16;
+	level->spawn.z = mz * 16;
+	for (y = my - 5; y > 0; y--)
+	{
+		unsigned index = level_get_index(level, mx / 2, y, mz / 2);
+		if (level->blocks[index].type != AIR)
+		{
+			level->spawn.y = (y + 4) * 32;
+			break;
+		}
+	}
 
-    level->spawn.h = 0;
-    level->spawn.p = 0;
+	level->spawn.h = 0;
+	level->spawn.p = 0;
 
-    /*
-    for (y = 0; y < my / 2; y++)
-    {
-        block.type = (y < my / 2 - 5) ? ROCK : (y < my / 2 - 1) ? DIRT : GRASS;
-        for (x = 0; x < mx; x++)
-        {
-            for (z = 0; z < mz; z++)
-            {
-                level_set_block(level, &block, level_get_index(level, x, y, z));
-            }
-        }
-    }
-    for (i = 0; i < mx * mz / 64; i++)
-    {
-        x = rand() % mx;
-        z = rand() % mz;
-        block.type = rand() % ROCK_END;
+	/*
+	for (y = 0; y < my / 2; y++)
+	{
+		block.type = (y < my / 2 - 5) ? ROCK : (y < my / 2 - 1) ? DIRT : GRASS;
+		for (x = 0; x < mx; x++)
+		{
+			for (z = 0; z < mz; z++)
+			{
+				level_set_block(level, &block, level_get_index(level, x, y, z));
+			}
+		}
+	}
+	for (i = 0; i < mx * mz / 64; i++)
+	{
+		x = rand() % mx;
+		z = rand() % mz;
+		block.type = rand() % ROCK_END;
 
-        for (y = rand() % (my / 4); y < my; y++)
-        {
-            level_set_block(level, &block, level_get_index(level, x, y, z));
-        }
-    }
+		for (y = rand() % (my / 4); y < my; y++)
+		{
+			level_set_block(level, &block, level_get_index(level, x, y, z));
+		}
+	}
 
-    for (i = 0; i < mx * mz; i++)
-    {
-        x = rand() % mx;
-        z = rand() % mz;
-        y = rand() % my;
-        block.type = rand() % ROCK_END;
-        level_set_block(level, &block, level_get_index(level, x, y, z));
-    }*/
+	for (i = 0; i < mx * mz; i++)
+	{
+		x = rand() % mx;
+		z = rand() % mz;
+		y = rand() % my;
+		block.type = rand() % ROCK_END;
+		level_set_block(level, &block, level_get_index(level, x, y, z));
+	}*/
 
 
-    level->changed = true;
+	level->changed = true;
 
-    pthread_mutex_unlock(&level->mutex);
+	pthread_mutex_unlock(&level->mutex);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Created level '%s'", level->name);
-    net_notify_all(buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Created level '%s'", level->name);
+	net_notify_all(buf);
 
-    //LOG(buf);
+	//LOG(buf);
 
-    return NULL;
+	return NULL;
 }
 
 void level_gen(struct level_t *level, int type)
 {
-    level->type = type;
+	level->type = type;
 
-    pthread_mutex_lock(&level->mutex);
-    if (level->thread_valid)
-    {
-        pthread_join(level->thread, NULL);
-    }
-    int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
-    level->thread_valid = (r == 0);
-    if (r != 0)
-    {
-        LOG("Unable to create thread for level generation, server may pause\n");
-        level_gen_thread(level);
-    }
+	pthread_mutex_lock(&level->mutex);
+	if (level->thread_valid)
+	{
+		pthread_join(level->thread, NULL);
+	}
+	int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
+	level->thread_valid = (r == 0);
+	if (r != 0)
+	{
+		LOG("Unable to create thread for level generation, server may pause\n");
+		level_gen_thread(level);
+	}
 }
 
 void level_unload(struct level_t *level)
 {
-    char buf[64];
-    snprintf(buf, sizeof buf, "Level '%s' unloaded", level->name);
-    net_notify_all(buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Level '%s' unloaded", level->name);
+	net_notify_all(buf);
 
-    //LOG(buf);
+	//LOG(buf);
 
-    physics_list_free(&level->physics);
-    block_update_list_free(&level->updates);
+	physics_list_free(&level->physics);
+	block_update_list_free(&level->updates);
 
-    free(level->blocks);
-    free(level);
+	free(level->blocks);
+	free(level);
 }
 
 static void *level_load_thread_abort(struct level_t *level, const char *reason)
 {
-    LOG("Unable to load level %s: %s\n", level->name, reason);
+	LOG("Unable to load level %s: %s\n", level->name, reason);
 
-    int i;
-    for (i = 0; i < s_clients.used; i++)
-    {
-        struct client_t *c = s_clients.items[i];
-        LOG("client %d: player %p\n", i, c->player);
-        if (c->player == NULL) continue;
-        LOG("level %p, new_level %p\n", level, c->player->new_level);
-        if (c->player->new_level == level)
-        {
-            c->player->new_level = c->player->level;
-            c->waiting_for_level = false;
-            LOG("Aborted level change for %s\n", c->player->username);
-        }
-    }
+	int i;
+	for (i = 0; i < s_clients.used; i++)
+	{
+		struct client_t *c = s_clients.items[i];
+		LOG("client %d: player %p\n", i, c->player);
+		if (c->player == NULL) continue;
+		LOG("level %p, new_level %p\n", level, c->player->new_level);
+		if (c->player->new_level == level)
+		{
+			c->player->new_level = c->player->level;
+			c->waiting_for_level = false;
+			LOG("Aborted level change for %s\n", c->player->username);
+		}
+	}
 
-    pthread_mutex_unlock(&level->mutex);
+	pthread_mutex_unlock(&level->mutex);
 
-    return NULL;
+	return NULL;
 }
 
 static void *level_load_thread(void *arg)
 {
-    int i;
-    struct level_t *l = arg;
-    gzFile gz;
+	int i;
+	struct level_t *l = arg;
+	gzFile gz;
 
-    char name[64];
-    strncpy(name, l->name, sizeof name);
+	char name[64];
+	strncpy(name, l->name, sizeof name);
 
-    char filename[64];
-    snprintf(filename, sizeof filename, "levels/%s.%s", name, l->convert ? "lvl" : "mcl");
-    lcase(filename);
+	char filename[64];
+	snprintf(filename, sizeof filename, "levels/%s.%s", name, l->convert ? "lvl" : "mcl");
+	lcase(filename);
 
-    gz = gzopen(filename, "rb");
-    if (gz == NULL) return level_load_thread_abort(l, "gzopen failed");
+	gz = gzopen(filename, "rb");
+	if (gz == NULL) return level_load_thread_abort(l, "gzopen failed");
 
-    if (l->convert)
-    {
-   	    int16_t x, y, z;
-    	int16_t version;
+	if (l->convert)
+	{
+   		int16_t x, y, z;
+		int16_t version;
 
 		if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l, "version/x");
 		if (version == 1874)
@@ -782,8 +782,8 @@ static void *level_load_thread(void *arg)
 		}
 		else
 		{
-		    l->rankvisit = RANK_GUEST;
-		    l->rankbuild = RANK_GUEST;
+			l->rankvisit = RANK_GUEST;
+			l->rankbuild = RANK_GUEST;
 		}
 
 		size_t s = x * y * z;
@@ -811,13 +811,13 @@ static void *level_load_thread(void *arg)
 			b->physics = blocktype_has_physics(b->type);
 			if (b->physics) physics_list_add(&l->physics, i);
 		}
-    }
-    else
+	}
+	else
 	{
-	    unsigned header, version;
-	    if (gzread(gz, &header, sizeof header) != sizeof version) return level_load_thread_abort(l, "header");
-	    if (header != 'MCLV') return level_load_thread_abort(l, "invalid header");
-	    if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l, "version");
+		unsigned header, version;
+		if (gzread(gz, &header, sizeof header) != sizeof version) return level_load_thread_abort(l, "header");
+		if (header != 'MCLV') return level_load_thread_abort(l, "invalid header");
+		if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l, "version");
 
 		unsigned x, y, z;
 		if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l, "x");
@@ -831,31 +831,31 @@ static void *level_load_thread(void *arg)
 
 		if (version == 0)
 		{
-		    l->owner = 0;
-		    l->rankvisit = RANK_GUEST;
-		    l->rankbuild = RANK_GUEST;
+			l->owner = 0;
+			l->rankvisit = RANK_GUEST;
+			l->rankbuild = RANK_GUEST;
 		}
 		else
 		{
-            if (gzread(gz, &l->owner, sizeof l->owner) != sizeof l->owner) return level_load_thread_abort(l, "owner");
-            if (gzread(gz, &l->rankvisit, sizeof l->rankvisit) != sizeof l->rankvisit) return level_load_thread_abort(l, "rankvisit");
-            if (gzread(gz, &l->rankbuild, sizeof l->rankbuild) != sizeof l->rankbuild) return level_load_thread_abort(l, "rankbuild");
+			if (gzread(gz, &l->owner, sizeof l->owner) != sizeof l->owner) return level_load_thread_abort(l, "owner");
+			if (gzread(gz, &l->rankvisit, sizeof l->rankvisit) != sizeof l->rankvisit) return level_load_thread_abort(l, "rankvisit");
+			if (gzread(gz, &l->rankbuild, sizeof l->rankbuild) != sizeof l->rankbuild) return level_load_thread_abort(l, "rankbuild");
 
-            size_t n;
-            unsigned u;
-            if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "uservisit count");
-            for (i = 0; i < n; i++)
-            {
-                if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "uservisit");
-                user_list_add(&l->uservisit, u);
-            }
+			size_t n;
+			unsigned u;
+			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "uservisit count");
+			for (i = 0; i < n; i++)
+			{
+				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "uservisit");
+				user_list_add(&l->uservisit, u);
+			}
 
-            if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "userbuild count");
-            for (i = 0; i < n; i++)
-            {
-                if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userbuild");
-                user_list_add(&l->userbuild, u);
-            }
+			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "userbuild count");
+			for (i = 0; i < n; i++)
+			{
+				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userbuild");
+				user_list_add(&l->userbuild, u);
+			}
 		}
 
 		int count = l->x * l->y * l->z;
@@ -864,226 +864,226 @@ static void *level_load_thread(void *arg)
 			struct block_t *b = &l->blocks[i];
 			if (b->physics) physics_list_add(&l->physics, i);
 		}
-    }
+	}
 
-    gzclose(gz);
+	gzclose(gz);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Level '%s' loaded", l->name);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Level '%s' loaded", l->name);
 
-    //LOG("%s\n", buf);
+	//LOG("%s\n", buf);
 
-    pthread_mutex_unlock(&l->mutex);
-    //if (level != NULL) *level = l;
+	pthread_mutex_unlock(&l->mutex);
+	//if (level != NULL) *level = l;
 
-    net_notify_all(buf);
+	net_notify_all(buf);
 
-    return NULL;
+	return NULL;
 }
 
 bool level_load(const char *name, struct level_t **levelp)
 {
 	bool convert = false;
-    char filename[64];
-    snprintf(filename, sizeof filename, "levels/%s.mcl", name);
-    lcase(filename);
+	char filename[64];
+	snprintf(filename, sizeof filename, "levels/%s.mcl", name);
+	lcase(filename);
 
-    FILE *f = fopen(filename, "rb");
-    if (f == NULL)
-    {
-    	snprintf(filename, sizeof filename, "levels/%s.lvl", name);
-    	lcase(filename);
+	FILE *f = fopen(filename, "rb");
+	if (f == NULL)
+	{
+		snprintf(filename, sizeof filename, "levels/%s.lvl", name);
+		lcase(filename);
 
-    	f = fopen(filename, "rb");
-    	if (f == NULL) return false;
+		f = fopen(filename, "rb");
+		if (f == NULL) return false;
 
-    	convert = true;
-    }
-    fclose(f);
+		convert = true;
+	}
+	fclose(f);
 
-    struct level_t *level = malloc(sizeof *level);
-    memset(level, 0, sizeof *level);
-    pthread_mutex_init(&level->mutex, NULL);
+	struct level_t *level = malloc(sizeof *level);
+	memset(level, 0, sizeof *level);
+	pthread_mutex_init(&level->mutex, NULL);
 
-    level_list_add(&s_levels, level);
-    if (levelp != NULL) *levelp = level;
+	level_list_add(&s_levels, level);
+	if (levelp != NULL) *levelp = level;
 
-    strncpy(level->name, name, sizeof level->name);
-    level->convert = convert;
+	strncpy(level->name, name, sizeof level->name);
+	level->convert = convert;
 
-    pthread_mutex_lock(&level->mutex);
-    if (level->thread_valid)
-    {
-        pthread_join(level->thread, NULL);
-    }
-    int r = pthread_create(&level->thread, NULL, &level_load_thread, level);
-    level->thread_valid = (r == 0);
-    if (r != 0)
-    {
-        LOG("Unable to create thread for level loading, server may pause\n");
-        level_load_thread(level);
-    }
+	pthread_mutex_lock(&level->mutex);
+	if (level->thread_valid)
+	{
+		pthread_join(level->thread, NULL);
+	}
+	int r = pthread_create(&level->thread, NULL, &level_load_thread, level);
+	level->thread_valid = (r == 0);
+	if (r != 0)
+	{
+		LOG("Unable to create thread for level loading, server may pause\n");
+		level_load_thread(level);
+	}
 
-    return true;
+	return true;
 }
 
 void *level_save_thread(void *arg)
 {
-    struct level_t *l = arg;
+	struct level_t *l = arg;
 
-    l->changed = false;
+	l->changed = false;
 
-    char filename[64];
-    snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
-    lcase(filename);
+	char filename[64];
+	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
+	lcase(filename);
 
-    gzFile gz = gzopen(filename, "wb");
-    if (gz == NULL)
-    {
-        pthread_mutex_unlock(&l->mutex);
-        return NULL;
-    }
+	gzFile gz = gzopen(filename, "wb");
+	if (gz == NULL)
+	{
+		pthread_mutex_unlock(&l->mutex);
+		return NULL;
+	}
 
-    unsigned header  = 'MCLV';
-    unsigned version = 1;
-    gzwrite(gz, &header, sizeof header);
-    gzwrite(gz, &version, sizeof version);
+	unsigned header  = 'MCLV';
+	unsigned version = 1;
+	gzwrite(gz, &header, sizeof header);
+	gzwrite(gz, &version, sizeof version);
 
-    gzwrite(gz, &l->x, sizeof l->x);
-    gzwrite(gz, &l->y, sizeof l->y);
-    gzwrite(gz, &l->z, sizeof l->z);
-    gzwrite(gz, &l->spawn, sizeof l->spawn);
-    gzwrite(gz, l->blocks, sizeof *l->blocks * l->x * l->y * l->z);
+	gzwrite(gz, &l->x, sizeof l->x);
+	gzwrite(gz, &l->y, sizeof l->y);
+	gzwrite(gz, &l->z, sizeof l->z);
+	gzwrite(gz, &l->spawn, sizeof l->spawn);
+	gzwrite(gz, l->blocks, sizeof *l->blocks * l->x * l->y * l->z);
 
-    gzwrite(gz, &l->owner, sizeof l->owner);
-    gzwrite(gz, &l->rankvisit, sizeof l->rankvisit);
-    gzwrite(gz, &l->rankbuild, sizeof l->rankbuild);
+	gzwrite(gz, &l->owner, sizeof l->owner);
+	gzwrite(gz, &l->rankvisit, sizeof l->rankvisit);
+	gzwrite(gz, &l->rankbuild, sizeof l->rankbuild);
 
-    int i;
-    gzwrite(gz, &l->uservisit.used, sizeof l->uservisit.used);
-    for (i = 0; i < l->uservisit.used; i++)
-    {
-        gzwrite(gz, &l->uservisit.items[i], sizeof l->uservisit.items[i]);
-    }
+	int i;
+	gzwrite(gz, &l->uservisit.used, sizeof l->uservisit.used);
+	for (i = 0; i < l->uservisit.used; i++)
+	{
+		gzwrite(gz, &l->uservisit.items[i], sizeof l->uservisit.items[i]);
+	}
 
-    gzwrite(gz, &l->userbuild.used, sizeof l->userbuild.used);
-    for (i = 0; i < l->userbuild.used; i++)
-    {
-        gzwrite(gz, &l->userbuild.items[i], sizeof l->userbuild.items[i]);
-    }
+	gzwrite(gz, &l->userbuild.used, sizeof l->userbuild.used);
+	for (i = 0; i < l->userbuild.used; i++)
+	{
+		gzwrite(gz, &l->userbuild.items[i], sizeof l->userbuild.items[i]);
+	}
 
-    gzclose(gz);
+	gzclose(gz);
 
-    //LOG("Level '%s' saved\n", l->name);
+	//LOG("Level '%s' saved\n", l->name);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Level '%s' saved", l->name);
-    net_notify_all(buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Level '%s' saved", l->name);
+	net_notify_all(buf);
 
-    pthread_mutex_unlock(&l->mutex);
+	pthread_mutex_unlock(&l->mutex);
 
-    return NULL;
+	return NULL;
 }
 
 void level_save(struct level_t *l)
 {
-    if (pthread_mutex_trylock(&l->mutex) != 0) return;
-    if (l->thread_valid)
-    {
-        pthread_join(l->thread, NULL);
-    }
-    int r = pthread_create(&l->thread, NULL, &level_save_thread, l);
-    l->thread_valid = (r == 0);
-    if (r != 0)
-    {
-        LOG("Unable to create thread for level saving, server may pause\n");
-        level_save_thread(l);
-    }
+	if (pthread_mutex_trylock(&l->mutex) != 0) return;
+	if (l->thread_valid)
+	{
+		pthread_join(l->thread, NULL);
+	}
+	int r = pthread_create(&l->thread, NULL, &level_save_thread, l);
+	l->thread_valid = (r == 0);
+	if (r != 0)
+	{
+		LOG("Unable to create thread for level saving, server may pause\n");
+		level_save_thread(l);
+	}
 }
 
 bool level_get_by_name(const char *name, struct level_t **level)
 {
-    int i;
-    struct level_t *l;
+	int i;
+	struct level_t *l;
 
-    for (i = 0; i < s_levels.used; i++)
-    {
-        l = s_levels.items[i];
-        if (l != NULL && strcasecmp(l->name, name) == 0)
-        {
-            if (level != NULL) *level = l;
-            return true;
-        }
-    }
+	for (i = 0; i < s_levels.used; i++)
+	{
+		l = s_levels.items[i];
+		if (l != NULL && strcasecmp(l->name, name) == 0)
+		{
+			if (level != NULL) *level = l;
+			return true;
+		}
+	}
 
-    /* See if level is saved? */
-    if (level_load(name, &l))
-    {
-        if (level != NULL) *level = l;
-        return true;
-    }
+	/* See if level is saved? */
+	if (level_load(name, &l))
+	{
+		if (level != NULL) *level = l;
+		return true;
+	}
 
-    return false;
+	return false;
 }
 
 void level_save_all()
 {
-    int i;
+	int i;
 
-    for (i = 0; i < s_levels.used; i++)
-    {
-        if (s_levels.items[i] != NULL && s_levels.items[i]->changed)
-        {
-            level_save(s_levels.items[i]);
-        }
-    }
+	for (i = 0; i < s_levels.used; i++)
+	{
+		if (s_levels.items[i] != NULL && s_levels.items[i]->changed)
+		{
+			level_save(s_levels.items[i]);
+		}
+	}
 }
 
 static bool level_is_empty(const struct level_t *l)
 {
-    int i;
-    for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-    {
-        if (l->clients[i] != NULL) return false;
-    }
+	int i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		if (l->clients[i] != NULL) return false;
+	}
 
-    return true;
+	return true;
 }
 
 void level_unload_empty()
 {
-    int i, j;
+	int i, j;
 
-    for (i = 0; i < s_levels.used; i++)
-    {
-        struct level_t *l = s_levels.items[i];
+	for (i = 0; i < s_levels.used; i++)
+	{
+		struct level_t *l = s_levels.items[i];
 
-        if (l == NULL || l->changed) continue;
+		if (l == NULL || l->changed) continue;
 
-        /* Test if another thread is accessing... */
-        if (pthread_mutex_trylock(&l->mutex) != 0) continue;
-        pthread_mutex_unlock(&l->mutex);
+		/* Test if another thread is accessing... */
+		if (pthread_mutex_trylock(&l->mutex) != 0) continue;
+		pthread_mutex_unlock(&l->mutex);
 
-        if (!level_is_empty(l)) continue;
+		if (!level_is_empty(l)) continue;
 
-        bool cuboid = false;
-        for (j = 0; j < s_cuboids.used; j++)
-        {
-            const struct cuboid_t *c = &s_cuboids.items[j];
-            if (c->level == l)
-            {
-                cuboid = true;
-                break;
-            }
-        }
+		bool cuboid = false;
+		for (j = 0; j < s_cuboids.used; j++)
+		{
+			const struct cuboid_t *c = &s_cuboids.items[j];
+			if (c->level == l)
+			{
+				cuboid = true;
+				break;
+			}
+		}
 
-        if (cuboid) continue;
+		if (cuboid) continue;
 
-        level_unload(l);
-        //level_list_del(&s_levels, l);
+		level_unload(l);
+		//level_list_del(&s_levels, l);
 
-        s_levels.items[i] = NULL;
-    }
+		s_levels.items[i] = NULL;
+	}
 }
 
 bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int16_t *y, int16_t *z)
@@ -1091,15 +1091,15 @@ bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int1
 	if (index < 0 || index >= level->x * level->y * level->z) return false;
 
 	if (x != NULL) *x = index % level->x;
-    if (y != NULL) *y = index / level->x / level->z;
-    if (z != NULL) *z = (index / level->x) % level->z;
+	if (y != NULL) *y = index / level->x / level->z;
+	if (z != NULL) *z = (index / level->x) % level->z;
 
-    return true;
+	return true;
 }
 
 static void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t old_type, enum blocktype_t new_type, const struct player_t *p)
 {
-    struct cuboid_t c;
+	struct cuboid_t c;
 
 	if (!level_get_xyz(level, start, &c.sx, &c.sy, &c.sz)) return;
 	if (!level_get_xyz(level, end, &c.ex, &c.ey, &c.ez)) return;
@@ -1124,52 +1124,52 @@ static void level_cuboid(struct level_t *level, unsigned start, unsigned end, en
 
 void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t)
 {
-    int i;
+	int i;
 
-    if (client->player->rank == RANK_BANNED)
-    {
-        /* Ignore banned players :D */
-        return;
-    }
+	if (client->player->rank == RANK_BANNED)
+	{
+		/* Ignore banned players :D */
+		return;
+	}
 
-    if (client->waiting_for_level)
-    {
-        client_notify(client, "Change ignored whilst waiting for level change!");
-        return;
-    }
+	if (client->waiting_for_level)
+	{
+		client_notify(client, "Change ignored whilst waiting for level change!");
+		return;
+	}
 
-    if (x < 0 || y < 0 || z < 0 || x >= level->x || y >= level->y || z >= level->z)
-    {
-        return;
-    }
+	if (x < 0 || y < 0 || z < 0 || x >= level->x || y >= level->y || z >= level->z)
+	{
+		return;
+	}
 
-    unsigned index = level_get_index(level, x, y, z);
-    struct block_t *b = &level->blocks[index];
-    enum blocktype_t bt = b->type;
+	unsigned index = level_get_index(level, x, y, z);
+	struct block_t *b = &level->blocks[index];
+	enum blocktype_t bt = b->type;
 
-    if (client->player->mode == MODE_INFO)
-    {
-        char buf[64];
-        snprintf(buf, sizeof buf, "%s%s at %dx%dx%d placed by %s",
-                 b->fixed ? "fixed " : "",
-                 blocktype_get_name(bt), x, y, z,
-                 b->owner == 0 ? "none" : playerdb_get_username(b->owner)
-        );
-        client_notify(client, buf);
-        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-        return;
-    }
+	if (client->player->mode == MODE_INFO)
+	{
+		char buf[64];
+		snprintf(buf, sizeof buf, "%s%s at %dx%dx%d placed by %s",
+				 b->fixed ? "fixed " : "",
+				 blocktype_get_name(bt), x, y, z,
+				 b->owner == 0 ? "none" : playerdb_get_username(b->owner)
+		);
+		client_notify(client, buf);
+		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+		return;
+	}
 
-    if (!level_user_can_build(level, client->player))
-    {
-        client_notify(client, "You do not have sufficient permission to build on this level");
-        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-        return;
-    }
+	if (!level_user_can_build(level, client->player))
+	{
+		client_notify(client, "You do not have sufficient permission to build on this level");
+		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+		return;
+	}
 
-    if (client->player->mode == MODE_CUBOID)
-    {
-    	client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+	if (client->player->mode == MODE_CUBOID)
+	{
+		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
 		if (client->player->cuboid_start == UINT_MAX)
 		{
@@ -1182,10 +1182,10 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		level_cuboid(level, client->player->cuboid_start, index, -1, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type, client->player);
 		client->player->mode = MODE_NORMAL;
 		return;
-    }
-    else if (client->player->mode == MODE_REPLACE)
-    {
-    	client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+	}
+	else if (client->player->mode == MODE_REPLACE)
+	{
+		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
 		if (client->player->cuboid_start == UINT_MAX)
 		{
@@ -1198,168 +1198,169 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type, client->player);
 		client->player->mode = MODE_NORMAL;
 		return;
-    }
+	}
 
-    enum blocktype_t nt = client->player->bindings[t];
+	enum blocktype_t nt = client->player->bindings[t];
 
-    if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
-    else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
-    else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
+	if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
+	else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
+	else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
 
-    /* Client thinks it has changed to air */
-    if (m == 0) t = AIR;
-    if (!HasBit(client->player->flags, FLAG_PAINT))
-    {
-        if (m == 0) {
-            if (trigger(level, index, b))
-            {
-                client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+	/* Client thinks it has changed to air */
+	if (m == 0) t = AIR;
+	if (!HasBit(client->player->flags, FLAG_PAINT))
+	{
+		if (m == 0) {
+			int r = trigger(level, index, b);
+			if (r > 0)
+			{
+				if (r == 2) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
-                //LOG("Triggered!");
-                return;
-            }
+				//LOG("Triggered!");
+				return;
+			}
 
-            nt = AIR;
-        }
+			nt = AIR;
+		}
 
-        if (m == 1 && bt != AIR && bt != WATER && bt != LAVA && bt != WATERSTILL && bt != LAVASTILL)
-        {
-            client_notify(client, "Active physics block cannot be changed");
-            client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-            return;
-        }
-    }
+		if (m == 1 && bt != AIR && bt != WATER && bt != LAVA && bt != WATERSTILL && bt != LAVASTILL)
+		{
+			client_notify(client, "Active physics block cannot be changed");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+			return;
+		}
+	}
 
-    if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
-        // || (b->owner != 0 && b->owner != client->player->globalid)))
-    {
-        client_notify(client, "Block cannot be changed");
-        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-        return;
-    }
+	if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
+		// || (b->owner != 0 && b->owner != client->player->globalid)))
+	{
+		client_notify(client, "Block cannot be changed");
+		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+		return;
+	}
 
-    if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid))
-    {
-        client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-        return;
-    }
+	if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid))
+	{
+		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+		return;
+	}
 
-    if (bt != nt)
-    {
-        player_undo_log(client->player, index);
+	if (bt != nt)
+	{
+		player_undo_log(client->player, index);
 
-        bool oldphysics = b->physics;
+		bool oldphysics = b->physics;
 
-        b->type = nt;
-        b->data = 0;
-        b->fixed = HasBit(client->player->flags, FLAG_PLACE_FIXED);
-        b->owner = (b->type == AIR && !b->fixed) ? 0 : client->player->globalid;
-        b->physics = blocktype_has_physics(nt);
+		b->type = nt;
+		b->data = 0;
+		b->fixed = HasBit(client->player->flags, FLAG_PLACE_FIXED);
+		b->owner = (b->type == AIR && !b->fixed) ? 0 : client->player->globalid;
+		b->physics = blocktype_has_physics(nt);
 
-        if (oldphysics != b->physics)
-        {
-            if (oldphysics) physics_list_del_item(&level->physics, index);
-            if (b->physics) physics_list_add(&level->physics, index);
-        }
+		if (oldphysics != b->physics)
+		{
+			if (oldphysics) physics_list_del_item(&level->physics, index);
+			if (b->physics) physics_list_add(&level->physics, index);
+		}
 
-        level->changed = true;
+		level->changed = true;
 
-        enum blocktype_t pt = convert(level, index, b);
+		enum blocktype_t pt = convert(level, index, b);
 
-        for (i = 0; i < s_clients.used; i++)
-        {
-            struct client_t *c = s_clients.items[i];
-            if (c->player == NULL) continue;
-            if ((client != c || pt != t) && c->player->level == level)
-            {
-                client_add_packet(c, packet_send_set_block(x, y, z, pt));
-            }
-        }
-    }
-    else
-    {
-        enum blocktype_t pt = convert(level, index, b);
+		for (i = 0; i < s_clients.used; i++)
+		{
+			struct client_t *c = s_clients.items[i];
+			if (c->player == NULL) continue;
+			if ((client != c || pt != t) && c->player->level == level)
+			{
+				client_add_packet(c, packet_send_set_block(x, y, z, pt));
+			}
+		}
+	}
+	else
+	{
+		enum blocktype_t pt = convert(level, index, b);
 
-        if (pt != t)
-        {
-            /* Block hasn't changed but client thinks it has? */
-            client_add_packet(client, packet_send_set_block(x, y, z, pt));
-        }
-    }
+		if (pt != t)
+		{
+			/* Block hasn't changed but client thinks it has? */
+			client_add_packet(client, packet_send_set_block(x, y, z, pt));
+		}
+	}
 }
 
 void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index)
 {
-    int i;
-    struct block_t *b = &level->blocks[index];
-    *b = *block;
-    level->changed = true;
+	int i;
+	struct block_t *b = &level->blocks[index];
+	*b = *block;
+	level->changed = true;
 
-    int16_t x, y, z;
-    if (!level_get_xyz(level, index, &x, &y, &z)) return;
+	int16_t x, y, z;
+	if (!level_get_xyz(level, index, &x, &y, &z)) return;
 
-    for (i = 0; i < s_clients.used; i++)
-    {
-        struct client_t *c = s_clients.items[i];
-        if (c->player == NULL) continue;
-        if (c->player->level == level)
-        {
-            client_add_packet(c, packet_send_set_block(x, y, z, convert(level, index, b)));
-        }
-    }
+	for (i = 0; i < s_clients.used; i++)
+	{
+		struct client_t *c = s_clients.items[i];
+		if (c->player == NULL) continue;
+		if (c->player->level == level)
+		{
+			client_add_packet(c, packet_send_set_block(x, y, z, convert(level, index, b)));
+		}
+	}
 }
 
 static void level_mark_teleporter(struct level_t *level, struct position_t *pos)
 {
-    unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
-    level->blocks[index].teleporter = 1;
+	unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
+	level->blocks[index].teleporter = 1;
 }
 
 static void level_unmark_teleporter(struct level_t *level, struct position_t *pos)
 {
-    unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
-    level->blocks[index].teleporter = 0;
+	unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
+	level->blocks[index].teleporter = 0;
 }
 
 void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level)
 {
-    int i = 0;
-    for (i = 0; i < level->teleporters.used; i++)
-    {
-        struct teleporter_t *t = &level->teleporters.items[i];
-        if (strcasecmp(t->name, name) == 0)
-        {
-            level_unmark_teleporter(level, &t->pos);
-            t->pos = *pos;
-            if (dest != NULL) strncpy(t->dest, dest, sizeof t->dest);
-            if (dest_level != NULL) strncpy(t->dest_level, dest_level, sizeof t->dest_level);
-            level_mark_teleporter(level, pos);
-            return;
-        }
-    }
+	int i = 0;
+	for (i = 0; i < level->teleporters.used; i++)
+	{
+		struct teleporter_t *t = &level->teleporters.items[i];
+		if (strcasecmp(t->name, name) == 0)
+		{
+			level_unmark_teleporter(level, &t->pos);
+			t->pos = *pos;
+			if (dest != NULL) strncpy(t->dest, dest, sizeof t->dest);
+			if (dest_level != NULL) strncpy(t->dest_level, dest_level, sizeof t->dest_level);
+			level_mark_teleporter(level, pos);
+			return;
+		}
+	}
 
-    struct teleporter_t t;
-    memset(&t, 0, sizeof t);
-    strncpy(t.name, name, sizeof t.name);
-    t.pos = *pos;
-    if (dest != NULL) strncpy(t.dest, dest, sizeof t.dest);
-    if (dest_level != NULL) strncpy(t.dest_level, dest_level, sizeof t.dest_level);
+	struct teleporter_t t;
+	memset(&t, 0, sizeof t);
+	strncpy(t.name, name, sizeof t.name);
+	t.pos = *pos;
+	if (dest != NULL) strncpy(t.dest, dest, sizeof t.dest);
+	if (dest_level != NULL) strncpy(t.dest_level, dest_level, sizeof t.dest_level);
 
-    teleporter_list_add(&level->teleporters, t);
-    level_mark_teleporter(level, pos);
+	teleporter_list_add(&level->teleporters, t);
+	level_mark_teleporter(level, pos);
 }
 
 static int gettime()
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 /*void physics_remove(struct level_t *level, unsigned index)
 {
-    physics_list_add(&level->physics_remove, index);
+	physics_list_add(&level->physics_remove, index);
 }*/
 
 static void level_run_physics(struct level_t *level, bool can_init)
@@ -1369,28 +1370,28 @@ static void level_run_physics(struct level_t *level, bool can_init)
 
 	if (level->physics_iter == 0)
 	{
-	    if (!can_init) return;
+		if (!can_init) return;
 
-	    //LOG("Starting physics run with %lu blocks\n", level->physics.used)
+		//LOG("Starting physics run with %lu blocks\n", level->physics.used)
 		level->physics_runtime = 0;
 
-        /* Swap physics list */
-        unsigned *p = level->physics2.items;
-        level->physics2.items = level->physics.items;
-        level->physics.items = p;
+		/* Swap physics list */
+		unsigned *p = level->physics2.items;
+		level->physics2.items = level->physics.items;
+		level->physics.items = p;
 
-        size_t u = level->physics2.used;
-        level->physics2.used = level->physics.used;
-        level->physics.used = u;
+		size_t u = level->physics2.used;
+		level->physics2.used = level->physics.used;
+		level->physics.used = u;
 
-        u = level->physics2.size;
-        level->physics2.size = level->physics.size;
-        level->physics.size = u;
+		u = level->physics2.size;
+		level->physics2.size = level->physics.size;
+		level->physics.size = u;
 	}
 
-    //LOG("Done %d out of %lu\n", level->physics_iter, level->physics2.used);
+	//LOG("Done %d out of %lu\n", level->physics_iter, level->physics2.used);
 
-    int s = gettime();
+	int s = gettime();
 
 	//LOG("%lu physics blocks, iterator at %d\n", level->physics.used, level->physics_iter);
 	for (; level->physics_iter < level->physics2.used; level->physics_iter++)
@@ -1435,7 +1436,7 @@ static void level_run_physics(struct level_t *level, bool can_init)
 	//LOG("Physics ran in %d (%lu blocks)\n", level->physics_runtime, level->physics2.used);
 
 	level->physics_done = 1;
-    level->physics2.used = 0;
+	level->physics2.used = 0;
 }
 
 static void level_run_updates(struct level_t *level, bool can_init)
@@ -1443,139 +1444,139 @@ static void level_run_updates(struct level_t *level, bool can_init)
 	/* Don't run updates until physics are complete */
 	if (level->physics_done == 0) return;
 
-    //LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
+	//LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
 
-    if (level->updates_iter == 0)
-    {
-        if (!can_init) return;
+	if (level->updates_iter == 0)
+	{
+		if (!can_init) return;
 
-       // LOG("Starting update run with %lu blocks\n", level->updates.used)
+	   // LOG("Starting update run with %lu blocks\n", level->updates.used)
 
 		level->updates_runtime = 0;
-    }
+	}
 
-    //LOG("Done %d out of %lu\n", level->updates_iter, level->updates.used);
+	//LOG("Done %d out of %lu\n", level->updates_iter, level->updates.used);
 
-    int s = gettime();
+	int s = gettime();
 
-    int n = 40;
-    for (; level->updates_iter < level->updates.used; level->updates_iter++)
-    {
-        struct block_update_t *bu = &level->updates.items[level->updates_iter];
-        struct block_t *b = &level->blocks[bu->index];
+	int n = 40;
+	for (; level->updates_iter < level->updates.used; level->updates_iter++)
+	{
+		struct block_update_t *bu = &level->updates.items[level->updates_iter];
+		struct block_t *b = &level->blocks[bu->index];
 
-        enum blocktype_t pt1 = convert(level, bu->index, b);
+		enum blocktype_t pt1 = convert(level, bu->index, b);
 
-        if (bu->newtype != -1)
-        {
-            b->type = bu->newtype;
-        }
+		if (bu->newtype != -1)
+		{
+			b->type = bu->newtype;
+		}
 
-        b->data = bu->newdata;
-        b->physics = blocktype_has_physics(b->type);
-        if (b->physics) physics_list_add(&level->physics, bu->index);
+		b->data = bu->newdata;
+		b->physics = blocktype_has_physics(b->type);
+		if (b->physics) physics_list_add(&level->physics, bu->index);
 
-        enum blocktype_t pt2 = convert(level, bu->index, b);
-        int16_t x, y, z;
-        level_get_xyz(level, bu->index, &x, &y, &z);
+		enum blocktype_t pt2 = convert(level, bu->index, b);
+		int16_t x, y, z;
+		level_get_xyz(level, bu->index, &x, &y, &z);
 
-        if (pt1 != pt2)
-        {
-            int j;
-            for (j = 0; j < s_clients.used; j++)
-            {
-                struct client_t *c = s_clients.items[j];
-                if (c->player == NULL) continue;
-                if (c->player->level == level)
-                {
-                    client_add_packet(c, packet_send_set_block(x, y, z, pt2));
-                }
-            }
+		if (pt1 != pt2)
+		{
+			int j;
+			for (j = 0; j < s_clients.used; j++)
+			{
+				struct client_t *c = s_clients.items[j];
+				if (c->player == NULL) continue;
+				if (c->player->level == level)
+				{
+					client_add_packet(c, packet_send_set_block(x, y, z, pt2));
+				}
+			}
 
-            /* Max changes */
-            n--;
-            if (n == 0) {
-            	level->updates_runtime += gettime() - s;
-            	return;
-            }
-        }
+			/* Max changes */
+			n--;
+			if (n == 0) {
+				level->updates_runtime += gettime() - s;
+				return;
+			}
+		}
 
-        /* Max iterations, or 40 ms */
-        //if (gettime() - s > 40) return;
-    }
+		/* Max iterations, or 40 ms */
+		//if (gettime() - s > 40) return;
+	}
 
-    level->updates_runtime += gettime() - s;
+	level->updates_runtime += gettime() - s;
 
-    //LOG("Updates ran in %d (%lu blocks)\n", level->updates_runtime, level->updates.used);
+	//LOG("Updates ran in %d (%lu blocks)\n", level->updates_runtime, level->updates.used);
 
 	//LOG("Hmm (%lu / %lu blocks)\n", level->physics.used, level->physics2.used);
 
-    level->updates.used = 0;
-    level->updates_iter = 0;
-    level->physics_iter = 0;
+	level->updates.used = 0;
+	level->updates_iter = 0;
+	level->physics_iter = 0;
 
-    level->physics_done = 0;
+	level->physics_done = 0;
 }
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
 {
-    /* Time sink? */
-    int i;
-    for (i = 0; i < level->updates.used; i++)
-    {
-        struct block_update_t *bu = &level->updates.items[i];
-        if (index == bu->index) {
-            return;
-            bu->newtype = newtype;
-            bu->newdata = newdata;
-            //LOG("update (again) @ %d (%d - %d)\n", index, newtype, newdata);
-            return;
-        }
-    }
+	/* Time sink? */
+	int i;
+	for (i = 0; i < level->updates.used; i++)
+	{
+		struct block_update_t *bu = &level->updates.items[i];
+		if (index == bu->index) {
+			return;
+			bu->newtype = newtype;
+			bu->newdata = newdata;
+			//LOG("update (again) @ %d (%d - %d)\n", index, newtype, newdata);
+			return;
+		}
+	}
 
-    struct block_update_t bu;
-    bu.index = index;
-    bu.newtype = newtype;
-    bu.newdata = newdata;
-    block_update_list_add(&level->updates, bu);
+	struct block_update_t bu;
+	bu.index = index;
+	bu.newtype = newtype;
+	bu.newdata = newdata;
+	block_update_list_add(&level->updates, bu);
 
-    //LOG("update @ %d (%d - %d)\n", index, newtype, newdata);
+	//LOG("update @ %d (%d - %d)\n", index, newtype, newdata);
 }
 
 void level_process_physics(bool can_init)
 {
-    int i;
-    for (i = 0; i < s_levels.used; i++)
-    {
-        struct level_t *level = s_levels.items[i];
-        if (level == NULL) continue;
+	int i;
+	for (i = 0; i < s_levels.used; i++)
+	{
+		struct level_t *level = s_levels.items[i];
+		if (level == NULL) continue;
 
-        /* Don't run physics for empty levels, else it will never unload */
-        if (level_is_empty(level)) continue;
+		/* Don't run physics for empty levels, else it will never unload */
+		if (level_is_empty(level)) continue;
 
-        /* Test if another thread is accessing... */
-        if (pthread_mutex_trylock(&level->mutex) != 0) continue;
-        pthread_mutex_unlock(&level->mutex);
+		/* Test if another thread is accessing... */
+		if (pthread_mutex_trylock(&level->mutex) != 0) continue;
+		pthread_mutex_unlock(&level->mutex);
 
-        level_run_physics(level, can_init);
-    }
+		level_run_physics(level, can_init);
+	}
 }
 
 void level_process_updates(bool can_init)
 {
-    int i;
-    for (i = 0; i < s_levels.used; i++)
-    {
-        struct level_t *level = s_levels.items[i];
-        if (level == NULL) continue;
+	int i;
+	for (i = 0; i < s_levels.used; i++)
+	{
+		struct level_t *level = s_levels.items[i];
+		if (level == NULL) continue;
 
-        /* Don't run physics for empty levels, else it will never unload */
-        if (level_is_empty(level)) continue;
+		/* Don't run physics for empty levels, else it will never unload */
+		if (level_is_empty(level)) continue;
 
-        /* Test if another thread is accessing... */
-        if (pthread_mutex_trylock(&level->mutex) != 0) continue;
-        pthread_mutex_unlock(&level->mutex);
+		/* Test if another thread is accessing... */
+		if (pthread_mutex_trylock(&level->mutex) != 0) continue;
+		pthread_mutex_unlock(&level->mutex);
 
-        level_run_updates(level, can_init);
-    }
+		level_run_updates(level, can_init);
+	}
 }

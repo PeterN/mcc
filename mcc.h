@@ -7,26 +7,26 @@
 
 struct server_t
 {
-    char *name;
-    char *motd;
-    int max_players;
-    int players;
-    bool public;
-    bool exit;
-    time_t start_time;
-    clock_t cpu_start;
-    double cpu_time;
+	char *name;
+	char *motd;
+	int max_players;
+	int players;
+	bool public;
+	bool exit;
+	time_t start_time;
+	clock_t cpu_start;
+	double cpu_time;
 
-    FILE *logfile;
+	FILE *logfile;
 
-    struct
-    {
-        char *hostname;
-        int port;
-        char *name;
-        char *channel;
-        char *pass;
-    } irc;
+	struct
+	{
+		char *hostname;
+		int port;
+		char *name;
+		char *channel;
+		char *pass;
+	} irc;
 };
 
 extern struct server_t g_server;

@@ -18,37 +18,37 @@
 
 bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
-    struct addrinfo *ai;
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family   = AF_INET;
-    hints.ai_flags    = AI_ADDRCONFIG;
-    hints.ai_socktype = SOCK_STREAM;
+	struct addrinfo *ai;
+	struct addrinfo hints;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family   = AF_INET;
+	hints.ai_flags	= AI_ADDRCONFIG;
+	hints.ai_socktype = SOCK_STREAM;
 
-    char port_name[6];
-    snprintf(port_name, sizeof port_name, "%u", port);
+	char port_name[6];
+	snprintf(port_name, sizeof port_name, "%u", port);
 
-    int e = getaddrinfo(hostname, port_name, &hints, &ai);
+	int e = getaddrinfo(hostname, port_name, &hints, &ai);
 
-    if (e != 0)
-    {
-        perror("getaddrinfo");
-        return false;
-    }
+	if (e != 0)
+	{
+		perror("getaddrinfo");
+		return false;
+	}
 
-    struct addrinfo *runp;
-    for (runp = ai; runp != NULL; runp = runp->ai_next)
-    {
-        struct sockaddr_in *ai_addr = (struct sockaddr_in *)runp->ai_addr;
+	struct addrinfo *runp;
+	for (runp = ai; runp != NULL; runp = runp->ai_next)
+	{
+		struct sockaddr_in *ai_addr = (struct sockaddr_in *)runp->ai_addr;
 
-        /* Take the first address */
-        *addr = *ai_addr;
-        break;
-    }
+		/* Take the first address */
+		*addr = *ai_addr;
+		break;
+	}
 
-    freeaddrinfo(ai);
+	freeaddrinfo(ai);
 
-    return true;
+	return true;
 }
 
 static struct sockaddr_in serv_addr;
@@ -89,16 +89,16 @@ void net_init()
 
 	net_set_nonblock(s_listenfd);
 
-    heartbeat_start();
+	heartbeat_start();
 }
 
 void net_close(struct client_t *c, const char *reason)
 {
-    char buf[64];
+	char buf[64];
 
-    close(c->sock);
+	close(c->sock);
 
-    /* Mark client for deletion */
+	/* Mark client for deletion */
 	c->close = true;
 
 	if (c->player == NULL)
@@ -120,18 +120,18 @@ void net_close(struct client_t *c, const char *reason)
 			}
 		}
 
-	    client_send_despawn(c, false);
-	    c->player->level->clients[c->player->levelid] = NULL;
+		client_send_despawn(c, false);
+		c->player->level->clients[c->player->levelid] = NULL;
 
-        if (reason == NULL)
-        {
-            snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected", c->player->colourusername);
-        }
-	    else
-	    {
-	        snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected (%s)", c->player->colourusername, reason);
-	    }
-	    net_notify_all(buf);
+		if (reason == NULL)
+		{
+			snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected", c->player->colourusername);
+		}
+		else
+		{
+			snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected (%s)", c->player->colourusername, reason);
+		}
+		net_notify_all(buf);
 
 		LOG("Closing connection %s (%d): %s\n", c->player->username, c->player->globalid, reason);
 		player_del(c->player);
@@ -140,30 +140,30 @@ void net_close(struct client_t *c, const char *reason)
 
 static void net_packetsend(struct client_t *c)
 {
-    size_t res;
-    struct packet_t *p = c->packet_send;
+	size_t res;
+	struct packet_t *p = c->packet_send;
 
-    if (p == NULL) return;
+	if (p == NULL) return;
 
-    while (true)
-    {
-        p = c->packet_send;
+	while (true)
+	{
+		p = c->packet_send;
 
-        res = send(c->sock, p->buffer, p->loc - p->buffer, MSG_NOSIGNAL);
-        if (res == -1)
-        {
-            //if (errno != EWOULDBLOCK)
-            //{
-                perror("send");
-            //}
-            break;
-        }
+		res = send(c->sock, p->buffer, p->loc - p->buffer, MSG_NOSIGNAL);
+		if (res == -1)
+		{
+			//if (errno != EWOULDBLOCK)
+			//{
+				perror("send");
+			//}
+			break;
+		}
 
-        c->packet_send = p->next;
-        free(p);
+		c->packet_send = p->next;
+		free(p);
 
-        if (c->packet_send == NULL) break;
-    }
+		if (c->packet_send == NULL) break;
+	}
 }
 
 static void net_packetrecv(struct client_t *c)
@@ -194,7 +194,7 @@ static void net_packetrecv(struct client_t *c)
 		}
 		else if (res == 0)
 		{
-		    /* Normal disconnect? */
+			/* Normal disconnect? */
 			net_close(c, NULL);
 			return;
 		}
@@ -204,8 +204,8 @@ static void net_packetrecv(struct client_t *c)
 			p->size = packet_recv_size(p->buffer[0]);
 			if (p->size == -1)
 			{
-			    char buf[64];
-			    snprintf(buf, sizeof buf, "unrecognised packet type 0x%02X!\n", p->buffer[0]);
+				char buf[64];
+				snprintf(buf, sizeof buf, "unrecognised packet type 0x%02X!\n", p->buffer[0]);
 				net_close(c, buf);
 				return;
 			}
@@ -230,7 +230,7 @@ void net_run()
 	{
 		if (s_clients.items[i]->close)
 		{
-		    free(s_clients.items[i]);
+			free(s_clients.items[i]);
 			client_list_del_index(&s_clients, i);
 			/* Restart :/ */
 			i = -1;
@@ -246,14 +246,14 @@ void net_run()
 
 	if (s_heartbeat_fd >= 0)
 	{
-	    FD_SET(s_heartbeat_fd, &read_fd);
-	    FD_SET(s_heartbeat_fd, &write_fd);
+		FD_SET(s_heartbeat_fd, &read_fd);
+		FD_SET(s_heartbeat_fd, &write_fd);
 	}
 
 	if (s_irc_fd >= 0)
 	{
-	    FD_SET(s_irc_fd, &read_fd);
-	    FD_SET(s_irc_fd, &write_fd);
+		FD_SET(s_irc_fd, &read_fd);
+		FD_SET(s_irc_fd, &write_fd);
 	}
 
 	/* Add clients */
@@ -277,41 +277,41 @@ void net_run()
 	{
 		while (1)
 		{
-		    struct client_t *c;
-		    struct sockaddr_storage sin;
-		    socklen_t sin_len = sizeof sin;
+			struct client_t *c;
+			struct sockaddr_storage sin;
+			socklen_t sin_len = sizeof sin;
 
 			/* This better be nonblocking! */
 			int fd = accept(s_listenfd, (struct sockaddr *)&sin, &sin_len);
 			if (fd == -1) break;
 
-            c = calloc(1, sizeof *c);
+			c = calloc(1, sizeof *c);
 			c->sock = fd;
 			c->sin  = sin;
 			client_list_add(&s_clients, c);
 		}
 	}
 
-    if (s_heartbeat_fd >= 0)
+	if (s_heartbeat_fd >= 0)
 	{
-	    bool can_write = FD_ISSET(s_heartbeat_fd, &write_fd);
-	    bool can_read  = FD_ISSET(s_heartbeat_fd, &read_fd);
+		bool can_write = FD_ISSET(s_heartbeat_fd, &write_fd);
+		bool can_read  = FD_ISSET(s_heartbeat_fd, &read_fd);
 
-	    if (can_write || can_read)
-	    {
-	        heartbeat_run(can_write, can_read);
-	    }
+		if (can_write || can_read)
+		{
+			heartbeat_run(can_write, can_read);
+		}
 	}
 
 	if (s_irc_fd >= 0)
 	{
-	    bool can_write = FD_ISSET(s_irc_fd, &write_fd);
-	    bool can_read  = FD_ISSET(s_irc_fd, &read_fd);
+		bool can_write = FD_ISSET(s_irc_fd, &write_fd);
+		bool can_read  = FD_ISSET(s_irc_fd, &read_fd);
 
-	    if (can_write || can_read)
-	    {
-	        irc_run(can_write, can_read);
-	    }
+		if (can_write || can_read)
+		{
+			irc_run(can_write, can_read);
+		}
 	}
 
 	for (i = 0; i < clients; i++)
@@ -319,7 +319,7 @@ void net_run()
 		struct client_t *c = s_clients.items[i];
 		if (FD_ISSET(c->sock, &write_fd))
 		{
-		    net_packetsend(c);
+			net_packetsend(c);
 		}
 		if (FD_ISSET(c->sock, &read_fd))
 		{
@@ -330,12 +330,12 @@ void net_run()
 
 void net_notify_all(const char *message)
 {
-    int i;
-    for (i = 0; i < s_clients.used; i++)
-    {
-        struct client_t *c = s_clients.items[i];
-        client_add_packet(c, packet_send_message(0, message));
-    }
+	int i;
+	for (i = 0; i < s_clients.used; i++)
+	{
+		struct client_t *c = s_clients.items[i];
+		client_add_packet(c, packet_send_message(0, message));
+	}
 
-    LOG("%s\n", message);
+	LOG("%s\n", message);
 }

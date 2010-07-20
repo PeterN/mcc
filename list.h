@@ -20,7 +20,7 @@ static inline void X ## _list_init(struct X ## _list_t *list) \
 \
 static inline void X ## _list_free(struct X ## _list_t *list) \
 { \
-    free(list->items); \
+	free(list->items); \
 } \
 \
 static inline void X ## _list_add(struct X ## _list_t *list, T item) \

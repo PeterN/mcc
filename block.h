@@ -88,8 +88,8 @@ struct level_t;
 
 struct block_t
 {
-    uint16_t fixed:1;
-    uint16_t physics:1;
+	uint16_t fixed:1;
+	uint16_t physics:1;
 	uint16_t type:13;
 	uint16_t teleporter:1;
 	uint16_t data:16;
@@ -102,16 +102,16 @@ typedef void(*physics_func_t)(struct level_t *l, unsigned index, const struct bl
 
 struct blocktype_desc_t
 {
-    const char *name;
-    convert_func_t convert_func;
-    trigger_func_t trigger_func;
-    physics_func_t physics_func;
+	const char *name;
+	convert_func_t convert_func;
+	trigger_func_t trigger_func;
+	physics_func_t physics_func;
 };
 
 static inline bool blocktype_desc_t_compare(struct blocktype_desc_t *a, struct blocktype_desc_t *b)
 {
-    /* Compare pointers */
-    return a->name == a->name;
+	/* Compare pointers */
+	return a->name == a->name;
 }
 LIST(blocktype_desc, struct blocktype_desc_t, blocktype_desc_t_compare)
 
@@ -120,12 +120,12 @@ LIST(blocktype_desc, struct blocktype_desc_t, blocktype_desc_t_compare)
 void blocktype_init();
 const char *blocktype_get_name(enum blocktype_t type);
 enum blocktype_t blocktype_get_by_name(const char *name);
-const struct block_t block_convert_from_mcs(uint8_t type);
+struct block_t block_convert_from_mcs(uint8_t type);
 bool blocktype_has_physics(enum blocktype_t type);
 
 int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, physics_func_t physics_func);
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block);
-bool trigger(struct level_t *level, unsigned index, const struct block_t *block);
+int trigger(struct level_t *level, unsigned index, const struct block_t *block);
 void physics(struct level_t *level, unsigned index, const struct block_t *block);
 
 #endif /* BLOCK_H */

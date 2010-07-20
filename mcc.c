@@ -16,26 +16,26 @@ struct server_t g_server;
 
 static int gettime()
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 void mcc_exit()
 {
-    level_save_all();
+	level_save_all();
 
 	/* Wait for threads to finish */
 	int i;
 	for (i = 0; i < s_levels.used; i++)
 	{
-	    struct level_t *l = s_levels.items[i];
-	    if (l != NULL && l->thread_valid)
-	    {
+		struct level_t *l = s_levels.items[i];
+		if (l != NULL && l->thread_valid)
+		{
 			pthread_join(l->thread, NULL);
 			l->thread_valid = false;
-	    }
+		}
 	}
 
 	playerdb_close();
@@ -45,9 +45,9 @@ void mcc_exit()
 
 static void sighandler(int sig)
 {
-    mcc_exit();
+	mcc_exit();
 
-    exit(0);
+	exit(0);
 }
 
 #define TICK_INTERVAL 40
@@ -55,37 +55,37 @@ static void sighandler(int sig)
 
 int main(int argc, char **argv)
 {
-    int tick = 0;
+	int tick = 0;
 	int i;
 
 	//config_read(&g_server);
 
 	g_server.logfile = fopen("log.txt", "a");
-    LOG("Server starting...\n");
+	LOG("Server starting...\n");
 
-    if (!level_load("main", NULL))
-    {
-        struct level_t *l = malloc(sizeof *l);
-        if (!level_init(l, 128, 32, 128, "main", true))
-        {
-            LOG("Unable to create main level, exiting.\n");
-        	free(l);
-        	return false;
-        }
+	if (!level_load("main", NULL))
+	{
+		struct level_t *l = malloc(sizeof *l);
+		if (!level_init(l, 128, 32, 128, "main", true))
+		{
+			LOG("Unable to create main level, exiting.\n");
+			free(l);
+			return false;
+		}
 
-        level_gen(l, 1);
+		level_gen(l, 1);
 
-        l->rankbuild = RANK_GUEST;
-        l->rankvisit = RANK_GUEST;
+		l->rankbuild = RANK_GUEST;
+		l->rankvisit = RANK_GUEST;
 
-        level_list_add(&s_levels, l);
-    }
+		level_list_add(&s_levels, l);
+	}
 
 	g_server.name = "TEST TEST TEST";
 	g_server.motd = "Test server for Just Another Minecraft Server";
 	g_server.max_players = 20;
 	g_server.players = 0;
-	g_server.public = false;
+	g_server.public = true;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
@@ -108,20 +108,18 @@ int main(int argc, char **argv)
 	int cur_ticks = gettime();
 	int next_tick = cur_ticks + TICK_INTERVAL;
 
-	module_load("./spleef.so");
-
 	while (!g_server.exit)
 	{
-	    int prev_cur_ticks = cur_ticks;
+		int prev_cur_ticks = cur_ticks;
 
 		net_run();
 
-        cur_ticks = gettime();
-        if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
-        {
-            next_tick = cur_ticks + TICK_INTERVAL;
+		cur_ticks = gettime();
+		if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
+		{
+			next_tick = cur_ticks + TICK_INTERVAL;
 
-            tick++;
+			tick++;
 
 			if ((tick % MS_TO_TICKS(1000)) == 0)
 			{
@@ -129,34 +127,34 @@ int main(int argc, char **argv)
 				g_server.cpu_time = ((double) (c - g_server.cpu_start)) / CLOCKS_PER_SEC * 100.0;
 				g_server.cpu_start = c;
 			}
-            //if ((tick % MS_TO_TICKS(2500)) == 0) client_info();
-            if ((tick % MS_TO_TICKS(60000)) == 0) heartbeat_start();
-            if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
-            if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
+			//if ((tick % MS_TO_TICKS(2500)) == 0) client_info();
+			if ((tick % MS_TO_TICKS(60000)) == 0) heartbeat_start();
+			if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
+			if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
 
-            //if ((tick % MS_TO_TICKS(240)) == 0)
+			//if ((tick % MS_TO_TICKS(240)) == 0)
 
-            level_process_physics((tick % MS_TO_TICKS(80)) == 0);
-            level_process_updates(true);
-            //(tick % MS_TO_TICKS(240)) == 0);
+			level_process_physics((tick % MS_TO_TICKS(80)) == 0);
+			level_process_updates(true);
+			//(tick % MS_TO_TICKS(240)) == 0);
 
-            cuboid_process();
-            player_send_positions();
+			cuboid_process();
+			player_send_positions();
 
-            //if ((tick % MS_TO_TICKS(1000)) == 0)
-            {
-                for (i = 0; i < s_clients.used; i++)
-                {
-                    struct client_t *c = s_clients.items[i];
-                    if (c->player != NULL && c->player->new_level != c->player->level)
-                    {
-                        level_send(c);
-                    }
-                }
-            }
-        }
+			//if ((tick % MS_TO_TICKS(1000)) == 0)
+			{
+				for (i = 0; i < s_clients.used; i++)
+				{
+					struct client_t *c = s_clients.items[i];
+					if (c->player != NULL && c->player->new_level != c->player->level)
+					{
+						level_send(c);
+					}
+				}
+			}
+		}
 
-        usleep(1000);
+		usleep(1000);
 	}
 
 	mcc_exit();

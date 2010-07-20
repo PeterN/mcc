@@ -19,33 +19,33 @@
 
 void notify_file(struct client_t *c, const char *filename)
 {
-    char buf[64];
-    FILE *f = fopen(filename, "r");
-    if (f == NULL)
-    {
-        snprintf(buf, sizeof buf, "No %s found", filename);
-        client_notify(c, buf);
-        return;
-    }
+	char buf[64];
+	FILE *f = fopen(filename, "r");
+	if (f == NULL)
+	{
+		snprintf(buf, sizeof buf, "No %s found", filename);
+		client_notify(c, buf);
+		return;
+	}
 
-    while (!feof(f))
-    {
-        memset(buf, 0, sizeof buf);
-        fgets(buf, sizeof buf, f);
-        if (buf[0] != '\0') client_notify(c, buf);
-    }
+	while (!feof(f))
+	{
+		memset(buf, 0, sizeof buf);
+		fgets(buf, sizeof buf, f);
+		if (buf[0] != '\0') client_notify(c, buf);
+	}
 
-    fclose(f);
+	fclose(f);
 }
 
 typedef bool(*command_func_t)(struct client_t *c, int params, const char **param);
 
 struct command_t
 {
-    const char *command;
-    enum rank_t rank;
-    command_func_t func;
-    const char *help;
+	const char *command;
+	enum rank_t rank;
+	command_func_t func;
+	const char *help;
 };
 
 struct command_t s_commands[];
@@ -67,29 +67,29 @@ static const char help_ban[] =
 
 CMD(ban)
 {
-    char buf[64];
-    struct player_t *p;
-    int oldrank;
+	char buf[64];
+	struct player_t *p;
+	int oldrank;
 
-    if (params != 2) return true;
+	if (params != 2) return true;
 
-    oldrank = playerdb_get_rank(param[1]);
-    if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
-    {
-        client_notify(c, "Cannot ban op or admin");
-        return false;
-    }
+	oldrank = playerdb_get_rank(param[1]);
+	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
+	{
+		client_notify(c, "Cannot ban op or admin");
+		return false;
+	}
 
-    playerdb_set_rank(param[1], RANK_BANNED);
-    p = player_get_by_name(param[1]);
-    if (p != NULL)
-    {
-        p->rank = RANK_BANNED;
-    }
+	playerdb_set_rank(param[1], RANK_BANNED);
+	p = player_get_by_name(param[1]);
+	if (p != NULL)
+	{
+		p->rank = RANK_BANNED;
+	}
 
-    snprintf(buf, sizeof buf, "%s banned", param[1]);
-    net_notify_all(buf);
-    return false;
+	snprintf(buf, sizeof buf, "%s banned", param[1]);
+	net_notify_all(buf);
+	return false;
 }
 
 static const char help_bind[] =
@@ -100,43 +100,43 @@ static const char help_bind[] =
 
 CMD(bind)
 {
-    char buf[64];
-    int i, j;
+	char buf[64];
+	int i, j;
 
-    if (params > 3) return true;
+	if (params > 3) return true;
 
-    switch (params)
-    {
-        case 1:
-            for (i = 0; i < BLOCK_END; i++)
-            {
-                if (c->player->bindings[i] != i)
-                {
-                    snprintf(buf, sizeof buf, "%s bound to %s", blocktype_get_name(i), blocktype_get_name(c->player->bindings[i]));
-                    client_notify(c, buf);
-                }
-            }
-            break;
+	switch (params)
+	{
+		case 1:
+			for (i = 0; i < BLOCK_END; i++)
+			{
+				if (c->player->bindings[i] != i)
+				{
+					snprintf(buf, sizeof buf, "%s bound to %s", blocktype_get_name(i), blocktype_get_name(c->player->bindings[i]));
+					client_notify(c, buf);
+				}
+			}
+			break;
 
-        case 2:
-            i = blocktype_get_by_name(param[1]);
-            if (i != -1)
-            {
-                c->player->bindings[i] = i;
+		case 2:
+			i = blocktype_get_by_name(param[1]);
+			if (i != -1)
+			{
+				c->player->bindings[i] = i;
 
-            }
-            break;
+			}
+			break;
 
-        case 3:
-            i = blocktype_get_by_name(param[1]);
-            j = blocktype_get_by_name(param[2]);
-            if (i != -1 && j != -1)
-            {
-                c->player->bindings[i] = j;
-            }
-            break;
-    }
-    return false;
+		case 3:
+			i = blocktype_get_by_name(param[1]);
+			j = blocktype_get_by_name(param[2]);
+			if (i != -1 && j != -1)
+			{
+				c->player->bindings[i] = j;
+			}
+			break;
+	}
+	return false;
 }
 
 static const char help_commands[] =
@@ -145,29 +145,29 @@ static const char help_commands[] =
 
 CMD(commands)
 {
-    char buf[64];
-    char *bufp = buf;
+	char buf[64];
+	char *bufp = buf;
 
-    struct command_t *comp = s_commands;
-    for (; comp->command != NULL; comp++)
-    {
-        if (c->player->rank < comp->rank) continue;
+	struct command_t *comp = s_commands;
+	for (; comp->command != NULL; comp++)
+	{
+		if (c->player->rank < comp->rank) continue;
 
-        size_t len = strlen(comp->command) + 1;
-        if (len >= sizeof buf - (bufp - buf))
-        {
-            client_notify(c, buf);
-            bufp = buf;
-        }
+		size_t len = strlen(comp->command) + 1;
+		if (len >= sizeof buf - (bufp - buf))
+		{
+			client_notify(c, buf);
+			bufp = buf;
+		}
 
-        strcpy(bufp, comp->command);
-        bufp[len - 1] = ' ';
-        bufp += len;
-    }
+		strcpy(bufp, comp->command);
+		bufp[len - 1] = ' ';
+		bufp += len;
+	}
 
-    client_notify(c, buf);
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_cuboid[] =
@@ -177,7 +177,7 @@ static const char help_cuboid[] =
 
 CMD(cuboid)
 {
-    char buf[64];
+	char buf[64];
 
 	if (params > 2) return true;
 
@@ -188,10 +188,10 @@ CMD(cuboid)
 	{
 		c->player->cuboid_type = blocktype_get_by_name(param[1]);
 		if (c->player->cuboid_type == -1)
-        {
-            snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
-            return false;
-        }
+		{
+			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+			return false;
+		}
 	}
 	else
 	{
@@ -199,10 +199,10 @@ CMD(cuboid)
 	}
 
 
-    snprintf(buf, sizeof buf, "Place corners of cuboid");
-    client_notify(c, buf);
+	snprintf(buf, sizeof buf, "Place corners of cuboid");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_disown[] =
@@ -212,13 +212,13 @@ static const char help_disown[] =
 
 CMD(disown)
 {
-    ToggleBit(c->player->flags, FLAG_DISOWN);
+	ToggleBit(c->player->flags, FLAG_DISOWN);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Disown %s", HasBit(c->player->flags, FLAG_DISOWN) ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Disown %s", HasBit(c->player->flags, FLAG_DISOWN) ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_exit[] =
@@ -227,9 +227,9 @@ static const char help_exit[] =
 
 CMD(exit)
 {
-    g_server.exit = true;
+	g_server.exit = true;
 
-    return false;
+	return false;
 }
 
 static const char help_filter[] =
@@ -239,28 +239,28 @@ static const char help_filter[] =
 
 CMD(filter)
 {
-    if (params > 2) return true;
+	if (params > 2) return true;
 
-    if (params == 2)
-    {
-        int filter = playerdb_get_globalid(param[1], false, NULL);
-        if (filter == -1)
-        {
-            client_notify(c, "User does not exist");
-            return false;
-        }
+	if (params == 2)
+	{
+		int filter = playerdb_get_globalid(param[1], false, NULL);
+		if (filter == -1)
+		{
+			client_notify(c, "User does not exist");
+			return false;
+		}
 
-        c->player->filter = filter;
-    }
-    else
-    {
-        c->player->filter = -1;
-        client_notify(c, "Filtering disabled");
-    }
+		c->player->filter = filter;
+	}
+	else
+	{
+		c->player->filter = -1;
+		client_notify(c, "Filtering disabled");
+	}
 
-    level_send(c);
+	level_send(c);
 
-    return false;
+	return false;
 }
 
 static const char help_fixed[] =
@@ -270,13 +270,13 @@ static const char help_fixed[] =
 
 CMD(fixed)
 {
-    ToggleBit(c->player->flags, FLAG_PLACE_FIXED);
+	ToggleBit(c->player->flags, FLAG_PLACE_FIXED);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, FLAG_PLACE_FIXED) ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, FLAG_PLACE_FIXED) ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_follow[] =
@@ -301,44 +301,44 @@ CMD(follow)
 		snprintf(buf, sizeof buf, "Stopped following %s", c->player->following->username);
 		client_notify(c, buf);
 
-	    client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->username, &c->player->following->pos));
+		client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->username, &c->player->following->pos));
 
 		c->player->following = NULL;
 		return false;
 	}
 
 	struct player_t *p = player_get_by_name(param[1]);
-    if (p == NULL)
-    {
-        snprintf(buf, sizeof buf, "%s is offline", param[1]);
-        client_notify(c, buf);
-        return false;
-    }
-    if (p->level != c->player->level)
-    {
-        snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
-        client_notify(c, buf);
-        return false;
-    }
+	if (p == NULL)
+	{
+		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
+	if (p->level != c->player->level)
+	{
+		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+		client_notify(c, buf);
+		return false;
+	}
 
-    if (!c->hidden)
-    {
-    	c->hidden = true;
-        client_send_despawn(c, true);
-    }
+	if (!c->hidden)
+	{
+		c->hidden = true;
+		client_send_despawn(c, true);
+	}
 
 	/* Despawn followed player to prevent following player jitter */
-    client_add_packet(c, packet_send_despawn_player(p->levelid));
+	client_add_packet(c, packet_send_despawn_player(p->levelid));
 
-    snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
-    client_notify(c, buf);
+	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
+	client_notify(c, buf);
 
-    snprintf(buf, sizeof buf, "Now following %s", p->username);
-    client_notify(c, buf);
+	snprintf(buf, sizeof buf, "Now following %s", p->username);
+	client_notify(c, buf);
 
-    c->player->following = p;
+	c->player->following = p;
 
-    return false;
+	return false;
 }
 
 static const char help_goto[] =
@@ -347,21 +347,21 @@ static const char help_goto[] =
 
 CMD(goto)
 {
-    if (params != 2) return true;
+	if (params != 2) return true;
 
-    struct level_t *l;
-    if (level_get_by_name(param[1], &l))
-    {
-        if (player_change_level(c->player, l)) level_send(c);
-    }
-    else
-    {
-        char buf[64];
-        snprintf(buf, sizeof buf, "Cannot go to level '%s'", param[1]);
-        client_notify(c, buf);
-    }
+	struct level_t *l;
+	if (level_get_by_name(param[1], &l))
+	{
+		if (player_change_level(c->player, l)) level_send(c);
+	}
+	else
+	{
+		char buf[64];
+		snprintf(buf, sizeof buf, "Cannot go to level '%s'", param[1]);
+		client_notify(c, buf);
+	}
 
-    return false;
+	return false;
 }
 
 static const char help_hide[] =
@@ -370,22 +370,22 @@ static const char help_hide[] =
 
 CMD(hide)
 {
-    c->hidden = !c->hidden;
+	c->hidden = !c->hidden;
 
-    if (c->hidden)
-    {
-        client_send_despawn(c, true);
-    }
-    else
-    {
-        client_send_spawn(c, true);
-    }
+	if (c->hidden)
+	{
+		client_send_despawn(c, true);
+	}
+	else
+	{
+		client_send_spawn(c, true);
+	}
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_home[] =
@@ -394,37 +394,37 @@ static const char help_home[] =
 
 CMD(home)
 {
-    char name[64];
-    struct level_t *l;
+	char name[64];
+	struct level_t *l;
 
-    snprintf(name, sizeof name, "%s_home", c->player->username);
+	snprintf(name, sizeof name, "%s_home", c->player->username);
 
-    if (!level_get_by_name(name, &l))
-    {
-        client_notify(c, "Creating your home level...");
+	if (!level_get_by_name(name, &l))
+	{
+		client_notify(c, "Creating your home level...");
 
-        l = malloc(sizeof *l);
-        if (!level_init(l, 64, 32, 64, name, true))
-        {
-        	LOG("Unable to create level\n");
-        	free(l);
-        	return false;
-        }
+		l = malloc(sizeof *l);
+		if (!level_init(l, 64, 32, 64, name, true))
+		{
+			LOG("Unable to create level\n");
+			free(l);
+			return false;
+		}
 
-        l->owner = c->player->globalid;
-        l->rankvisit = RANK_GUEST;
-        l->rankbuild = RANK_ADMIN;
-        user_list_add(&l->uservisit, l->owner);
-        user_list_add(&l->userbuild, l->owner);
+		l->owner = c->player->globalid;
+		l->rankvisit = RANK_GUEST;
+		l->rankbuild = RANK_ADMIN;
+		user_list_add(&l->uservisit, l->owner);
+		user_list_add(&l->userbuild, l->owner);
 
-        level_gen(l, 0);
-        level_list_add(&s_levels, l);
-    }
+		level_gen(l, 0);
+		level_list_add(&s_levels, l);
+	}
 
-    /* Don't resend the level if player is already on it */
-    if (player_change_level(c->player, l)) level_send(c);
+	/* Don't resend the level if player is already on it */
+	if (player_change_level(c->player, l)) level_send(c);
 
-    return false;
+	return false;
 }
 
 static const char help_identify[] =
@@ -433,9 +433,9 @@ static const char help_identify[] =
 
 CMD(identify)
 {
-    if (params != 2) return true;
+	if (params != 2) return true;
 
-    return false;
+	return false;
 }
 
 static const char help_info[] =
@@ -445,13 +445,13 @@ static const char help_info[] =
 
 CMD(info)
 {
-    player_toggle_mode(c->player, MODE_INFO);
+	player_toggle_mode(c->player, MODE_INFO);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Block info %s", (c->player->mode == MODE_INFO) ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Block info %s", (c->player->mode == MODE_INFO) ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_kick[] =
@@ -460,22 +460,22 @@ static const char help_kick[] =
 
 CMD(kick)
 {
-    if (params != 2) return true;
+	if (params != 2) return true;
 
-    char buf[64];
+	char buf[64];
 
-    struct player_t *p = player_get_by_name(param[1]);
-    if (p == NULL)
-    {
-        snprintf(buf, sizeof buf, "%s is offline", param[1]);
-        client_notify(c, buf);
-        return false;
-    }
+	struct player_t *p = player_get_by_name(param[1]);
+	if (p == NULL)
+	{
+		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
 
-    snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
-    net_close(p->client, buf);
+	snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
+	net_close(p->client, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_lava[] =
@@ -484,18 +484,18 @@ static const char help_lava[] =
 
 CMD(lava)
 {
-    player_toggle_mode(c->player, MODE_PLACE_LAVA);
+	player_toggle_mode(c->player, MODE_PLACE_LAVA);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Lava %s", (c->player->mode == MODE_PLACE_LAVA) ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Lava %s", (c->player->mode == MODE_PLACE_LAVA) ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static int level_filename_filter(const struct dirent *d)
 {
-    return strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL;
+	return strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL;
 }
 
 static const char help_levels[] =
@@ -504,45 +504,45 @@ static const char help_levels[] =
 
 CMD(levels)
 {
-    char buf[64];
-    char *bufp;
-    struct dirent **namelist;
-    int n, i;
+	char buf[64];
+	char *bufp;
+	struct dirent **namelist;
+	int n, i;
 
-    strcpy(buf, "Levels: ");
-    bufp = buf + strlen(buf);
+	strcpy(buf, "Levels: ");
+	bufp = buf + strlen(buf);
 
-    n = scandir("levels", &namelist, &level_filename_filter, alphasort);
-    if (n < 0)
-    {
-        client_notify(c, "Unable to get list of levels");
-        return false;
-    }
+	n = scandir("levels", &namelist, &level_filename_filter, alphasort);
+	if (n < 0)
+	{
+		client_notify(c, "Unable to get list of levels");
+		return false;
+	}
 
-    for (i = 0; i < n; i++)
-    {
-        /* Chop name off at extension */
-        char *ext = strrchr(namelist[i]->d_name, '.');
-        if (ext != NULL) *ext = '\0';
+	for (i = 0; i < n; i++)
+	{
+		/* Chop name off at extension */
+		char *ext = strrchr(namelist[i]->d_name, '.');
+		if (ext != NULL) *ext = '\0';
 
-        size_t len = strlen(namelist[i]->d_name) + (i < n - 1 ? 2 : 0);
-        if (len >= sizeof buf - (bufp - buf))
-        {
-            client_notify(c, buf);
-            bufp = buf;
-        }
+		size_t len = strlen(namelist[i]->d_name) + (i < n - 1 ? 2 : 0);
+		if (len >= sizeof buf - (bufp - buf))
+		{
+			client_notify(c, buf);
+			bufp = buf;
+		}
 
-        strcpy(bufp, namelist[i]->d_name);
-        bufp += len;
+		strcpy(bufp, namelist[i]->d_name);
+		bufp += len;
 
-        free(namelist[i]);
+		free(namelist[i]);
 
-        if (i < n - 1) strcpy(bufp - 2, ", ");
-    }
+		if (i < n - 1) strcpy(bufp - 2, ", ");
+	}
 
-    client_notify(c, buf);
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_mapinfo[] =
@@ -551,14 +551,14 @@ static const char help_mapinfo[] =
 
 CMD(mapinfo)
 {
-    const struct level_t *l = c->player->level;
-    char buf[64];
-    snprintf(buf, sizeof buf, "Level: %s  Owner: %s", l->name, playerdb_get_username(l->owner));
-    client_notify(c, buf);
-    snprintf(buf, sizeof buf, "Extents: %d x %d x %d", l->x, l->y, l->z);
-    client_notify(c, buf);
-    snprintf(buf, sizeof buf, "Visit permission: %s  Build permission: %s", rank_get_name(l->rankvisit), rank_get_name(l->rankbuild));
-    client_notify(c, buf);
+	const struct level_t *l = c->player->level;
+	char buf[64];
+	snprintf(buf, sizeof buf, "Level: %s  Owner: %s", l->name, playerdb_get_username(l->owner));
+	client_notify(c, buf);
+	snprintf(buf, sizeof buf, "Extents: %d x %d x %d", l->x, l->y, l->z);
+	client_notify(c, buf);
+	snprintf(buf, sizeof buf, "Visit permission: %s  Build permission: %s", rank_get_name(l->rankvisit), rank_get_name(l->rankbuild));
+	client_notify(c, buf);
 
 	return false;
 }
@@ -593,8 +593,8 @@ static const char help_motd[] =
 
 CMD(motd)
 {
-    notify_file(c, "motd.txt");
-    return false;
+	notify_file(c, "motd.txt");
+	return false;
 }
 
 static const char help_newlvl[] =
@@ -604,42 +604,42 @@ static const char help_newlvl[] =
 
 CMD(newlvl)
 {
-    if (params != 6) return true;
+	if (params != 6) return true;
 
-    const char *name = param[1];
-    int x = strtol(param[2], NULL, 10);
-    int y = strtol(param[3], NULL, 10);
-    int z = strtol(param[4], NULL, 10);
-    int t = strtol(param[5], NULL, 10);
+	const char *name = param[1];
+	int x = strtol(param[2], NULL, 10);
+	int y = strtol(param[3], NULL, 10);
+	int z = strtol(param[4], NULL, 10);
+	int t = strtol(param[5], NULL, 10);
 
-    if (!level_get_by_name(name, NULL))
-    {
-        struct level_t *l = malloc(sizeof *l);
-        if (!level_init(l, x, y, z, name, true))
-        {
-        	client_notify(c, "Unable to create level. Too big?");
-        	free(l);
-        	return false;
-        }
+	if (!level_get_by_name(name, NULL))
+	{
+		struct level_t *l = malloc(sizeof *l);
+		if (!level_init(l, x, y, z, name, true))
+		{
+			client_notify(c, "Unable to create level. Too big?");
+			free(l);
+			return false;
+		}
 
-        client_notify(c, "Starting level creation");
+		client_notify(c, "Starting level creation");
 
-        /* No owner, but only ops+ can go in initially */
-        l->owner = 0;
-        l->rankvisit = RANK_OP;
-        l->rankbuild = RANK_OP;
+		/* No owner, but only ops+ can go in initially */
+		l->owner = 0;
+		l->rankvisit = RANK_OP;
+		l->rankbuild = RANK_OP;
 
-        level_gen(l, t);
-        level_list_add(&s_levels, l);
-    }
-    else
-    {
-        char buf[64];
-        snprintf(buf, sizeof buf, "Level '%s' already exists", name);
-        client_notify(c, buf);
-    }
+		level_gen(l, t);
+		level_list_add(&s_levels, l);
+	}
+	else
+	{
+		char buf[64];
+		snprintf(buf, sizeof buf, "Level '%s' already exists", name);
+		client_notify(c, buf);
+	}
 
-    return false;
+	return false;
 }
 
 static const char help_opglass[] =
@@ -659,13 +659,13 @@ static const char help_paint[] =
 
 CMD(paint)
 {
-    ToggleBit(c->player->flags, FLAG_PAINT);
+	ToggleBit(c->player->flags, FLAG_PAINT);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Paint %s", HasBit(c->player->flags, FLAG_PAINT) ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Paint %s", HasBit(c->player->flags, FLAG_PAINT) ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_players[] =
@@ -674,20 +674,20 @@ static const char help_players[] =
 
 CMD(players)
 {
-    if (params > 2) return false;
+	if (params > 2) return false;
 
-    struct level_t *l = NULL;
-    if (params == 2)
-    {
-        if (!level_get_by_name(param[1], &l))
-        {
-            client_notify(c, "Unknown level");
-            return false;
-        }
-    }
+	struct level_t *l = NULL;
+	if (params == 2)
+	{
+		if (!level_get_by_name(param[1], &l))
+		{
+			client_notify(c, "Unknown level");
+			return false;
+		}
+	}
 
-    player_list(c, l);
-    return false;
+	player_list(c, l);
+	return false;
 }
 
 static const char help_replace[] =
@@ -696,38 +696,38 @@ static const char help_replace[] =
 
 CMD(replace)
 {
-    char buf[64];
+	char buf[64];
 
 	if (params > 3) return true;
 
 	c->player->replace_type = blocktype_get_by_name(param[1]);
 	if (c->player->replace_type == -1)
 	{
-        snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
-        return false;
+		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
+		return false;
 	}
 
 	if (params == 3)
 	{
 		c->player->cuboid_type = blocktype_get_by_name(param[2]);
 		if (c->player->cuboid_type == -1)
-        {
-            snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
-            return false;
-        }
+		{
+			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+			return false;
+		}
 	}
 	else
 	{
 		c->player->cuboid_type = -1;
 	}
 
-    c->player->mode = MODE_REPLACE;
+	c->player->mode = MODE_REPLACE;
 	c->player->cuboid_start = UINT_MAX;
 
-    snprintf(buf, sizeof buf, "Place corners of cuboid");
-    client_notify(c, buf);
+	snprintf(buf, sizeof buf, "Place corners of cuboid");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_rules[] =
@@ -736,8 +736,8 @@ static const char help_rules[] =
 
 CMD(rules)
 {
-    notify_file(c, "rules.txt");
-    return false;
+	notify_file(c, "rules.txt");
+	return false;
 }
 
 static const char help_setrank[] =
@@ -746,48 +746,48 @@ static const char help_setrank[] =
 
 CMD(setrank)
 {
-    int oldrank;
-    int newrank;
-    struct player_t *p;
+	int oldrank;
+	int newrank;
+	struct player_t *p;
 
-    if (params != 3) return true;
+	if (params != 3) return true;
 
-    newrank = rank_get_by_name(param[2]);
-    if (newrank == -1 && c->player->rank == RANK_ADMIN)
-    {
-        client_notify(c, "Invalid rank: banned guest builder advbuilder op admin");
-        return false;
-    }
-    if ((newrank == -1 || newrank >= RANK_OP) && c->player->rank == RANK_OP)
-    {
-        client_notify(c, "Invalid rank: banned guest builder advbuilder");
-        return false;
-    }
+	newrank = rank_get_by_name(param[2]);
+	if (newrank == -1 && c->player->rank == RANK_ADMIN)
+	{
+		client_notify(c, "Invalid rank: banned guest builder advbuilder op admin");
+		return false;
+	}
+	if ((newrank == -1 || newrank >= RANK_OP) && c->player->rank == RANK_OP)
+	{
+		client_notify(c, "Invalid rank: banned guest builder advbuilder");
+		return false;
+	}
 
-    oldrank = playerdb_get_rank(param[1]);
-    if (oldrank == newrank)
-    {
-        client_notify(c, "User already at rank");
-        return false;
-    }
-    if (c->player->rank != RANK_ADMIN && oldrank == RANK_ADMIN)
-    {
-        client_notify(c, "Cannot demote admin");
-        return false;
-    }
+	oldrank = playerdb_get_rank(param[1]);
+	if (oldrank == newrank)
+	{
+		client_notify(c, "User already at rank");
+		return false;
+	}
+	if (c->player->rank != RANK_ADMIN && oldrank == RANK_ADMIN)
+	{
+		client_notify(c, "Cannot demote admin");
+		return false;
+	}
 
-    playerdb_set_rank(param[1], newrank);
-    p = player_get_by_name(param[1]);
-    if (p != NULL)
-    {
-        p->rank = newrank;
-    }
+	playerdb_set_rank(param[1], newrank);
+	p = player_get_by_name(param[1]);
+	if (p != NULL)
+	{
+		p->rank = newrank;
+	}
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), p->username);
-    net_notify_all(buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), p->username);
+	net_notify_all(buf);
 
-    return false;
+	return false;
 }
 
 static const char help_setspawn[] =
@@ -796,18 +796,18 @@ static const char help_setspawn[] =
 
 CMD(setspawn)
 {
-    if (c->player->rank < RANK_OP && c->player->globalid != c->player->level->owner)
-    {
-        client_notify(c, "You do not have permission to change spawn here");
-        return false;
-    }
+	if (c->player->rank < RANK_OP && c->player->globalid != c->player->level->owner)
+	{
+		client_notify(c, "You do not have permission to change spawn here");
+		return false;
+	}
 
-    c->player->level->spawn = c->player->pos;
-    c->player->level->changed = true;
+	c->player->level->spawn = c->player->pos;
+	c->player->level->changed = true;
 
-    client_notify(c, "Spawn set to current position");
+	client_notify(c, "Spawn set to current position");
 
-    return false;
+	return false;
 }
 
 static const char help_spawn[] =
@@ -828,13 +828,13 @@ static const char help_solid[] =
 
 CMD(solid)
 {
-    player_toggle_mode(c->player, MODE_PLACE_SOLID);
+	player_toggle_mode(c->player, MODE_PLACE_SOLID);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Solid %s", (c->player->mode == MODE_PLACE_SOLID) ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Solid %s", (c->player->mode == MODE_PLACE_SOLID) ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_summon[] =
@@ -848,18 +848,18 @@ CMD(summon)
 	if (params != 2) return true;
 
 	struct player_t *p = player_get_by_name(param[1]);
-    if (p == NULL)
-    {
-        snprintf(buf, sizeof buf, "%s is offline", param[1]);
-        client_notify(c, buf);
-        return false;
-    }
-    if (p->level != c->player->level)
-    {
-        snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
-        client_notify(c, buf);
-        return false;
-    }
+	if (p == NULL)
+	{
+		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
+	if (p->level != c->player->level)
+	{
+		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+		client_notify(c, buf);
+		return false;
+	}
 
 	p->pos = c->player->pos;
 	client_add_packet(p->client, packet_send_teleport_player(0xFF, &p->pos));
@@ -875,7 +875,7 @@ CMD(summon)
 static char s_pattern[256];
 static int undo_filename_filter(const struct dirent *d)
 {
-    return strncmp(d->d_name, s_pattern, strlen(s_pattern)) == 0;
+	return strncmp(d->d_name, s_pattern, strlen(s_pattern)) == 0;
 }
 
 static const char help_teleporter[] =
@@ -883,11 +883,11 @@ static const char help_teleporter[] =
 
 CMD(teleporter)
 {
-    if (params < 2 || params > 5) return true;
+	if (params < 2 || params > 5) return true;
 
-    level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3]);
+	level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3]);
 
-    return false;
+	return false;
 }
 
 static const char help_time[] =
@@ -915,27 +915,27 @@ static const char help_tp[] =
 
 CMD(tp)
 {
-    char buf[64];
+	char buf[64];
 
-    if (params != 2) return true;
+	if (params != 2) return true;
 
-    const struct player_t *p = player_get_by_name(param[1]);
-    if (p == NULL)
-    {
-        snprintf(buf, sizeof buf, "%s is offline", param[1]);
-        client_notify(c, buf);
-        return false;
-    }
-    if (p->level != c->player->level)
-    {
-        snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
-        client_notify(c, buf);
-        return false;
-    }
+	const struct player_t *p = player_get_by_name(param[1]);
+	if (p == NULL)
+	{
+		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
+	if (p->level != c->player->level)
+	{
+		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+		client_notify(c, buf);
+		return false;
+	}
 
-    client_add_packet(c, packet_send_teleport_player(0xFF, &p->pos));
+	client_add_packet(c, packet_send_teleport_player(0xFF, &p->pos));
 
-    return false;
+	return false;
 }
 
 static const char help_undo[] =
@@ -944,59 +944,59 @@ static const char help_undo[] =
 
 CMD(undo)
 {
-    char buf[64];
+	char buf[64];
 
-    if (params < 3 || params > 4) return true;
+	if (params < 3 || params > 4) return true;
 
-    if (params == 3)
-    {
-        char *bufp;
-        struct dirent **namelist;
-        int n, i;
+	if (params == 3)
+	{
+		char *bufp;
+		struct dirent **namelist;
+		int n, i;
 
-        strcpy(buf, "Undo log: ");
-        bufp = buf + strlen(buf);
+		strcpy(buf, "Undo log: ");
+		bufp = buf + strlen(buf);
 
-        snprintf(s_pattern, sizeof s_pattern, "%s_%s_", param[2], param[1]);
+		snprintf(s_pattern, sizeof s_pattern, "%s_%s_", param[2], param[1]);
 
-        n = scandir("undo", &namelist, &undo_filename_filter, alphasort);
-        if (n < 0)
-        {
-            client_notify(c, "Unable to get list of undo logs");
-            return false;
-        }
+		n = scandir("undo", &namelist, &undo_filename_filter, alphasort);
+		if (n < 0)
+		{
+			client_notify(c, "Unable to get list of undo logs");
+			return false;
+		}
 
-        for (i = 0; i < n; i++)
-        {
-        	struct stat statbuf;
-        	//if (stat(namelist[i]->d_name, &statbuf) == 0)
+		for (i = 0; i < n; i++)
+		{
+			struct stat statbuf;
+			//if (stat(namelist[i]->d_name, &statbuf) == 0)
 			{
 				int undo_actions = statbuf.st_size / (sizeof (unsigned) + sizeof (struct block_t));
 				char buf2[64];
 				snprintf(buf2, sizeof buf2, "%s (%d)", namelist[i]->d_name + strlen(s_pattern), undo_actions);
 
-	            size_t len = strlen(buf2) + (i < n - 1 ? 2 : 0);
-	            if (len >= sizeof buf - (bufp - buf))
-	            {
-	                client_notify(c, buf);
-	                bufp = buf;
-	            }
+				size_t len = strlen(buf2) + (i < n - 1 ? 2 : 0);
+				if (len >= sizeof buf - (bufp - buf))
+				{
+					client_notify(c, buf);
+					bufp = buf;
+				}
 
-	            strcpy(bufp, buf2);
-	            bufp += len;
+				strcpy(bufp, buf2);
+				bufp += len;
 
-	            if (i < n - 1) strcpy(bufp - 2, ", ");
-	        }
+				if (i < n - 1) strcpy(bufp - 2, ", ");
+			}
 
-            free(namelist[i]);
-        }
+			free(namelist[i]);
+		}
 
-        client_notify(c, buf);
-        return false;
-    }
+		client_notify(c, buf);
+		return false;
+	}
 
-    player_undo(c, param[1], param[2], param[3]);
-    return false;
+	player_undo(c, param[1], param[2], param[3]);
+	return false;
 }
 
 static const char help_uptime[] =
@@ -1011,7 +1011,7 @@ CMD(uptime)
 	int seconds = uptime % 60;
 	int minutes = uptime / 60 % 60;
 	int hours   = uptime / 3600 % 24;
-	int days    = uptime / 86400;
+	int days	= uptime / 86400;
 
 	bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "Server uptime is ");
 	if (days > 0)
@@ -1039,8 +1039,8 @@ CMD(uptime)
 	struct rusage usage;
 	if (getrusage(RUSAGE_SELF, &usage) == 0)
 	{
-	    snprintf(buf, sizeof buf, "Server memory usage: %lu", usage.ru_ixrss);
-	    client_notify(c, buf);
+		snprintf(buf, sizeof buf, "Server memory usage: %lu", usage.ru_ixrss);
+		client_notify(c, buf);
 	}
 
 	return false;
@@ -1052,13 +1052,13 @@ static const char help_water[] =
 
 CMD(water)
 {
-    player_toggle_mode(c->player, MODE_PLACE_WATER);
+	player_toggle_mode(c->player, MODE_PLACE_WATER);
 
-    char buf[64];
-    snprintf(buf, sizeof buf, "Water %s", (c->player->mode == MODE_PLACE_WATER) ? "on" : "off");
-    client_notify(c, buf);
+	char buf[64];
+	snprintf(buf, sizeof buf, "Water %s", (c->player->mode == MODE_PLACE_WATER) ? "on" : "off");
+	client_notify(c, buf);
 
-    return false;
+	return false;
 }
 
 static const char help_whois[] =
@@ -1075,8 +1075,8 @@ CMD(whois)
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
-        client_notify(c, buf);
-        return false;
+		client_notify(c, buf);
+		return false;
 	}
 
 	//if (c->rank >= RANK_OP)
@@ -1090,63 +1090,63 @@ CMD(whois)
 
 struct command_t s_commands[] = {
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
-    { "ban", RANK_OP, &cmd_ban, help_ban },
-    { "bind", RANK_ADV_BUILDER, &cmd_bind, help_bind },
-    { "commands", RANK_BANNED, &cmd_commands, help_commands },
-    { "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
-    { "disown", RANK_OP, &cmd_disown, help_disown },
-    { "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
-    { "exit", RANK_ADMIN, &cmd_exit, help_exit },
-    { "fixed", RANK_OP, &cmd_fixed, help_fixed },
-    { "filter", RANK_OP, &cmd_filter, help_filter },
+	{ "ban", RANK_OP, &cmd_ban, help_ban },
+	{ "bind", RANK_ADV_BUILDER, &cmd_bind, help_bind },
+	{ "commands", RANK_BANNED, &cmd_commands, help_commands },
+	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
+	{ "disown", RANK_OP, &cmd_disown, help_disown },
+	{ "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
+	{ "exit", RANK_ADMIN, &cmd_exit, help_exit },
+	{ "fixed", RANK_OP, &cmd_fixed, help_fixed },
+	{ "filter", RANK_OP, &cmd_filter, help_filter },
 	{ "follow", RANK_OP, &cmd_follow, help_follow },
-    { "goto", RANK_GUEST, &cmd_goto, help_goto },
-    { "hide", RANK_OP, &cmd_hide, help_hide },
-    { "home", RANK_GUEST, &cmd_home, help_home },
-    { "identify", RANK_GUEST, &cmd_identify, help_identify },
-    { "info", RANK_BUILDER, &cmd_info, help_info },
-    { "kick", RANK_OP, &cmd_kick, help_kick },
-    { "lava", RANK_BUILDER, &cmd_lava, help_lava },
-    { "levels", RANK_GUEST, &cmd_levels, help_levels },
-    { "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
-    { "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
-    { "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
-    { "motd", RANK_BANNED, &cmd_motd, help_motd },
-    { "newlvl", RANK_ADMIN, &cmd_newlvl, help_newlvl },
+	{ "goto", RANK_GUEST, &cmd_goto, help_goto },
+	{ "hide", RANK_OP, &cmd_hide, help_hide },
+	{ "home", RANK_GUEST, &cmd_home, help_home },
+	{ "identify", RANK_GUEST, &cmd_identify, help_identify },
+	{ "info", RANK_BUILDER, &cmd_info, help_info },
+	{ "kick", RANK_OP, &cmd_kick, help_kick },
+	{ "lava", RANK_BUILDER, &cmd_lava, help_lava },
+	{ "levels", RANK_GUEST, &cmd_levels, help_levels },
+	{ "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
+	{ "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
+	{ "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
+	{ "motd", RANK_BANNED, &cmd_motd, help_motd },
+	{ "newlvl", RANK_ADMIN, &cmd_newlvl, help_newlvl },
 	{ "opglass", RANK_OP, &cmd_opglass, help_opglass },
 	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
-    { "rules", RANK_BANNED, &cmd_rules, help_rules },
-    { "setrank", RANK_OP, &cmd_setrank, help_setrank },
-    { "setspawn", RANK_BUILDER, &cmd_setspawn, help_setspawn },
-    { "spawn", RANK_GUEST, &cmd_spawn, help_spawn },
-    { "solid", RANK_OP, &cmd_solid, help_solid },
-    { "summon", RANK_OP, &cmd_summon, help_summon },
+	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
+	{ "setrank", RANK_OP, &cmd_setrank, help_setrank },
+	{ "setspawn", RANK_BUILDER, &cmd_setspawn, help_setspawn },
+	{ "spawn", RANK_GUEST, &cmd_spawn, help_spawn },
+	{ "solid", RANK_OP, &cmd_solid, help_solid },
+	{ "summon", RANK_OP, &cmd_summon, help_summon },
 	{ "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
-    { "time", RANK_GUEST, &cmd_time, help_time },
-    { "tp", RANK_BUILDER, &cmd_tp, help_tp },
-    { "undo", RANK_OP, &cmd_undo, help_undo },
-    { "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
-    { "water", RANK_BUILDER, &cmd_water, help_water },
-    { "whois", RANK_GUEST, &cmd_whois, help_whois },
-    { NULL, -1, NULL, NULL },
+	{ "time", RANK_GUEST, &cmd_time, help_time },
+	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
+	{ "undo", RANK_OP, &cmd_undo, help_undo },
+	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
+	{ "water", RANK_BUILDER, &cmd_water, help_water },
+	{ "whois", RANK_GUEST, &cmd_whois, help_whois },
+	{ NULL, -1, NULL, NULL },
 };
 
 bool command_process(struct client_t *client, int params, const char **param)
 {
-    struct command_t *comp = s_commands;
-    for (; comp->command != NULL; comp++)
-    {
-        if (client->player->rank >= comp->rank && strcasecmp(param[0], comp->command) == 0)
-        {
-            if (comp->func(client, params, param))
-            {
-            	client_notify(client, comp->help);
-            }
-            return true;
-        }
-    }
+	struct command_t *comp = s_commands;
+	for (; comp->command != NULL; comp++)
+	{
+		if (client->player->rank >= comp->rank && strcasecmp(param[0], comp->command) == 0)
+		{
+			if (comp->func(client, params, param))
+			{
+				client_notify(client, comp->help);
+			}
+			return true;
+		}
+	}
 
-    return false;
+	return false;
 }

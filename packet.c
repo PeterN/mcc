@@ -12,7 +12,7 @@
 
 struct packet_t *packet_init(size_t len)
 {
-    struct packet_t *p = malloc(sizeof *p + len);
+	struct packet_t *p = malloc(sizeof *p + len);
 
 	memset(p->buffer, 0, len);
 	p->loc = p->buffer;
@@ -65,7 +65,7 @@ static void packet_send_byte(struct packet_t *p, uint8_t data)
 static void packet_send_short(struct packet_t *p, int16_t data)
 {
 	*p->loc++ = ((uint16_t)data >> 8) & 0xFF;;
-	*p->loc++ =  (uint16_t)data       & 0xFF;
+	*p->loc++ =  (uint16_t)data	   & 0xFF;
 }
 
 static void packet_send_string(struct packet_t *p, const char *data)
@@ -120,7 +120,7 @@ size_t packet_recv_size(uint8_t type)
 
 void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 {
-    char buf[64];
+	char buf[64];
 
 	/* uint8_t version = */ packet_recv_byte(p);
 	char *username = packet_recv_string(p);
@@ -129,67 +129,67 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	if (c->player != NULL)
 	{
-	    net_close(c, "already logged in");
+		net_close(c, "already logged in");
 
-	    free(username);
-	    free(key);
-	    return;
+		free(username);
+		free(key);
+		return;
 	}
 
 	const char *type;
 
-    struct player_t *player = player_get_by_name(username);
-    if (player == NULL)
-    {
-        type = "connected";
-    }
-    else
-    {
-        type = "reconnected";
-        net_close(player->client, type);
-    }
+	struct player_t *player = player_get_by_name(username);
+	if (player == NULL)
+	{
+		type = "connected";
+	}
+	else
+	{
+		type = "reconnected";
+		net_close(player->client, type);
+	}
 
-    bool newuser;
-    player = player_add(username, &newuser);
+	bool newuser;
+	player = player_add(username, &newuser);
 
-    /* No longer need these */
+	/* No longer need these */
 	free(username);
 	free(key);
 
-    if (player == NULL)
-    {
-        net_close(c, "cannot get global id");
-        return;
-    }
+	if (player == NULL)
+	{
+		net_close(c, "cannot get global id");
+		return;
+	}
 
-    snprintf(buf, sizeof buf, TAG_GREEN "+ %s" TAG_YELLOW " %s", player->colourusername, type);
+	snprintf(buf, sizeof buf, TAG_GREEN "+ %s" TAG_YELLOW " %s", player->colourusername, type);
 
-    c->player = player;
-    player->client = c;
+	c->player = player;
+	player->client = c;
 
 	if (player->rank == RANK_BANNED)
 	{
-	    net_close(c, "banned");
-	    return;
+		net_close(c, "banned");
+		return;
 	}
 
 	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, (c->player->rank >= RANK_OP) ? 0x64 : 0));
 
-    struct level_t *l;
-    if (!level_get_by_name("main", &l))
-    {
-        net_close(c, "cannot load main level");
-        return;
-    }
+	struct level_t *l;
+	if (!level_get_by_name("main", &l))
+	{
+		net_close(c, "cannot load main level");
+		return;
+	}
 
-    net_notify_all(buf);
+	net_notify_all(buf);
 
-    if (player_change_level(c->player, l)) level_send(c);
+	if (player_change_level(c->player, l)) level_send(c);
 
-    if (newuser)
-    {
-        notify_file(c, "rules.txt");
-    }
+	if (newuser)
+	{
+		notify_file(c, "rules.txt");
+	}
 }
 
 void packet_recv_set_block(struct client_t *c, struct packet_t *p)
@@ -202,8 +202,8 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, "not logged in");
-	    return;
+		net_close(c, "not logged in");
+		return;
 	}
 
 	if (m > 1)
@@ -212,7 +212,7 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
-    level_change_block(c->player->level, c, x, y, z, m, t);
+	level_change_block(c->player->level, c, x, y, z, m, t);
 }
 
 void packet_recv_position(struct client_t *c, struct packet_t *p)
@@ -228,8 +228,8 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, "not logged in");
-	    return;
+		net_close(c, "not logged in");
+		return;
 	}
 
 	if (player_id != 0xFF)
@@ -248,8 +248,8 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-	    net_close(c, "not logged in");
-	    return;
+		net_close(c, "not logged in");
+		return;
 	}
 
 	client_process(c, message);

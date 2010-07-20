@@ -20,28 +20,28 @@ LIST(user, unsigned, user_compare)
 
 struct teleporter_t
 {
-    char name[32];
-    char dest[32];
-    char dest_level[32];
-    struct position_t pos;
+	char name[32];
+	char dest[32];
+	char dest_level[32];
+	struct position_t pos;
 };
 
 static inline bool teleporter_t_compare(struct teleporter_t *a, struct teleporter_t *b)
 {
-    return strcasecmp(a->name, b->name) == 0;
+	return strcasecmp(a->name, b->name) == 0;
 }
 LIST(teleporter, struct teleporter_t, teleporter_t_compare)
 
 struct level_t
 {
-    char name[64];
+	char name[64];
 	unsigned x;
 	unsigned y;
 	unsigned z;
 
 	struct position_t spawn;
 
-    unsigned owner;
+	unsigned owner;
 	uint8_t rankvisit;
 	uint8_t rankbuild;
 	struct user_list_t uservisit;
@@ -50,17 +50,17 @@ struct level_t
 	struct block_t *blocks;
 	struct physics_list_t physics, physics2;
 	struct block_update_list_t updates;
-    struct teleporter_list_t teleporters;
+	struct teleporter_list_t teleporters;
 
-    int physics_iter, physics_done;
-    int updates_iter;
-    int physics_runtime, updates_runtime;
+	int physics_iter, physics_done;
+	int updates_iter;
+	int physics_runtime, updates_runtime;
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
 
-    int type;
-    bool changed;
+	int type;
+	bool changed;
 	pthread_t thread;
 	bool thread_valid;
 	bool convert;
