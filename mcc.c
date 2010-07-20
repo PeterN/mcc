@@ -126,7 +126,11 @@ int main(int argc, char **argv)
             if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
             if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
 
-            if ((tick % MS_TO_TICKS(240)) == 0) level_process_updates();
+            //if ((tick % MS_TO_TICKS(240)) == 0)
+
+            level_process_physics((tick % MS_TO_TICKS(80)) == 0);
+            level_process_updates(true);
+            //(tick % MS_TO_TICKS(240)) == 0);
 
             cuboid_process();
             player_send_positions();
@@ -143,8 +147,6 @@ int main(int argc, char **argv)
                 }
             }
         }
-
-        level_process_physics();
 
         usleep(1000);
 	}

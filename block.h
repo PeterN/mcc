@@ -97,8 +97,8 @@ struct block_t
 };
 
 typedef enum blocktype_t(*convert_func_t)(struct level_t *level, unsigned index, const struct block_t *block);
-typedef bool(*trigger_func_t)(struct level_t *l, unsigned index, struct block_t *block);
-typedef bool(*physics_func_t)(struct level_t *l, unsigned index, struct block_t *block);
+typedef bool(*trigger_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
+typedef void(*physics_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 
 struct blocktype_desc_t
 {
@@ -117,33 +117,15 @@ LIST(blocktype_desc, struct blocktype_desc_t, blocktype_desc_t_compare)
 
 /*bool blocktype_is_phys(enum blocktype_t type);*/
 
-static inline bool block_is_fixed(const struct block_t *block)
-{
-	//return HasBit(block->type, 15);
-	return block->fixed;
-}
-
-static inline bool block_has_physics(const struct block_t *block)
-{
-	//return HasBit(block->type, 14);
-	return block->physics;
-}
-
-static inline enum blocktype_t block_get_blocktype(const struct block_t *block)
-{
-	//return GetBits(block->type, 0, 14);
-	return block->type;
-}
-
 void blocktype_init();
 const char *blocktype_get_name(enum blocktype_t type);
 enum blocktype_t blocktype_get_by_name(const char *name);
-struct block_t block_convert_from_mcs(uint8_t type);
+const struct block_t block_convert_from_mcs(uint8_t type);
 bool blocktype_has_physics(enum blocktype_t type);
 
 int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, physics_func_t physics_func);
-enum blocktype_t convert(struct level_t *level, unsigned index, struct block_t *block);
-bool trigger(struct level_t *level, unsigned index, struct block_t *block);
-void physics(struct level_t *level, unsigned index, struct block_t *block);
+enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block);
+bool trigger(struct level_t *level, unsigned index, const struct block_t *block);
+void physics(struct level_t *level, unsigned index, const struct block_t *block);
 
 #endif /* BLOCK_H */

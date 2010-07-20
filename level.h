@@ -96,7 +96,7 @@ void level_set_teleporter(struct level_t *level, const char *name, struct positi
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 void physics_remove(struct level_t *level, unsigned index);
 
-void level_proces_physics();
-void level_proces_updates();
+void level_process_physics(bool can_init);
+void level_process_updates(bool can_init);
 
 #endif /* LEVEL_H */

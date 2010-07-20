@@ -18,7 +18,7 @@ void cuboid_process()
         {
             unsigned index = level_get_index(c->level, c->cx, c->cy, c->cz);
             struct block_t *b = &c->level->blocks[index];
-            enum blocktype_t bt = block_get_blocktype(b);
+            enum blocktype_t bt = b->type;
 
             enum blocktype_t pt1 = convert(c->level, index, b);
 
