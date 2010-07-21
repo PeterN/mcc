@@ -52,6 +52,16 @@ struct command_t s_commands[];
 
 #define CMD(x) static bool cmd_ ## x (struct client_t *c, int params, const char **param)
 
+static const char help_adminrules[] =
+"/adminrules\n"
+"Display the server's admin rules.";
+
+CMD(adminrules)
+{
+	notify_file(c, "adminrules.txt");
+	return false;
+}
+
 static const char help_afk[] =
 "/afk [<message>]\n"
 "Mark yourself AFK";
@@ -362,6 +372,28 @@ CMD(goto)
 		client_notify(c, buf);
 	}
 
+	return false;
+}
+
+static const char help_help[] =
+"/help <command>\n"
+"Display help about a command. See /commands.";
+
+CMD(help)
+{
+	if (params != 2) return true;
+
+	struct command_t *comp = s_commands;
+	for (; comp->command != NULL; comp++)
+	{
+		if (strcasecmp(comp->command, param[1]) == 0)
+		{
+			client_notify(c, comp->help);
+			return false;
+		}
+	}
+
+	client_notify(c, "Command not found");
 	return false;
 }
 
@@ -1203,6 +1235,7 @@ CMD(whois)
 }
 
 struct command_t s_commands[] = {
+	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },
 	{ "bind", RANK_ADV_BUILDER, &cmd_bind, help_bind },
@@ -1215,6 +1248,7 @@ struct command_t s_commands[] = {
 	{ "filter", RANK_OP, &cmd_filter, help_filter },
 	{ "follow", RANK_OP, &cmd_follow, help_follow },
 	{ "goto", RANK_GUEST, &cmd_goto, help_goto },
+	{ "help", RANK_GUEST, &cmd_help, help_help },
 	{ "hide", RANK_OP, &cmd_hide, help_hide },
 	{ "home", RANK_GUEST, &cmd_home, help_home },
 	{ "identify", RANK_GUEST, &cmd_identify, help_identify },
