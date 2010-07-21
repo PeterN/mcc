@@ -2,7 +2,7 @@
 #include <time.h>
 #include "list.h"
 #include "timer.h"
-
+#include "mcc.h"
 
 static int gettime()
 {
@@ -40,12 +40,16 @@ struct timer_t *register_timer(int interval, timer_func_t timer_func, void *arg)
 
 	timer_list_add(&s_timers, t);
 
+	LOG("Registered %d ms timer\n", interval);
+
 	return t;
 }
 
 void deregister_timer(struct timer_t *handle)
 {
 	timer_list_del_item(&s_timers, handle);
+
+	LOG("Deregistered %d ms timer\n", handle->interval);
 
 	free(handle);
 }

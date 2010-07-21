@@ -9,6 +9,7 @@
 #include "player.h"
 #include "playerdb.h"
 #include "client.h"
+#include "timer.h"
 
 struct server_t g_server;
 
@@ -136,7 +137,7 @@ int main(int argc, char **argv)
 			//if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
 			//if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
 
-			timer_process();
+			process_timers(tick);
 
 			//if ((tick % MS_TO_TICKS(240)) == 0)
 

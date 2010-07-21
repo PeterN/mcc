@@ -349,11 +349,3 @@ void net_notify_all(const char *message)
 
 	LOG("%s\n", message);
 }
-
-void module_init(void **arg)
-{
-}
-
-void module_deinit(void *arg)
-{
-}
