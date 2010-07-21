@@ -107,7 +107,7 @@ void net_close(struct client_t *c, const char *reason)
 	}
 	else
 	{
-		int i;
+		unsigned i;
 		for (i = 0; i < s_clients.used; i++)
 		{
 			struct client_t *client = s_clients.items[i];
@@ -140,7 +140,7 @@ void net_close(struct client_t *c, const char *reason)
 
 static void net_packetsend(struct client_t *c)
 {
-	size_t res;
+	int res;
 	struct packet_t *p = c->packet_send;
 
 	if (p == NULL) return;
@@ -168,7 +168,7 @@ static void net_packetsend(struct client_t *c)
 
 static void net_packetrecv(struct client_t *c)
 {
-	size_t res;
+	int res;
 	struct packet_t *p;
 
 	if (c->packet_recv == NULL)
@@ -201,14 +201,15 @@ static void net_packetrecv(struct client_t *c)
 
 		if (p->size == 1)
 		{
-			p->size = packet_recv_size(p->buffer[0]);
-			if (p->size == -1)
+			int s = packet_recv_size(p->buffer[0]);
+			if (s == -1)
 			{
 				char buf[64];
 				snprintf(buf, sizeof buf, "unrecognised packet type 0x%02X!\n", p->buffer[0]);
 				net_close(c, buf);
 				return;
 			}
+			p->size = s;
 		}
 		p->pos += res;
 	}
@@ -330,7 +331,7 @@ void net_run()
 
 void net_notify_all(const char *message)
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];

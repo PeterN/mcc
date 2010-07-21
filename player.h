@@ -42,8 +42,8 @@ enum mode_t
 
 struct player_t
 {
-	int globalid;
-	int levelid;
+	unsigned globalid;
+	unsigned levelid;
 	char *colourusername;
 	char *username;
 	enum rank_t rank;
@@ -56,7 +56,7 @@ struct player_t
 	struct level_t *level, *new_level;
 	struct client_t *client;
 	struct player_t *following;
-	int filter;
+	unsigned filter;
 
 	unsigned cuboid_start;
 	enum blocktype_t cuboid_type;

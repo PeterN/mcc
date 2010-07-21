@@ -20,7 +20,7 @@ bool player_t_compare(struct player_t **a, struct player_t **b)
 
 struct player_t *player_get_by_name(const char *username)
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_players.used; i++)
 	{
 		if (strcasecmp(s_players.items[i]->username, username) == 0)
@@ -45,7 +45,7 @@ struct player_t *player_add(const char *username, bool *newuser)
 	sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
 	p->globalid = globalid;
 
-	int i;
+	enum blocktype_t i;
 	for (i = 0; i < BLOCK_END; i++)
 	{
 		p->bindings[i] = i;
@@ -126,7 +126,7 @@ void player_send_position(struct player_t *player)
 
 	//changed = 4;
 
-	int i;
+	unsigned i;
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
@@ -158,7 +158,7 @@ void player_send_position(struct player_t *player)
 
 void player_send_positions()
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_players.used; i++)
 	{
 		struct player_t *player = s_players.items[i];
@@ -176,7 +176,7 @@ void player_send_positions()
 
 void player_info()
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_players.used; i++)
 	{
 		printf("Player %d = %s\n", i, s_players.items[i]->username);
@@ -303,7 +303,7 @@ enum colour_t rank_get_colour(enum rank_t rank)
 void player_list(struct client_t *c, const struct level_t *l)
 {
 	char buf[64];
-	int i;
+	unsigned i;
 	for (i = 0; i < 3; i++)
 	{
 		bool added = false;
@@ -317,7 +317,7 @@ void player_list(struct client_t *c, const struct level_t *l)
 		}
 		bufp += strlen(buf);
 
-		int j;
+		unsigned j;
 		for (j = 0; j < s_players.used; j++)
 		{
 			const struct player_t *p = s_players.items[j];

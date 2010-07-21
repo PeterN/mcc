@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <limits.h>
 #include "bitstuff.h"
 #include "list.h"
 
@@ -82,6 +83,8 @@ enum blocktype_t
 	AIR_FLOOD_UP,
 	DOOR2_AIR,
 	DOOR3_AIR,*/
+	
+	BLOCK_INVALID = UINT_MAX
 };
 
 struct level_t;

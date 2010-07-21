@@ -23,7 +23,7 @@ bool level_t_compare(struct level_t **a, struct level_t **b)
 	return *a == *b;
 }
 
-bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name, bool zero)
+bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const char *name, bool zero)
 {
 	if (zero)
 	{
@@ -95,7 +95,7 @@ static bool level_user_can_visit(const struct level_t *l, const struct player_t 
 {
 	if (p->rank >= l->rankvisit) return true;
 
-	int i;
+	unsigned i;
 	for (i = 0; i < l->uservisit.used; i++)
 	{
 		if (l->uservisit.items[i] == p->globalid) return true;
@@ -108,7 +108,7 @@ static bool level_user_can_build(const struct level_t *l, const struct player_t 
 {
 	if (p->rank >= l->rankbuild) return true;
 
-	int i;
+	unsigned i;
 	for (i = 0; i < l->userbuild.used; i++)
 	{
 		if (l->userbuild.items[i] == p->globalid) return true;
@@ -122,7 +122,7 @@ bool level_send(struct client_t *c)
 	struct level_t *oldlevel = c->player->level;
 	struct level_t *newlevel = c->player->new_level;
 	unsigned length = newlevel->x * newlevel->y * newlevel->z;
-	int x;
+	unsigned x;
 	int i;
 	z_stream z;
 
@@ -425,7 +425,7 @@ static void level_gen_heightmap(float *map, int mx, int mz, int type)
 	int amplitude;
 	int size_min = mx < mz ? mx : mz;
 
-	for (log_size_min = 6; (1U << log_size_min) < size_min; log_size_min++) { }
+	for (log_size_min = 6; (1 << log_size_min) < size_min; log_size_min++) { }
 	log_frequency_min = log_size_min - 6;
 
 	do {
@@ -708,11 +708,11 @@ static void *level_load_thread_abort(struct level_t *level, const char *reason)
 {
 	LOG("Unable to load level %s: %s\n", level->name, reason);
 
-	int i;
+	unsigned i;
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
-		LOG("client %d: player %p\n", i, c->player);
+		LOG("client %u: player %p\n", i, c->player);
 		if (c->player == NULL) continue;
 		LOG("level %p, new_level %p\n", level, c->player->new_level);
 		if (c->player->new_level == level)
@@ -786,7 +786,7 @@ static void *level_load_thread(void *arg)
 			l->rankbuild = RANK_GUEST;
 		}
 
-		size_t s = x * y * z;
+		int s = x * y * z;
 		uint8_t *blocks = malloc(s);
 		if (blocks == NULL) return level_load_thread_abort(l, "malloc blocks failed");
 		if (gzread(gz, blocks, s) != s)
@@ -795,7 +795,6 @@ static void *level_load_thread(void *arg)
 			return level_load_thread_abort(l, "blocks");
 		}
 
-		int i;
 		for (i = 0; i < s; i++)
 		{
 			l->blocks[i] = block_convert_from_mcs(blocks[i]);
@@ -819,14 +818,26 @@ static void *level_load_thread(void *arg)
 		if (header != 'MCLV') return level_load_thread_abort(l, "invalid header");
 		if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l, "version");
 
-		unsigned x, y, z;
-		if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l, "x");
-		if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l, "y");
-		if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l, "z");
-		if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l, "level init failed");
+		if (version < 2)
+		{
+			unsigned x, y, z;
+			if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l, "x");
+			if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l, "y");
+			if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l, "z");
+			if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l, "level init failed");
+		}
+		else
+		{
+			int16_t x, y, z;
+			if (gzread(gz, &x, sizeof x) != sizeof x) return level_load_thread_abort(l, "x");
+			if (gzread(gz, &y, sizeof y) != sizeof y) return level_load_thread_abort(l, "y");
+			if (gzread(gz, &z, sizeof z) != sizeof z) return level_load_thread_abort(l, "z");
+			if (!level_init(l, x, y, z, name, false)) return level_load_thread_abort(l, "level init failed");
+		}
+
 		if (gzread(gz, &l->spawn, sizeof l->spawn) != sizeof l->spawn) return level_load_thread_abort(l, "spawn");
 
-		size_t s = sizeof *l->blocks * x * y *z;
+		int s = sizeof *l->blocks * l->x * l->y * l->z;
 		if (gzread(gz, l->blocks, s) != s) return level_load_thread_abort(l, "blocks");
 
 		if (version == 0)
@@ -844,14 +855,14 @@ static void *level_load_thread(void *arg)
 			size_t n;
 			unsigned u;
 			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "uservisit count");
-			for (i = 0; i < n; i++)
+			for (i = 0; i < (int)n; i++)
 			{
 				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "uservisit");
 				user_list_add(&l->uservisit, u);
 			}
 
 			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "userbuild count");
-			for (i = 0; i < n; i++)
+			for (i = 0; i < (int)n; i++)
 			{
 				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userbuild");
 				user_list_add(&l->userbuild, u);
@@ -945,7 +956,7 @@ void *level_save_thread(void *arg)
 	}
 
 	unsigned header  = 'MCLV';
-	unsigned version = 1;
+	unsigned version = 2;
 	gzwrite(gz, &header, sizeof header);
 	gzwrite(gz, &version, sizeof version);
 
@@ -959,7 +970,7 @@ void *level_save_thread(void *arg)
 	gzwrite(gz, &l->rankvisit, sizeof l->rankvisit);
 	gzwrite(gz, &l->rankbuild, sizeof l->rankbuild);
 
-	int i;
+	unsigned i;
 	gzwrite(gz, &l->uservisit.used, sizeof l->uservisit.used);
 	for (i = 0; i < l->uservisit.used; i++)
 	{
@@ -1003,7 +1014,7 @@ void level_save(struct level_t *l)
 
 bool level_get_by_name(const char *name, struct level_t **level)
 {
-	int i;
+	unsigned i;
 	struct level_t *l;
 
 	for (i = 0; i < s_levels.used; i++)
@@ -1028,7 +1039,7 @@ bool level_get_by_name(const char *name, struct level_t **level)
 
 void level_save_all()
 {
-	int i;
+	unsigned i;
 
 	for (i = 0; i < s_levels.used; i++)
 	{
@@ -1052,7 +1063,7 @@ static bool level_is_empty(const struct level_t *l)
 
 void level_unload_empty()
 {
-	int i, j;
+	unsigned i, j;
 
 	for (i = 0; i < s_levels.used; i++)
 	{
@@ -1088,7 +1099,7 @@ void level_unload_empty()
 
 bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int16_t *y, int16_t *z)
 {
-	if (index < 0 || index >= level->x * level->y * level->z) return false;
+//	if (index >= level->x * level->y * level->z) return false;
 
 	if (x != NULL) *x = index % level->x;
 	if (y != NULL) *y = index / level->x / level->z;
@@ -1124,8 +1135,6 @@ static void level_cuboid(struct level_t *level, unsigned start, unsigned end, en
 
 void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t)
 {
-	int i;
-
 	if (client->player->rank == RANK_BANNED)
 	{
 		/* Ignore banned players :D */
@@ -1179,7 +1188,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 
 		client_notify(client, "Cuboid end placed");
-		level_cuboid(level, client->player->cuboid_start, index, -1, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type, client->player);
+		level_cuboid(level, client->player->cuboid_start, index, -1, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
 		client->player->mode = MODE_NORMAL;
 		return;
 	}
@@ -1195,7 +1204,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 
 		client_notify(client, "Replace end placed");
-		level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, client->player->cuboid_type == -1 ? client->player->bindings[t] : client->player->cuboid_type, client->player);
+		level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
 		client->player->mode = MODE_NORMAL;
 		return;
 	}
@@ -1267,6 +1276,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 		enum blocktype_t pt = convert(level, index, b);
 
+		unsigned i;
 		for (i = 0; i < s_clients.used; i++)
 		{
 			struct client_t *c = s_clients.items[i];
@@ -1291,7 +1301,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index)
 {
-	int i;
+	unsigned i;
 	struct block_t *b = &level->blocks[index];
 	*b = *block;
 	level->changed = true;
@@ -1324,7 +1334,7 @@ static void level_unmark_teleporter(struct level_t *level, struct position_t *po
 
 void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level)
 {
-	int i = 0;
+	unsigned i = 0;
 	for (i = 0; i < level->teleporters.used; i++)
 	{
 		struct teleporter_t *t = &level->teleporters.items[i];
@@ -1467,7 +1477,7 @@ static void level_run_updates(struct level_t *level, bool can_init)
 
 		enum blocktype_t pt1 = convert(level, bu->index, b);
 
-		if (bu->newtype != -1)
+		if (bu->newtype != BLOCK_INVALID)
 		{
 			b->type = bu->newtype;
 		}
@@ -1482,7 +1492,7 @@ static void level_run_updates(struct level_t *level, bool can_init)
 
 		if (pt1 != pt2)
 		{
-			int j;
+			unsigned j;
 			for (j = 0; j < s_clients.used; j++)
 			{
 				struct client_t *c = s_clients.items[j];
@@ -1521,7 +1531,7 @@ static void level_run_updates(struct level_t *level, bool can_init)
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
 {
 	/* Time sink? */
-	int i;
+	unsigned i;
 	for (i = 0; i < level->updates.used; i++)
 	{
 		struct block_update_t *bu = &level->updates.items[i];
@@ -1545,7 +1555,7 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 
 void level_process_physics(bool can_init)
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_levels.used; i++)
 	{
 		struct level_t *level = s_levels.items[i];
@@ -1564,7 +1574,7 @@ void level_process_physics(bool can_init)
 
 void level_process_updates(bool can_init)
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_levels.used; i++)
 	{
 		struct level_t *level = s_levels.items[i];

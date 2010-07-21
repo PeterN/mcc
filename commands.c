@@ -101,7 +101,7 @@ static const char help_bind[] =
 CMD(bind)
 {
 	char buf[64];
-	int i, j;
+	enum blocktype_t i, j;
 
 	if (params > 3) return true;
 
@@ -120,7 +120,7 @@ CMD(bind)
 
 		case 2:
 			i = blocktype_get_by_name(param[1]);
-			if (i != -1)
+			if (i != BLOCK_INVALID)
 			{
 				c->player->bindings[i] = i;
 
@@ -130,7 +130,7 @@ CMD(bind)
 		case 3:
 			i = blocktype_get_by_name(param[1]);
 			j = blocktype_get_by_name(param[2]);
-			if (i != -1 && j != -1)
+			if (i != BLOCK_INVALID && j != BLOCK_INVALID)
 			{
 				c->player->bindings[i] = j;
 			}
@@ -183,11 +183,12 @@ CMD(cuboid)
 
 	c->player->mode = MODE_CUBOID;
 	c->player->cuboid_start = UINT_MAX;
+	c->player->replace_type = BLOCK_INVALID;
 
 	if (params == 2)
 	{
 		c->player->cuboid_type = blocktype_get_by_name(param[1]);
-		if (c->player->cuboid_type == -1)
+		if (c->player->cuboid_type == BLOCK_INVALID)
 		{
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
 			return false;
@@ -195,7 +196,7 @@ CMD(cuboid)
 	}
 	else
 	{
-		c->player->cuboid_type = -1;
+		c->player->cuboid_type = BLOCK_INVALID;
 	}
 
 
@@ -559,6 +560,22 @@ CMD(mapinfo)
 	client_notify(c, buf);
 	snprintf(buf, sizeof buf, "Visit permission: %s  Build permission: %s", rank_get_name(l->rankvisit), rank_get_name(l->rankbuild));
 	client_notify(c, buf);
+	
+	if (c->player->rank == RANK_ADMIN || c->player->globalid == c->player->level->owner)
+	{
+		unsigned i;
+		for (i = 0; i < c->player->level->uservisit.used; i++)
+		{
+			snprintf(buf, sizeof buf, "Visit permission: %s", playerdb_get_username(c->player->level->uservisit.items[i]));
+			client_notify(c, buf);
+		}
+		
+		for (i = 0; i < c->player->level->userbuild.used; i++)
+		{
+			snprintf(buf, sizeof buf, "Build permission: %s", playerdb_get_username(c->player->level->userbuild.items[i]));
+			client_notify(c, buf);
+		}
+	}
 
 	return false;
 }
@@ -668,6 +685,103 @@ CMD(paint)
 	return false;
 }
 
+static const char help_perbuild[] =
+"/perbuild [<rank>|+/-<user>]\n";
+
+CMD(perbuild)
+{
+	if (params != 2) return true;
+
+	if (c->player->rank < RANK_OP && c->player->globalid != c->player->level->owner)
+	{
+		client_notify(c, "You do not have permission to change permissions here");
+		return false;
+	}
+	
+	if (param[1][0] == '-' || param[1][0] == '+')
+	{
+		int globalid = playerdb_get_globalid(param[1] + 1, false, NULL);
+		if (globalid == -1)
+		{
+			client_notify(c, "User does not exist");
+			return false;
+		}
+		
+		if (param[1][0] == '-')
+		{
+			user_list_del_item(&c->player->level->userbuild, globalid);
+		}
+		else
+		{
+			user_list_add(&c->player->level->userbuild, globalid);
+		}
+		c->player->level->changed = true;
+		client_notify(c, "Build permission set");
+	}
+	else
+	{
+		int rank = rank_get_by_name(param[1]);
+		if (rank == -1)
+		{
+			client_notify(c, "Invalid rank");
+			return false;
+		}
+
+		c->player->level->rankbuild = rank;
+		c->player->level->changed = true;
+		client_notify(c, "Build permission set");
+	}
+}
+
+static const char help_pervisit[] =
+"/pervisit [<rank>|+/-<user>]\n";
+
+CMD(pervisit)
+{
+	if (params != 2) return true;
+
+	if (c->player->rank < RANK_OP && c->player->globalid != c->player->level->owner)
+	{
+		client_notify(c, "You do not have permission to change permissions here");
+		return false;
+	}
+	
+	if (param[1][0] == '-' || param[1][0] == '+')
+	{
+		int globalid = playerdb_get_globalid(param[1] + 1, false, NULL);
+		if (globalid == -1)
+		{
+			client_notify(c, "User does not exist");
+			return false;
+		}
+		
+		if (param[1][0] == '-')
+		{
+			user_list_del_item(&c->player->level->uservisit, globalid);
+		}
+		else
+		{
+			user_list_add(&c->player->level->uservisit, globalid);
+		}
+		c->player->level->changed = true;
+		client_notify(c, "Visit permission set");
+	}
+	else
+	{
+		int rank = rank_get_by_name(param[1]);
+		if (rank == -1)
+		{
+			client_notify(c, "Invalid rank");
+			return false;
+		}
+
+		c->player->level->rankvisit = rank;
+		c->player->level->changed = true;
+		client_notify(c, "Visit permission set");
+	}
+}
+
+
 static const char help_players[] =
 "/players [<level>]\n"
 "List all players connected. If <level> is specified, only players on that level are listed.";
@@ -701,7 +815,7 @@ CMD(replace)
 	if (params > 3) return true;
 
 	c->player->replace_type = blocktype_get_by_name(param[1]);
-	if (c->player->replace_type == -1)
+	if (c->player->replace_type == BLOCK_INVALID)
 	{
 		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
 		return false;
@@ -710,7 +824,7 @@ CMD(replace)
 	if (params == 3)
 	{
 		c->player->cuboid_type = blocktype_get_by_name(param[2]);
-		if (c->player->cuboid_type == -1)
+		if (c->player->cuboid_type == BLOCK_INVALID)
 		{
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
 			return false;
@@ -718,7 +832,7 @@ CMD(replace)
 	}
 	else
 	{
-		c->player->cuboid_type = -1;
+		c->player->cuboid_type = BLOCK_INVALID;
 	}
 
 	c->player->mode = MODE_REPLACE;
@@ -856,7 +970,7 @@ CMD(summon)
 	}
 	if (p->level != c->player->level)
 	{
-		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], p->level->name);
 		client_notify(c, buf);
 		return false;
 	}
@@ -928,7 +1042,7 @@ CMD(tp)
 	}
 	if (p->level != c->player->level)
 	{
-		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], c->player->level->name);
+		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], p->level->name);
 		client_notify(c, buf);
 		return false;
 	}
@@ -1115,6 +1229,8 @@ struct command_t s_commands[] = {
 	{ "newlvl", RANK_ADMIN, &cmd_newlvl, help_newlvl },
 	{ "opglass", RANK_OP, &cmd_opglass, help_opglass },
 	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
+	{ "perbuild", RANK_BUILDER, &cmd_perbuild, help_perbuild },
+	{ "pervisit", RANK_BUILDER, &cmd_pervisit, help_pervisit },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
@@ -1123,7 +1239,7 @@ struct command_t s_commands[] = {
 	{ "spawn", RANK_GUEST, &cmd_spawn, help_spawn },
 	{ "solid", RANK_OP, &cmd_solid, help_solid },
 	{ "summon", RANK_OP, &cmd_summon, help_summon },
-	{ "teleporter", RANK_ADV_BUILDER, &cmd_teleporter },
+	{ "teleporter", RANK_ADV_BUILDER, &cmd_teleporter, help_teleporter },
 	{ "time", RANK_GUEST, &cmd_time, help_time },
 	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },

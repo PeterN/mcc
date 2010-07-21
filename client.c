@@ -41,7 +41,7 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 
 bool client_notify_by_username(const char *username, const char *message)
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
@@ -132,7 +132,7 @@ void client_send_spawn(const struct client_t *c, bool hiding)
 	if (c->player == NULL || c->player->level == NULL) return;
 	const struct level_t *level = c->player->level;
 
-	int i;
+	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
 		if (level->clients[i] != NULL && level->clients[i] != c)
@@ -148,7 +148,7 @@ void client_send_despawn(const struct client_t *c, bool hiding)
 	if (c->player == NULL || c->player->level == NULL) return;
 	const struct level_t *level = c->player->level;
 
-	int i;
+	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
 		if (level->clients[i] != NULL && level->clients[i] != c)
@@ -161,7 +161,7 @@ void client_send_despawn(const struct client_t *c, bool hiding)
 
 void client_info()
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_clients.used; i++)
 	{
 		const struct client_t *c = s_clients.items[i];

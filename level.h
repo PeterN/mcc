@@ -35,9 +35,9 @@ LIST(teleporter, struct teleporter_t, teleporter_t_compare)
 struct level_t
 {
 	char name[64];
-	unsigned x;
-	unsigned y;
-	unsigned z;
+	int16_t x;
+	int16_t y;
+	int16_t z;
 
 	struct position_t spawn;
 
@@ -52,9 +52,9 @@ struct level_t
 	struct block_update_list_t updates;
 	struct teleporter_list_t teleporters;
 
-	int physics_iter, physics_done;
-	int updates_iter;
-	int physics_runtime, updates_runtime;
+	unsigned physics_iter, physics_done;
+	unsigned updates_iter;
+	unsigned physics_runtime, updates_runtime;
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
@@ -79,7 +79,7 @@ static inline unsigned level_get_index(struct level_t *level, unsigned x, unsign
 	return x + (z + y * level->z) * level->x;
 }
 
-bool level_init(struct level_t *level, unsigned x, unsigned y, unsigned z, const char *name, bool zero);
+bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const char *name, bool zero);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 bool level_send(struct client_t *client);
 void level_gen(struct level_t *level, int type);

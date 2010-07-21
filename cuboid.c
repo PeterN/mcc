@@ -8,7 +8,7 @@ struct cuboid_list_t s_cuboids;
 
 void cuboid_process()
 {
-	int i;
+	unsigned i;
 	for (i = 0; i < s_cuboids.used; i++)
 	{
 		struct cuboid_t *c = &s_cuboids.items[i];
@@ -22,7 +22,7 @@ void cuboid_process()
 
 			enum blocktype_t pt1 = convert(c->level, index, b);
 
-			if (bt != c->new_type && (c->old_type == -1 || bt == c->old_type))
+			if (bt != c->new_type && (c->old_type == BLOCK_INVALID || bt == c->old_type))
 			{
 				bool oldphysics = b->physics;
 
@@ -44,7 +44,7 @@ void cuboid_process()
 
 				if (pt1 != pt2)
 				{
-					int j;
+					unsigned j;
 					for (j = 0; j < s_clients.used; j++)
 					{
 						struct client_t *client = s_clients.items[j];

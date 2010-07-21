@@ -27,7 +27,7 @@ void mcc_exit()
 	level_save_all();
 
 	/* Wait for threads to finish */
-	int i;
+	unsigned i;
 	for (i = 0; i < s_levels.used; i++)
 	{
 		struct level_t *l = s_levels.items[i];
@@ -56,7 +56,7 @@ static void sighandler(int sig)
 int main(int argc, char **argv)
 {
 	int tick = 0;
-	int i;
+	unsigned i;
 
 	//config_read(&g_server);
 
