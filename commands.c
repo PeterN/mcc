@@ -265,7 +265,7 @@ CMD(filter)
 	}
 	else
 	{
-		c->player->filter = -1;
+		c->player->filter = 0;
 		client_notify(c, "Filtering disabled");
 	}
 
