@@ -1169,14 +1169,9 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		return;
 	}
 
-	if (!level_user_can_build(level, client->player))
-	{
-		client_notify(client, "You do not have sufficient permission to build on this level");
-		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-		return;
-	}
+	bool canbuild = level_user_can_build(level, client->player);
 
-	if (client->player->mode == MODE_CUBOID)
+	if (client->player->mode == MODE_CUBOID && can_build)
 	{
 		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
@@ -1192,7 +1187,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		client->player->mode = MODE_NORMAL;
 		return;
 	}
-	else if (client->player->mode == MODE_REPLACE)
+	else if (client->player->mode == MODE_REPLACE && can_build)
 	{
 		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
@@ -1240,18 +1235,30 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 	}
 
-	if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
-		// || (b->owner != 0 && b->owner != client->player->globalid)))
+	if (!can_build)
 	{
-		client_notify(client, "Block cannot be changed");
+		client_notify(client, "You do not have sufficient permission to build on this level");
 		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 		return;
 	}
 
-	if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid))
+	if (client->player->globalid != level->owner)
 	{
-		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-		return;
+		/* Not level owner, so check block permissions */
+
+		if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
+			// || (b->owner != 0 && b->owner != client->player->globalid)))
+		{
+			client_notify(client, "Block cannot be changed");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+			return;
+		}
+
+		if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid))
+		{
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+			return;
+		}
 	}
 
 	if (bt != nt)
