@@ -127,6 +127,7 @@ struct block_t block_convert_from_mcs(uint8_t type);
 bool blocktype_has_physics(enum blocktype_t type);
 
 int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, physics_func_t physics_func);
+void deregister_blocktype(enum blocktype_t type);
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block);
 int trigger(struct level_t *level, unsigned index, const struct block_t *block);
 void physics(struct level_t *level, unsigned index, const struct block_t *block);

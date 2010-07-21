@@ -10,39 +10,54 @@ static struct blocktype_desc_list_t s_blocks;
 int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, physics_func_t physics_func)
 {
 	struct blocktype_desc_t desc;
+	memset(&desc, 0, sizeof desc);
 
 	if (type == BLOCK_INVALID)
 	{
-		desc.name = name;
-		desc.convert_func = convert_func;
-		desc.trigger_func = trigger_func;
-		desc.physics_func = physics_func;
-		blocktype_desc_list_add(&s_blocks, desc);
+		/* Allocate a new block type, reusing the name if available */
+		unsigned i;
+		for (i = 0; i < s_blocks.used; i++)
+		{
+			if (strcasecmp(s_blocks.items[i].name, name) == 0)
+			{
+				type == i;
+				break;
+			}
+		}
 
-		LOG("Registered %s as %lu\n", desc.name, s_blocks.used - 1);
-
-		return s_blocks.used - 1;
+		if (type == BLOCK_INVALID)
+		{
+			blocktype_desc_list_add(&s_blocks, desc);
+			type = s_blocks.used - 1;
+		}
 	}
 	else
 	{
-		memset(&desc, 0, sizeof desc);
-
 		/* Add blank entries until we reach the block we want */
 		while (s_blocks.used <= type)
 		{
 			blocktype_desc_list_add(&s_blocks, desc);
 		}
-
-		struct blocktype_desc_t *descp = &s_blocks.items[type];
-		descp->name = name;
-		descp->convert_func = convert_func;
-		descp->trigger_func = trigger_func;
-		descp->physics_func = physics_func;
-
-		LOG("Registered %s as %d\n", descp->name, type);
-
-		return type;
 	}
+
+	struct blocktype_desc_t *descp = &s_blocks.items[type];
+	descp->name = name;
+	descp->convert_func = convert_func;
+	descp->trigger_func = trigger_func;
+	descp->physics_func = physics_func;
+	LOG("Registered %s as %d\n", descp->name, type);
+
+	return type;
+}
+
+deregister_blocktype(enum blocktype_t type)
+{
+	struct blocktype_desc_t *descp = &s_blocks.items[type];
+	descp->name = name;
+	descp->convert_func = NULL;
+	descp->trigger_func = NULL;
+	descp->physics_func = NULL;
+	LOG("Deregistered %s / %d\n", descp->name, type);
 }
 
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block)
@@ -52,6 +67,10 @@ enum blocktype_t convert(struct level_t *level, unsigned index, const struct blo
 	{
 		return btd->convert_func(level, index, block);
 	}
+
+	/* Non-standard block that no longer exists? Show as red... */
+	if (block->type >= BLOCK_END) return RED;
+
 	return block->type;
 }
 
