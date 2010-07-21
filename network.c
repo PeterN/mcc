@@ -11,10 +11,34 @@
 #include "level.h"
 #include "packet.h"
 #include "player.h"
-#include "irc.h"
-#include "heartbeat.h"
 #include "network.h"
 #include "mcc.h"
+
+static inline bool socket_t_compare(const struct socket_t *a, const struct socket_t *b)
+{
+	return a->fd == b->fd;
+}
+
+LIST(socket, struct socket_t, socket_t_compare)
+static struct socket_list_t s_sockets;
+
+void register_socket(int fd, socket_func_t socket_func, void *arg)
+{
+	struct socket_t s;
+	s.fd = fd;
+	s.socket_func = socket_func;
+	s.arg = arg;
+
+	socket_list_add(&s_sockets, s);
+}
+
+void deregister_socket(int fd)
+{
+	struct socket_t s;
+	s.fd = fd;
+
+	socket_list_del_item(&s_sockets, s);
+}
 
 bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
@@ -22,7 +46,7 @@ bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family   = AF_INET;
-	hints.ai_flags	= AI_ADDRCONFIG;
+	hints.ai_flags    = AI_ADDRCONFIG;
 	hints.ai_socktype = SOCK_STREAM;
 
 	char port_name[6];
@@ -88,8 +112,6 @@ void net_init()
 	}
 
 	net_set_nonblock(s_listenfd);
-
-	heartbeat_start();
 }
 
 void net_close(struct client_t *c, const char *reason)
@@ -245,16 +267,12 @@ void net_run()
 	/* Add listen socket */
 	FD_SET(s_listenfd, &read_fd);
 
-	if (s_heartbeat_fd >= 0)
+	/* Add service sockets */
+	for (i = 0; i < s_sockets.used; i++)
 	{
-		FD_SET(s_heartbeat_fd, &read_fd);
-		FD_SET(s_heartbeat_fd, &write_fd);
-	}
-
-	if (s_irc_fd >= 0)
-	{
-		FD_SET(s_irc_fd, &read_fd);
-		FD_SET(s_irc_fd, &write_fd);
+		int fd = s_sockets.items[i].fd;
+		FD_SET(fd, &read_fd);
+		FD_SET(fd, &write_fd);
 	}
 
 	/* Add clients */
@@ -293,25 +311,16 @@ void net_run()
 		}
 	}
 
-	if (s_heartbeat_fd >= 0)
+	for (i = 0; i < s_sockets.used; i++)
 	{
-		bool can_write = FD_ISSET(s_heartbeat_fd, &write_fd);
-		bool can_read  = FD_ISSET(s_heartbeat_fd, &read_fd);
+		struct socket_t *s = &s_sockets.items[i];
+		int fd = s->fd;
+		bool can_write = FD_ISSET(fd, &write_fd);
+		bool can_read  = FD_ISSET(fd, &read_fd);
 
 		if (can_write || can_read)
 		{
-			heartbeat_run(can_write, can_read);
-		}
-	}
-
-	if (s_irc_fd >= 0)
-	{
-		bool can_write = FD_ISSET(s_irc_fd, &write_fd);
-		bool can_read  = FD_ISSET(s_irc_fd, &read_fd);
-
-		if (can_write || can_read)
-		{
-			irc_run(can_write, can_read);
+			s->socket_func(fd, can_write, can_read, s->arg);
 		}
 	}
 
@@ -339,4 +348,12 @@ void net_notify_all(const char *message)
 	}
 
 	LOG("%s\n", message);
+}
+
+void module_init(void **arg)
+{
+}
+
+void module_deinit(void *arg)
+{
 }

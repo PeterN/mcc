@@ -85,8 +85,8 @@ bool level_send(struct client_t *client);
 void level_gen(struct level_t *level, int type);
 bool level_get_by_name(const char *name, struct level_t **level);
 bool level_load(const char *name, struct level_t **level);
-void level_save_all();
-void level_unload_empty();
+void level_save_all(void *arg);
+void level_unload_empty(void *arg);
 
 void level_change_block(struct level_t *level, struct client_t *c, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t);
 void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index);

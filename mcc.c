@@ -9,8 +9,6 @@
 #include "player.h"
 #include "playerdb.h"
 #include "client.h"
-#include "heartbeat.h"
-#include "irc.h"
 
 struct server_t g_server;
 
@@ -24,7 +22,7 @@ static int gettime()
 
 void mcc_exit()
 {
-	level_save_all();
+	level_save_all(NULL);
 
 	/* Wait for threads to finish */
 	unsigned i;
@@ -103,7 +101,13 @@ int main(int argc, char **argv)
 	playerdb_init();
 
 	net_init();
+
+	module_load("heartbeat.so");
+	module_load("irc.so");
 	//irc_start();
+
+	register_timer(120000, &level_save_all, NULL);
+	register_timer(20000, &level_unload_empty, NULL);
 
 	int cur_ticks = gettime();
 	int next_tick = cur_ticks + TICK_INTERVAL;
@@ -128,9 +132,11 @@ int main(int argc, char **argv)
 				g_server.cpu_start = c;
 			}
 			//if ((tick % MS_TO_TICKS(2500)) == 0) client_info();
-			if ((tick % MS_TO_TICKS(60000)) == 0) heartbeat_start();
-			if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
-			if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
+			//if ((tick % MS_TO_TICKS(60000)) == 0) heartbeat_start();
+			//if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
+			//if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
+
+			timer_process();
 
 			//if ((tick % MS_TO_TICKS(240)) == 0)
 

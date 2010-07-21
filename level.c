@@ -1037,7 +1037,7 @@ bool level_get_by_name(const char *name, struct level_t **level)
 	return false;
 }
 
-void level_save_all()
+void level_save_all(void *arg)
 {
 	unsigned i;
 
@@ -1061,7 +1061,7 @@ static bool level_is_empty(const struct level_t *l)
 	return true;
 }
 
-void level_unload_empty()
+void level_unload_empty(void *arg)
 {
 	unsigned i, j;
 
@@ -1169,7 +1169,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		return;
 	}
 
-	bool canbuild = level_user_can_build(level, client->player);
+	bool can_build = level_user_can_build(level, client->player);
 
 	if (client->player->mode == MODE_CUBOID && can_build)
 	{

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -9,50 +10,23 @@
 #include <errno.h>
 #include "mcc.h"
 #include "network.h"
+#include "timer.h"
 
-int s_heartbeat_fd = -1;
-
-static struct sockaddr_in s_heartbeat_addr;
-static int s_heartbeat_stage;
-static bool s_heartbeat_resolved;
-
-void heartbeat_start()
+struct heartbeat_t
 {
-	if (s_heartbeat_fd != -1) return;
+	int fd;
+	struct timer_t *timer;
 
-	if (!s_heartbeat_resolved)
-	{
-		if (!resolve("www.minecraft.net", 80, &s_heartbeat_addr))
-		{
-			LOG("Unable to resolve heartbeat server\n");
-			return;
-		}
-		s_heartbeat_resolved = true;
-	}
+	struct sockaddr_in heartbeat_addr;
+	int heartbeat_stage;
+	bool heartbeat_resolved;
+};
 
-	s_heartbeat_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (s_heartbeat_fd < 0)
-	{
-		perror("socket");
-		return;
-	}
-
-	net_set_nonblock(s_heartbeat_fd);
-
-	if (connect(s_heartbeat_fd, (struct sockaddr *)&s_heartbeat_addr, sizeof s_heartbeat_addr) < 0)
-	{
-		if (errno != EINPROGRESS) {
-			perror("connect");
-			s_heartbeat_fd = -1;
-		}
-	}
-
-	s_heartbeat_stage = 0;
-}
-
-void heartbeat_run(bool can_write, bool can_read)
+void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 {
-	switch (s_heartbeat_stage)
+	struct heartbeat_t *h = arg;
+
+	switch (h->heartbeat_stage)
 	{
 		case 0:
 		{
@@ -76,14 +50,14 @@ void heartbeat_run(bool can_write, bool can_read)
 						"%s",
 						url, host, strlen(postdata), postdata);
 
-			int res = write(s_heartbeat_fd, request, strlen(request));
+			int res = write(fd, request, strlen(request));
 			if (res < 0)
 			{
 				perror("write");
 				break;
 			}
 
-			s_heartbeat_stage = 1;
+			h->heartbeat_stage = 1;
 			return;
 		}
 
@@ -93,7 +67,7 @@ void heartbeat_run(bool can_write, bool can_read)
 
 			char buf[2048];
 
-			int res = read(s_heartbeat_fd, buf, sizeof buf);
+			int res = read(fd, buf, sizeof buf);
 			if (res < 0)
 			{
 				perror("read");
@@ -112,6 +86,73 @@ void heartbeat_run(bool can_write, bool can_read)
 			break;
 	}
 
-	close(s_heartbeat_fd);
-	s_heartbeat_fd = -1;
+	close(fd);
+
+	deregister_socket(fd);
+
+	h->fd = -1;
+}
+
+void heartbeat_start(void *arg)
+{
+	struct heartbeat_t *h = arg;
+
+	if (h->fd != -1) return;
+
+	if (!h->heartbeat_resolved)
+	{
+		if (!resolve("www.minecraft.net", 80, &h->heartbeat_addr))
+		{
+			LOG("Unable to resolve heartbeat server\n");
+			return;
+		}
+		h->heartbeat_resolved = true;
+	}
+
+	h->fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (h->fd < 0)
+	{
+		perror("socket");
+		return;
+	}
+
+	net_set_nonblock(h->fd);
+
+	if (connect(h->fd, (struct sockaddr *)&h->heartbeat_addr, sizeof h->heartbeat_addr) < 0)
+	{
+		if (errno != EINPROGRESS) {
+			perror("connect");
+			h->fd = -1;
+			return;
+		}
+	}
+
+	register_socket(h->fd, &heartbeat_run, h);
+
+	h->heartbeat_stage = 0;
+}
+
+void module_init(void **arg)
+{
+	struct heartbeat_t *h = malloc(sizeof *h);
+	h->fd = -1;
+	h->heartbeat_resolved = false;
+	h->timer = register_timer(60000, &heartbeat_start, h);
+
+	*arg = h;
+}
+
+void module_deinit(void *arg)
+{
+	struct heartbeat_t *h = arg;
+
+	if (h->fd != -1)
+	{
+		close(h->fd);
+		deregister_socket(h->fd);
+	}
+
+	deregister_timer(h->timer);
+
+	free(h);
 }

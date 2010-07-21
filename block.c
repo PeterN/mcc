@@ -50,10 +50,9 @@ int register_blocktype(enum blocktype_t type, const char *name, convert_func_t c
 	return type;
 }
 
-deregister_blocktype(enum blocktype_t type)
+void deregister_blocktype(enum blocktype_t type)
 {
 	struct blocktype_desc_t *descp = &s_blocks.items[type];
-	descp->name = name;
 	descp->convert_func = NULL;
 	descp->trigger_func = NULL;
 	descp->physics_func = NULL;

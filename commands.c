@@ -1260,7 +1260,7 @@ struct command_t s_commands[] = {
 	{ "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
 	{ "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
 	{ "motd", RANK_BANNED, &cmd_motd, help_motd },
-	{ "newlvl", RANK_ADMIN, &cmd_newlvl, help_newlvl },
+	{ "newlvl", RANK_ADV_BUILDER, &cmd_newlvl, help_newlvl },
 	{ "opglass", RANK_OP, &cmd_opglass, help_opglass },
 	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
 	{ "perbuild", RANK_BUILDER, &cmd_perbuild, help_perbuild },
