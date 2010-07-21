@@ -171,7 +171,7 @@ bool level_send(struct client_t *c)
 	*bufp++ = (length >> 24) & 0xFF;
 	*bufp++ = (length >> 16) & 0xFF;
 	*bufp++ = (length >>  8) & 0xFF;
-	*bufp++ =  length		& 0xFF;
+	*bufp++ =  length        & 0xFF;
 
 	/* Serialize map data */
 	for (x = 0; x < length; x++)
