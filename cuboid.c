@@ -22,7 +22,7 @@ void cuboid_process()
 
 			enum blocktype_t pt1 = convert(c->level, index, b);
 
-			if (bt != c->new_type && (c->old_type == BLOCK_INVALID || bt == c->old_type))
+			if (c->old_type == BLOCK_INVALID || bt == c->old_type)
 			{
 				bool oldphysics = b->physics;
 
