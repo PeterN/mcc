@@ -88,12 +88,15 @@ int trigger(struct level_t *l, unsigned index, const struct block_t *block)
 void physics(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
+
 	if (btd->physics_func != NULL)
 	{
 		btd->physics_func(level, index, block);
 	}
-
-	level->blocks[index].physics = false;
+	else
+	{
+		level->blocks[index].physics = false;
+	}
 }
 
 void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, int16_t z, bool gravity)

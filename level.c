@@ -455,6 +455,8 @@ void *level_gen_thread(void *arg)
 
 	memset(&block, 0, sizeof block);
 
+	memset(level->blocks, 0, sizeof *level->blocks * mx * my * mz);
+
 	if (level->type == 0 || level->type == 1)
 	{
 		for (z = 0; z < mz; z++)
@@ -657,6 +659,16 @@ void *level_gen_thread(void *arg)
 		level_set_block(level, &block, level_get_index(level, x, y, z));
 	}*/
 
+	/* Activate physics */
+	int count = mx * my * mz;
+	for (i = 0; i < count; i++)
+	{
+		struct block_t *b = &level->blocks[i];
+		b->physics = blocktype_has_physics(b->type);
+		if (b->physics) physics_list_add(&level->physics, i);
+	}
+
+	level_prerun(level);
 
 	level->changed = true;
 
@@ -1165,6 +1177,10 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 				 b->owner == 0 ? "none" : playerdb_get_username(b->owner)
 		);
 		client_notify(client, buf);
+
+		snprintf(buf, sizeof buf, "Physics: %s  Data 0x%04X", b->physics ? "yes" : "no", b->data);
+		client_notify(client, buf);
+
 		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 		return;
 	}
@@ -1380,7 +1396,7 @@ static int gettime()
 	physics_list_add(&level->physics_remove, index);
 }*/
 
-static void level_run_physics(struct level_t *level, bool can_init)
+static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 {
 	/* Don't run physics if updates are being done */
 	if (level->physics_done == 1) return;
@@ -1418,7 +1434,7 @@ static void level_run_physics(struct level_t *level, bool can_init)
 
 		physics(level, index, b);
 
-		if (gettime() - s > 40) {
+		if (limit && gettime() - s > 40) {
 			level->physics_runtime += gettime() - s;
 			return;
 		}
@@ -1456,7 +1472,7 @@ static void level_run_physics(struct level_t *level, bool can_init)
 	level->physics2.used = 0;
 }
 
-static void level_run_updates(struct level_t *level, bool can_init)
+static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 {
 	/* Don't run updates until physics are complete */
 	if (level->physics_done == 0) return;
@@ -1490,14 +1506,15 @@ static void level_run_updates(struct level_t *level, bool can_init)
 		}
 
 		b->data = bu->newdata;
-		b->physics = blocktype_has_physics(b->type);
+		//if (b->physics) b->physics = blocktype_has_physics(b->type);
 		if (b->physics) physics_list_add(&level->physics, bu->index);
 
 		enum blocktype_t pt2 = convert(level, bu->index, b);
 		int16_t x, y, z;
 		level_get_xyz(level, bu->index, &x, &y, &z);
 
-		if (pt1 != pt2)
+		/* Don't send client updates when in "no limits" mode */
+		if (limit && pt1 != pt2)
 		{
 			unsigned j;
 			for (j = 0; j < s_clients.used; j++)
@@ -1543,12 +1560,26 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 	{
 		struct block_update_t *bu = &level->updates.items[i];
 		if (index == bu->index) {
-			return;
-			bu->newtype = newtype;
-			bu->newdata = newdata;
-			//LOG("update (again) @ %d (%d - %d)\n", index, newtype, newdata);
+			/* Reset physics bit again */
+			if (bu->newtype == BLOCK_INVALID)
+			{
+				level->blocks[index].physics = blocktype_has_physics(level->blocks[index].type);
+			}
+			else
+			{
+				level->blocks[index].physics = blocktype_has_physics(bu->newtype);
+			}
 			return;
 		}
+	}
+
+	if (newtype == BLOCK_INVALID)
+	{
+		level->blocks[index].physics = blocktype_has_physics(level->blocks[index].type);
+	}
+	else
+	{
+		level->blocks[index].physics = blocktype_has_physics(newtype);
 	}
 
 	struct block_update_t bu;
@@ -1556,8 +1587,17 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 	bu.newtype = newtype;
 	bu.newdata = newdata;
 	block_update_list_add(&level->updates, bu);
+}
 
-	//LOG("update @ %d (%d - %d)\n", index, newtype, newdata);
+void level_prerun(struct level_t *l)
+{
+	int n;
+
+	for (n = 0; n < 100; n++)
+	{
+		level_run_physics(l, true, false);
+		level_run_updates(l, true, false);
+	}
 }
 
 void level_process_physics(bool can_init)
@@ -1575,7 +1615,7 @@ void level_process_physics(bool can_init)
 		if (pthread_mutex_trylock(&level->mutex) != 0) continue;
 		pthread_mutex_unlock(&level->mutex);
 
-		level_run_physics(level, can_init);
+		level_run_physics(level, can_init, true);
 	}
 }
 
@@ -1594,6 +1634,6 @@ void level_process_updates(bool can_init)
 		if (pthread_mutex_trylock(&level->mutex) != 0) continue;
 		pthread_mutex_unlock(&level->mutex);
 
-		level_run_updates(level, can_init);
+		level_run_updates(level, can_init, true);
 	}
 }

@@ -578,6 +578,49 @@ CMD(levels)
 	return false;
 }
 
+static const char help_lvlowner[] =
+"/lvlowner <user> [<level>]\n"
+"Change ownership of a level.";
+
+CMD(lvlowner)
+{
+	if (params != 2 && params != 3) return true;
+
+	struct level_t *l;
+	if (params == 3)
+	{
+		if (!level_get_by_name(param[2], &l))
+		{
+			client_notify(c, "Level does not exist");
+			return false;
+		}
+	}
+	else
+	{
+		l = c->player->level;
+	}
+
+	int globalid;
+	if (strcasecmp(param[1], "none") == 0)
+	{
+		globalid = 0;
+	}
+	else
+	{
+		globalid = playerdb_get_globalid(param[1], false, NULL);
+		if (globalid == -1)
+		{
+			client_notify(c, "User does not exist");
+			return false;
+		}
+	}
+
+	l->owner = globalid;
+	l->changed = true;
+
+	return false;
+}
+
 static const char help_mapinfo[] =
 "/mapinfo\n"
 "List information about the current level.";
@@ -661,6 +704,24 @@ CMD(newlvl)
 	int z = strtol(param[4], NULL, 10);
 	int t = strtol(param[5], NULL, 10);
 
+	if (x < 16 || y < 16 || z < 16)
+	{
+		client_notify(c, "Minimum dimension is 16 blocks");
+		return false;
+	}
+
+	if ((x & (x - 1)) != 0 || (y & (y - 1)) != 0 || (z & (z - 1)) != 0)
+	{
+		client_notify(c, "Dimension must be power of two");
+		return false;
+	}
+
+	if (x * y * z > 512*512*512)
+	{
+		client_notify(c, "Volume too large");
+		return false;
+	}
+
 	if (!level_get_by_name(name, NULL))
 	{
 		struct level_t *l = malloc(sizeof *l);
@@ -673,10 +734,10 @@ CMD(newlvl)
 
 		client_notify(c, "Starting level creation");
 
-		/* No owner, but only ops+ can go in initially */
-		l->owner = 0;
-		l->rankvisit = RANK_OP;
-		l->rankbuild = RANK_OP;
+		/* Owner is creator */
+		l->owner = c->player->globalid;
+		l->rankvisit = c->player->rank;
+		l->rankbuild = c->player->rank;
 
 		level_gen(l, t);
 		level_list_add(&s_levels, l);
@@ -874,6 +935,35 @@ CMD(replace)
 	client_notify(c, buf);
 
 	return false;
+}
+
+static const char help_resetlvl[] =
+"/resetlvl <type>\n"
+"";
+
+CMD(resetlvl)
+{
+	if (params != 2) return true;
+
+	struct level_t *l = c->player->level;
+
+	if (c->player->rank < RANK_OP && c->player->globalid != l->owner)
+	{
+		client_notify(c, "You do not have permission to reset this level.");
+		return false;
+	}
+
+	int t = strtol(param[1], NULL, 10);
+
+	unsigned i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		struct client_t *c = l->clients[i];
+		if (c == NULL) continue;
+		c->waiting_for_level = true;
+	}
+
+	level_gen(l, t);
 }
 
 static const char help_rules[] =
@@ -1256,6 +1346,7 @@ struct command_t s_commands[] = {
 	{ "kick", RANK_OP, &cmd_kick, help_kick },
 	{ "lava", RANK_BUILDER, &cmd_lava, help_lava },
 	{ "levels", RANK_GUEST, &cmd_levels, help_levels },
+	{ "lvlowner", RANK_OP, &cmd_lvlowner, help_lvlowner },
 	{ "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
 	{ "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
 	{ "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
@@ -1267,6 +1358,7 @@ struct command_t s_commands[] = {
 	{ "pervisit", RANK_BUILDER, &cmd_pervisit, help_pervisit },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
+	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
 	{ "setrank", RANK_OP, &cmd_setrank, help_setrank },
 	{ "setspawn", RANK_BUILDER, &cmd_setspawn, help_setspawn },

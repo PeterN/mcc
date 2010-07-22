@@ -15,25 +15,29 @@ static struct spleef_t
 
 static enum blocktype_t convert_spleef1(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	switch (block->data)
+	return block->data == 1 ? s.air : s.floor1;
+
+/*	switch (block->data)
 	{
 		case 0: return s.floor1;
 		case 1: return s.air;
 		case 2: return RED;
 		case 3: return BLUE;
-	}
+	}*/
 //	return block->data ? s.air : s.floor1;
 }
 
 static enum blocktype_t convert_spleef2(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	switch (block->data)
+	return block->data == 1 ? s.air : s.floor2;
+
+/*	switch (block->data)
 	{
 		case 0: return s.floor2;
 		case 1: return s.air;
 		case 2: return RED;
 		case 3: return BLUE;
-	}
+	}*/
 //
 //	return block->data ? s.air : s.floor2;
 }

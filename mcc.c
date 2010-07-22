@@ -13,7 +13,7 @@
 
 struct server_t g_server;
 
-static int gettime()
+static unsigned gettime()
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -107,15 +107,15 @@ int main(int argc, char **argv)
 	module_load("irc.so");
 	//irc_start();
 
-	register_timer(120000, &level_save_all, NULL);
-	register_timer(20000, &level_unload_empty, NULL);
+	register_timer("save levels", 120000, &level_save_all, NULL);
+	register_timer("unload levels", 20000, &level_unload_empty, NULL);
 
-	int cur_ticks = gettime();
-	int next_tick = cur_ticks + TICK_INTERVAL;
+	unsigned cur_ticks = gettime();
+	unsigned next_tick = cur_ticks + TICK_INTERVAL;
 
 	while (!g_server.exit)
 	{
-		int prev_cur_ticks = cur_ticks;
+		unsigned prev_cur_ticks = cur_ticks;
 
 		net_run();
 
@@ -137,7 +137,7 @@ int main(int argc, char **argv)
 			//if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
 			//if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
 
-			process_timers(tick);
+			process_timers(cur_ticks);
 
 			//if ((tick % MS_TO_TICKS(240)) == 0)
 
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 				for (i = 0; i < s_clients.used; i++)
 				{
 					struct client_t *c = s_clients.items[i];
-					if (c->player != NULL && c->player->new_level != c->player->level)
+					if (c->player != NULL && (c->player->new_level != c->player->level || c->waiting_for_level))
 					{
 						level_send(c);
 					}

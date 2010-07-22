@@ -41,10 +41,15 @@ TNTSRC := tnt.c
 TNTOBJ := $(TNTSRC:.c=.o)
 TNTO := tnt.so
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO)
+ALSRC := airlayer.c
+ALOBJ := $(ALSRC:.c=.o)
+ALO := airlayer.so
+
+
+all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO)
 
 clean:
-	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO)
+	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
@@ -55,9 +60,6 @@ $(HBO): $(HBOBJ)
 $(IRCO): $(IRCOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,$(IRCO) -o $(IRCO) $(IRCOBJ)
 
-$(MCCO): $(MCCOBJ) $(LIBO)
-	$(CC) $(LDFLAGS) $(MCCOBJ) -L. -lmcc -o $@
-
 $(WWO): $(WWOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(WWO) $(WWOBJ) -o $@
 
@@ -67,5 +69,13 @@ $(SPLEEFO): $(SPLEEFOBJ) $(LIBO)
 $(TNTO): $(TNTOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(TNTO) $(TNTOBJ) -o $@
 
+$(ALO): $(ALOBJ) $(LIBO)
+	$(CC) -shared -fPIC -Wl,-soname,$(ALO) $(ALOBJ) -o $@
+
+$(MCCO): $(MCCOBJ) $(LIBO)
+	$(CC) $(LDFLAGS) $(MCCOBJ) -L. -lmcc -o $@
+
 .c.o:
 	$(CC) -c -fPIC $(CFLAGS) $< -o $@
+
+# DO NOT DELETE

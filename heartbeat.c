@@ -137,7 +137,7 @@ void module_init(void **arg)
 	struct heartbeat_t *h = malloc(sizeof *h);
 	h->fd = -1;
 	h->heartbeat_resolved = false;
-	h->timer = register_timer(60000, &heartbeat_start, h);
+	h->timer = register_timer("heartbeat", 60000, &heartbeat_start, h);
 
 	*arg = h;
 }
