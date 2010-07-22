@@ -18,6 +18,7 @@ struct cuboid_t
 	struct level_t *level;
 	unsigned owner;
 	bool fixed;
+	bool owner_is_op;
 	int count;
 };
 

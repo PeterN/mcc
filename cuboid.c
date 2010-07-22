@@ -24,6 +24,8 @@ void cuboid_process()
 
 			if (c->old_type == BLOCK_INVALID || bt == c->old_type)
 			{
+				if (!c->owner_is_op && b->owner != 0 && b->owner != c->owner) continue;
+
 				bool oldphysics = b->physics;
 
 				/* Handle physics */
