@@ -91,7 +91,7 @@ bool level_load(const char *name, struct level_t **level);
 void level_save_all(void *arg);
 void level_unload_empty(void *arg);
 
-void level_change_block(struct level_t *level, struct client_t *c, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t);
+void level_change_block(struct level_t *level, struct client_t *c, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click);
 void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index);
 
 void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level);

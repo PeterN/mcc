@@ -212,7 +212,7 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
-	level_change_block(c->player->level, c, x, y, z, m, t);
+	level_change_block(c->player->level, c, x, y, z, m, t, true);
 }
 
 void packet_recv_position(struct client_t *c, struct packet_t *p)

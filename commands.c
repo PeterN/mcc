@@ -860,6 +860,8 @@ CMD(perbuild)
 		c->player->level->changed = true;
 		client_notify(c, "Build permission set");
 	}
+
+	return false;
 }
 
 static const char help_pervisit[] =
@@ -908,8 +910,57 @@ CMD(pervisit)
 		c->player->level->changed = true;
 		client_notify(c, "Visit permission set");
 	}
+
+	return false;
 }
 
+static const char help_place[] =
+"/place <type> [<x> <y> <z>]\n"
+"Place a block at the specified coordinates.";
+
+CMD(place)
+{
+	char buf[64];
+
+	if (params != 2 || params > 5) return true;
+
+	if (c->player->level == NULL || c->waiting_for_level)
+	{
+		client_notify(c, "You must be on a level to use this command");
+		return false;
+	}
+
+	enum blocktype_t type = blocktype_get_by_name(param[1]);
+	if (type == BLOCK_INVALID)
+	{
+		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
+
+	int16_t x, y, z;
+	if (params == 2)
+	{
+		x = c->player->pos.x / 32;
+		y = c->player->pos.y / 32;
+		z = c->player->pos.z / 32;
+	}
+	else
+	{
+		x = strtol(param[2], NULL, 10);
+		y = strtol(param[3], NULL, 10);
+		z = strtol(param[4], NULL, 10);
+	}
+
+	if (x < 0 || y < 0 || z < 0 || x >= c->player->level->x || y >= c->player->level->y || z >= c->player->level->z)
+	{
+		client_notify(c, "Coordinates out of range");
+		return false;
+	}
+
+	level_change_block(c->player->level, c, x, y, z, 1, type, false);
+	return false;
+}
 
 static const char help_players[] =
 "/players [<level>]\n"
@@ -917,7 +968,7 @@ static const char help_players[] =
 
 CMD(players)
 {
-	if (params > 2) return false;
+	if (params > 2) return true;
 
 	struct level_t *l = NULL;
 	if (params == 2)
@@ -1410,6 +1461,7 @@ struct command_t s_commands[] = {
 	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
 	{ "perbuild", RANK_BUILDER, &cmd_perbuild, help_perbuild },
 	{ "pervisit", RANK_BUILDER, &cmd_pervisit, help_pervisit },
+	{ "place", RANK_ADV_BUILDER, &cmd_place, help_place },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },

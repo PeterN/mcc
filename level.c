@@ -1158,7 +1158,7 @@ static void level_cuboid(struct level_t *level, unsigned start, unsigned end, en
 	cuboid_list_add(&s_cuboids, c);
 }
 
-void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t)
+void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click)
 {
 	if (client->player->rank == RANK_BANNED)
 	{
@@ -1181,7 +1181,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	struct block_t *b = &level->blocks[index];
 	enum blocktype_t bt = b->type;
 
-	if (client->player->mode == MODE_INFO)
+	if (click && client->player->mode == MODE_INFO)
 	{
 		char buf[64];
 		snprintf(buf, sizeof buf, "%s%s at %dx%dx%d placed by %s",
@@ -1200,7 +1200,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 	bool can_build = level_user_can_build(level, client->player);
 
-	if (client->player->mode == MODE_CUBOID && can_build)
+	if (click && client->player->mode == MODE_CUBOID && can_build)
 	{
 		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
@@ -1216,7 +1216,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		client->player->mode = MODE_NORMAL;
 		return;
 	}
-	else if (client->player->mode == MODE_REPLACE && can_build)
+	else if (click && client->player->mode == MODE_REPLACE && can_build)
 	{
 		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
@@ -1233,15 +1233,18 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		return;
 	}
 
-	enum blocktype_t nt = client->player->bindings[t];
+	enum blocktype_t nt = click ? client->player->bindings[t] : t;
 
-	if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
-	else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
-	else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
+	if (click)
+	{
+		if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
+		else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
+		else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
+	}
 
 	/* Client thinks it has changed to air */
 	if (m == 0) t = AIR;
-	if (!HasBit(client->player->flags, FLAG_PAINT))
+	if (click && !HasBit(client->player->flags, FLAG_PAINT))
 	{
 		if (m == 0) {
 			int r = trigger(level, index, b);
@@ -1318,7 +1321,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		{
 			struct client_t *c = s_clients.items[i];
 			if (c->player == NULL) continue;
-			if ((client != c || pt != t) && c->player->level == level)
+			if ((client != c || pt != t || !click) && c->player->level == level)
 			{
 				client_add_packet(c, packet_send_set_block(x, y, z, pt));
 			}
