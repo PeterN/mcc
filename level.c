@@ -1139,7 +1139,7 @@ static void level_cuboid(struct level_t *level, unsigned start, unsigned end, en
 	c.count = 0;
 	c.old_type = old_type;
 	c.new_type = new_type;
-	c.owner = p->globalid;
+	c.owner = HasBit(p->flags, FLAG_DISOWN) ? 0 : p->globalid;
 	c.fixed = HasBit(p->flags, FLAG_PLACE_FIXED);
 
 	cuboid_list_add(&s_cuboids, c);
@@ -1270,7 +1270,8 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 			return;
 		}
 
-		if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid))
+		/* Air with owner can be replaced */
+		if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid && b->type != AIR))
 		{
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
@@ -1286,7 +1287,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		b->type = nt;
 		b->data = 0;
 		b->fixed = HasBit(client->player->flags, FLAG_PLACE_FIXED);
-		b->owner = (b->type == AIR && !b->fixed) ? 0 : client->player->globalid;
+		b->owner = HasBit(client->player->flags, FLAG_DISOWN) ? 0 : client->player->globalid;
 		b->physics = blocktype_has_physics(nt);
 
 		if (oldphysics != b->physics)
