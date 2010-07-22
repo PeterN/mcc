@@ -752,6 +752,12 @@ CMD(newlvl)
 		return false;
 	}
 
+	if (t < 0 || t > 6)
+	{
+		client_notify(c, "Type must be from 0 to 6 only");
+		return false;
+	}
+
 	if (!level_get_by_name(name, NULL))
 	{
 		struct level_t *l = malloc(sizeof *l);
@@ -996,6 +1002,12 @@ CMD(resetlvl)
 	int t = strtol(param[1], NULL, 10);
 	int hr = strtol(param[2], NULL, 10);
 	int sh = strtol(param[3], NULL, 10);
+
+	if (t < 0 || t > 6)
+	{
+		client_notify(c, "Type must be from 0 to 6 only");
+		return false;
+	}
 
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
