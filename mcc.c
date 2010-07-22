@@ -80,12 +80,12 @@ int main(int argc, char **argv)
 		level_list_add(&s_levels, l);
 	}
 
-	g_server.name = "TEST TEST TEST 2";
+	g_server.name = "TEST TEST TEST";
 	g_server.motd = "Test server for Just Another Minecraft Server";
 	g_server.max_players = 20;
 	g_server.players = 0;
-	g_server.port = 25566;
-	g_server.public = false;
+	g_server.port = 25565;
+	g_server.public = true;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();

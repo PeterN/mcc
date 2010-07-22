@@ -24,44 +24,45 @@ void cuboid_process()
 
 			if (c->old_type == BLOCK_INVALID || bt == c->old_type)
 			{
-				if (!c->owner_is_op && b->owner != 0 && b->owner != c->owner) continue;
-
-				bool oldphysics = b->physics;
-
-				/* Handle physics */
-				b->type = c->new_type;
-				b->data = 0;
-				/* Set owner to none if placing air, unless fixed */
-				b->owner = (c->new_type == AIR && !c->fixed) ? 0 : c->owner;
-				b->fixed = c->fixed;
-				b->physics = blocktype_has_physics(c->new_type);
-
-				if (oldphysics != b->physics)
+				if (c->owner_is_op || b->owner == 0 || b->owner == c->owner)
 				{
-					if (oldphysics) physics_list_del_item(&c->level->physics, index);
-					if (b->physics) physics_list_add(&c->level->physics, index);
-				}
+					bool oldphysics = b->physics;
 
-				enum blocktype_t pt2 = convert(c->level, index, b);
+					/* Handle physics */
+					b->type = c->new_type;
+					b->data = 0;
+					/* Set owner to none if placing air, unless fixed */
+					b->owner = (c->new_type == AIR && !c->fixed) ? 0 : c->owner;
+					b->fixed = c->fixed;
+					b->physics = blocktype_has_physics(c->new_type);
 
-				if (pt1 != pt2)
-				{
-					unsigned j;
-					for (j = 0; j < s_clients.used; j++)
+					if (oldphysics != b->physics)
 					{
-						struct client_t *client = s_clients.items[j];
-						if (client->player == NULL) continue;
-						if (client->player->level == c->level)
-						{
-							client_add_packet(client, packet_send_set_block(c->cx, c->cy, c->cz, pt2));
-						}
+						if (oldphysics) physics_list_del_item(&c->level->physics, index);
+						if (b->physics) physics_list_add(&c->level->physics, index);
 					}
 
-					max--;
-				}
+					enum blocktype_t pt2 = convert(c->level, index, b);
 
-				c->count++;
-				c->level->changed = true;
+					if (pt1 != pt2)
+					{
+						unsigned j;
+						for (j = 0; j < s_clients.used; j++)
+						{
+							struct client_t *client = s_clients.items[j];
+							if (client->player == NULL) continue;
+							if (client->player->level == c->level)
+							{
+								client_add_packet(client, packet_send_set_block(c->cx, c->cy, c->cz, pt2));
+							}
+						}
+
+						max--;
+					}
+
+					c->count++;
+					c->level->changed = true;
+				}
 			}
 
 			c->cz++;
