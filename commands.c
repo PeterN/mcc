@@ -130,20 +130,43 @@ CMD(bind)
 
 		case 2:
 			i = blocktype_get_by_name(param[1]);
-			if (i != BLOCK_INVALID)
+			if (i == BLOCK_INVALID)
+			{
+				snprintf(buf, sizeof buf, "Unknown blocktype %s", param[1]);
+			}
+			else
 			{
 				c->player->bindings[i] = i;
-
+				snprintf(buf, sizeof buf, "Unbound %s", blocktype_get_name(i));
 			}
+
+			client_notify(c, buf);
 			break;
 
 		case 3:
 			i = blocktype_get_by_name(param[1]);
 			j = blocktype_get_by_name(param[2]);
-			if (i != BLOCK_INVALID && j != BLOCK_INVALID)
+			if ((i == ADMINIUM || j == ADMINIUM) && c->player->rank < RANK_OP)
+			{
+				client_notify(c, "You do not have permission to place adminium.");
+				return false;
+			}
+
+			if (i == BLOCK_INVALID)
+			{
+				snprintf(buf, sizeof buf, "Unknown blocktype %s", param[1]);
+			}
+			else if (j == BLOCK_INVALID)
+			{
+				snprintf(buf, sizeof buf, "Unknown blocktype %s", param[2]);
+			}
+			else
 			{
 				c->player->bindings[i] = j;
+				snprintf(buf, sizeof buf, "Bound %s to %s", blocktype_get_name(i), blocktype_get_name(j));
 			}
+
+			client_notify(c, buf);
 			break;
 	}
 	return false;
@@ -201,6 +224,11 @@ CMD(cuboid)
 		if (c->player->cuboid_type == BLOCK_INVALID)
 		{
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+			return false;
+		}
+		else if (c->player->cuboid_type == ADMINIUM && c->player->rank < RANK_OP)
+		{
+			snprintf(buf, sizeof buf, "You do not have permission to place adminium");
 			return false;
 		}
 	}
@@ -915,6 +943,11 @@ CMD(replace)
 		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
 		return false;
 	}
+	else if (c->player->replace_type == ADMINIUM && c->player->rank < RANK_OP)
+	{
+		snprintf(buf, sizeof buf, "You do not have permission to replace adminium");
+		return false;
+	}
 
 	if (params == 3)
 	{
@@ -922,6 +955,11 @@ CMD(replace)
 		if (c->player->cuboid_type == BLOCK_INVALID)
 		{
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+			return false;
+		}
+		else if (c->player->cuboid_type == ADMINIUM && c->player->rank < RANK_OP)
+		{
+			snprintf(buf, sizeof buf, "You do not have permission to place adminium");
 			return false;
 		}
 	}
