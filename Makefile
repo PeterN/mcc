@@ -1,4 +1,4 @@
-CFLAGS := -W -g -O3
+CFLAGS := -W -g
 LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 
 LIBSRC := block.c

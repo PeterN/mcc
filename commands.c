@@ -450,7 +450,7 @@ CMD(home)
 		user_list_add(&l->uservisit, l->owner);
 		user_list_add(&l->userbuild, l->owner);
 
-		level_gen(l, 0);
+		level_gen(l, 0, l->y / 2, l->y / 2);
 		level_list_add(&s_levels, l);
 	}
 
@@ -690,19 +690,21 @@ CMD(motd)
 }
 
 static const char help_newlvl[] =
-"/newlvl <name> <x> <y> <z> <type>\n"
+"/newlvl <name> <x> <y> <z> <type> <height_range> <sea_height>\n"
 "Create a new level. <y> is height. "
 "Type: 0=flat 1=flat/adminium 2=smooth 6=rough";
 
 CMD(newlvl)
 {
-	if (params != 6) return true;
+	if (params != 8) return true;
 
 	const char *name = param[1];
 	int x = strtol(param[2], NULL, 10);
 	int y = strtol(param[3], NULL, 10);
 	int z = strtol(param[4], NULL, 10);
 	int t = strtol(param[5], NULL, 10);
+	int hr = strtol(param[6], NULL, 10);
+	int sh = strtol(param[7], NULL, 10);
 
 	if (x < 16 || y < 16 || z < 16)
 	{
@@ -739,7 +741,7 @@ CMD(newlvl)
 		l->rankvisit = c->player->rank;
 		l->rankbuild = c->player->rank;
 
-		level_gen(l, t);
+		level_gen(l, t, hr, sh);
 		level_list_add(&s_levels, l);
 	}
 	else
@@ -938,12 +940,12 @@ CMD(replace)
 }
 
 static const char help_resetlvl[] =
-"/resetlvl <type>\n"
+"/resetlvl <type> <height_range> <sea_height>\n"
 "";
 
 CMD(resetlvl)
 {
-	if (params != 2) return true;
+	if (params != 4) return true;
 
 	struct level_t *l = c->player->level;
 
@@ -954,6 +956,8 @@ CMD(resetlvl)
 	}
 
 	int t = strtol(param[1], NULL, 10);
+	int hr = strtol(param[2], NULL, 10);
+	int sh = strtol(param[3], NULL, 10);
 
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -963,7 +967,7 @@ CMD(resetlvl)
 		c->waiting_for_level = true;
 	}
 
-	level_gen(l, t);
+	level_gen(l, t, hr, sh);
 }
 
 static const char help_rules[] =

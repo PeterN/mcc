@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 			return false;
 		}
 
-		level_gen(l, 1);
+		level_gen(l, 1, l->y / 2, l->y / 2);
 
 		l->rankbuild = RANK_GUEST;
 		l->rankvisit = RANK_GUEST;

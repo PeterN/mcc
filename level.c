@@ -489,37 +489,41 @@ void *level_gen_thread(void *arg)
 		{
 			for (x = 0; x < mx; x++)
 			{
-				int h = hm[x + z * dmx] * my / 2 + my / 4;
+				int h = (hm[x + z * dmx] - 0.5) * level->height_range + my / 2;
 
-				for (y = 0; y < h; y++)
+				for (y = 0; y < h && y < my; y++)
 				{
-					block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y < my / 2) ? SAND : GRASS;
+					block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y <= level->sea_height) ? SAND : GRASS;
 					level_set_block(level, &block, level_get_index(level, x, y, z));
 				}
 
 				block.type = WATER;
-				for (; y < my / 2; y++)
+				for (; y < level->sea_height && y < my; y++)
 				{
 					level_set_block(level, &block, level_get_index(level, x, y, z));
 				}
 			}
 		}
 
-		block.type = AIR;
-		for (i = 0; i < 5; i++)
+//		block.type = AIR;
+		for (i = 0; i < 16; i++)
 		{
 			level_gen_heightmap(cmh, mx, mz, level->type - 2);
 			level_gen_heightmap(cmd, mx, mz, level->type - 2);
 
 			int base = cmd[0] * my;
 
-			/*switch (i % 4)
+			switch (i % 8)
 			{
-				case 0: block.type = ROCK; break;
-				case 1: block.type = DIRT; break;
-				case 2: block.type = AIR; break;
-				case 3: block.type = AIR; break;
-			}*/
+				case 0: block.type = AIR; break;
+				case 1: block.type = ROCK; break;
+				case 2: block.type = DIRT; break;
+				case 3: block.type = GRAVEL; break;
+				case 4: block.type = SAND; break;
+				case 5: block.type = GOLDROCK; break;
+				case 6: block.type = IRONROCK; break;
+				case 7: block.type = COAL; break;
+			}
 
 			for (z = 0; z < mz; z++)
 			{
@@ -537,7 +541,7 @@ void *level_gen_thread(void *arg)
 						//int cdi = base + cd * my / 8;// / 1.5f;
 						//int chi = ch * my / 4 + cdi;//di + (ch - 0.5f) * my / 3.0f;
 						int cdi = cd * h * 1.2;
-						int chi = ch * h * 1.2;
+						int chi = cdi + ch * h * 0.25;
 						if (cdi > chi) {
 							cdi = cdi ^ chi;
 							chi = cdi ^ chi;
@@ -659,6 +663,8 @@ void *level_gen_thread(void *arg)
 		level_set_block(level, &block, level_get_index(level, x, y, z));
 	}*/
 
+	level->physics.used = 0;
+
 	/* Activate physics */
 	int count = mx * my * mz;
 	for (i = 0; i < count; i++)
@@ -683,9 +689,11 @@ void *level_gen_thread(void *arg)
 	return NULL;
 }
 
-void level_gen(struct level_t *level, int type)
+void level_gen(struct level_t *level, int type, int height_range, int sea_height)
 {
 	level->type = type;
+	level->height_range = height_range;
+	level->sea_height = sea_height;
 
 	pthread_mutex_lock(&level->mutex);
 	if (level->thread_valid)
@@ -867,7 +875,7 @@ static void *level_load_thread(void *arg)
 			unsigned n;
 			unsigned u;
 			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "uservisit count");
-			if (version < 3 && gzread(gz, &u, sizeof n) != sizeof u || u != 0) return level_load_thread_abort(l, "uservisit count (old)");
+			if (version < 3 && gzread(gz, &u, sizeof n) != sizeof u && u != 0) return level_load_thread_abort(l, "uservisit count (old)");
 			for (i = 0; i < (int)n; i++)
 			{
 				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "uservisit");
@@ -875,7 +883,7 @@ static void *level_load_thread(void *arg)
 			}
 
 			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "userbuild count");
-			if (version < 3 && gzread(gz, &u, sizeof n) != sizeof u || u != 0) return level_load_thread_abort(l, "userbuild count (old)");
+			if (version < 3 && gzread(gz, &u, sizeof n) != sizeof u && u != 0) return level_load_thread_abort(l, "userbuild count (old)");
 			for (i = 0; i < (int)n; i++)
 			{
 				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userbuild");

@@ -60,6 +60,9 @@ struct level_t
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
 
 	int type;
+	int height_range;
+	int sea_height;
+
 	bool changed;
 	pthread_t thread;
 	bool thread_valid;
@@ -82,7 +85,7 @@ static inline unsigned level_get_index(struct level_t *level, unsigned x, unsign
 bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const char *name, bool zero);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 bool level_send(struct client_t *client);
-void level_gen(struct level_t *level, int type);
+void level_gen(struct level_t *level, int type, int height_range, int sea_height);
 bool level_get_by_name(const char *name, struct level_t **level);
 bool level_load(const char *name, struct level_t **level);
 void level_save_all(void *arg);
