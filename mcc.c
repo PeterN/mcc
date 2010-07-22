@@ -80,11 +80,12 @@ int main(int argc, char **argv)
 		level_list_add(&s_levels, l);
 	}
 
-	g_server.name = "TEST TEST TEST";
+	g_server.name = "TEST TEST TEST 2";
 	g_server.motd = "Test server for Just Another Minecraft Server";
 	g_server.max_players = 20;
 	g_server.players = 0;
-	g_server.public = true;
+	g_server.port = 25566;
+	g_server.public = false;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
@@ -101,10 +102,10 @@ int main(int argc, char **argv)
 
 	playerdb_init();
 
-	net_init();
+	net_init(g_server.port);
 
 	module_load("heartbeat.so");
-	module_load("irc.so");
+	//module_load("irc.so");
 	//irc_start();
 
 	register_timer("save levels", 120000, &level_save_all, NULL);

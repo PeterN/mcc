@@ -864,9 +864,10 @@ static void *level_load_thread(void *arg)
 			if (gzread(gz, &l->rankvisit, sizeof l->rankvisit) != sizeof l->rankvisit) return level_load_thread_abort(l, "rankvisit");
 			if (gzread(gz, &l->rankbuild, sizeof l->rankbuild) != sizeof l->rankbuild) return level_load_thread_abort(l, "rankbuild");
 
-			size_t n;
+			unsigned n;
 			unsigned u;
 			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "uservisit count");
+			if (version < 3 && gzread(gz, &u, sizeof n) != sizeof u || u != 0) return level_load_thread_abort(l, "uservisit count (old)");
 			for (i = 0; i < (int)n; i++)
 			{
 				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "uservisit");
@@ -874,6 +875,7 @@ static void *level_load_thread(void *arg)
 			}
 
 			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "userbuild count");
+			if (version < 3 && gzread(gz, &u, sizeof n) != sizeof u || u != 0) return level_load_thread_abort(l, "userbuild count (old)");
 			for (i = 0; i < (int)n; i++)
 			{
 				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userbuild");
@@ -968,7 +970,7 @@ void *level_save_thread(void *arg)
 	}
 
 	unsigned header  = 'MCLV';
-	unsigned version = 2;
+	unsigned version = 3;
 	gzwrite(gz, &header, sizeof header);
 	gzwrite(gz, &version, sizeof version);
 
@@ -983,13 +985,15 @@ void *level_save_thread(void *arg)
 	gzwrite(gz, &l->rankbuild, sizeof l->rankbuild);
 
 	unsigned i;
-	gzwrite(gz, &l->uservisit.used, sizeof l->uservisit.used);
+	i = l->uservisit.used;
+	gzwrite(gz, &i, sizeof i);
 	for (i = 0; i < l->uservisit.used; i++)
 	{
 		gzwrite(gz, &l->uservisit.items[i], sizeof l->uservisit.items[i]);
 	}
 
-	gzwrite(gz, &l->userbuild.used, sizeof l->userbuild.used);
+	i = l->userbuild.used;
+	gzwrite(gz, &i, sizeof i);
 	for (i = 0; i < l->userbuild.used; i++)
 	{
 		gzwrite(gz, &l->userbuild.items[i], sizeof l->userbuild.items[i]);

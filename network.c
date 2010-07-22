@@ -85,7 +85,7 @@ void net_set_nonblock(int fd)
 	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
-void net_init()
+void net_init(int port)
 {
 	s_listenfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (s_listenfd < 0)
@@ -96,7 +96,7 @@ void net_init()
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serv_addr.sin_port = htons(25565);
+	serv_addr.sin_port = htons(port);
 
 	if (bind(s_listenfd, (struct sockaddr *)&serv_addr, sizeof serv_addr) < 0)
 	{
@@ -142,8 +142,11 @@ void net_close(struct client_t *c, const char *reason)
 			}
 		}
 
-		client_send_despawn(c, false);
-		c->player->level->clients[c->player->levelid] = NULL;
+		if (c->player->level != NULL)
+		{
+			client_send_despawn(c, false);
+			c->player->level->clients[c->player->levelid] = NULL;
+		}
 
 		if (reason == NULL)
 		{

@@ -11,6 +11,7 @@ struct server_t
 	char *motd;
 	int max_players;
 	int players;
+	int port;
 	bool public;
 	bool exit;
 	time_t start_time;

@@ -17,7 +17,7 @@ struct socket_t
 void register_socket(int fd, socket_func_t socket_func, void *arg);
 void deregister_socket(int fd);
 
-void net_init();
+void net_init(int port);
 void net_run();
 void net_close(struct client_t *c, const char *reason);
 
