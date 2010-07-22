@@ -223,7 +223,7 @@ CMD(cuboid)
 		c->player->cuboid_type = blocktype_get_by_name(param[1]);
 		if (c->player->cuboid_type == BLOCK_INVALID)
 		{
-			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+			snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
 			return false;
 		}
 		else if (c->player->cuboid_type == ADMINIUM && c->player->rank < RANK_OP)
@@ -935,7 +935,7 @@ CMD(replace)
 {
 	char buf[64];
 
-	if (params > 3) return true;
+	if (params != 2 && params != 3) return true;
 
 	c->player->replace_type = blocktype_get_by_name(param[1]);
 	if (c->player->replace_type == BLOCK_INVALID)
