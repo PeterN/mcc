@@ -104,7 +104,7 @@ int playerdb_get_globalid(const char *username, bool add, bool *added)
 	int i;
 	int res;
 
-	if (added != NULL) added = false;
+	if (added != NULL) *added = false;
 
 	for (i = 0; i < (add ? 2 : 1); i++)
 	{
