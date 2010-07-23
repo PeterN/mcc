@@ -1076,10 +1076,12 @@ void level_save_all(void *arg)
 
 static bool level_is_empty(const struct level_t *l)
 {
-	int i;
-	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	unsigned i;
+	for (i = 0; i < s_clients.used; i++)
 	{
-		if (l->clients[i] != NULL) return false;
+		const struct client_t *c = s_clients.items[i];
+		if (c->player == NULL) continue;
+		if (c->player->level == l || c->player->new_level == l) return false;
 	}
 
 	return true;
