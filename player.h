@@ -62,9 +62,6 @@ struct player_t
 	enum blocktype_t cuboid_type;
 	enum blocktype_t replace_type;
 
-	FILE *undo_log;
-	char undo_log_name[256];
-
 	enum blocktype_t bindings[BLOCK_END];
 };
 
@@ -80,7 +77,6 @@ void player_move(struct player_t *player, struct position_t *pos);
 
 void player_info();
 
-void player_undo_log(struct player_t *player, unsigned index);
 void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp);
 
 enum rank_t rank_get_by_name(const char *rank);

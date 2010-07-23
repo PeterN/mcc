@@ -63,22 +63,7 @@ void player_del(struct player_t *player)
 	player_list_del_item(&s_players, player);
 	g_server.players--;
 
-	if (player->undo_log != NULL)
-	{
-		fclose(player->undo_log);
-	}
-
 	free(player);
-}
-
-static void player_change_undo_log(struct player_t *player, struct level_t *level)
-{
-	if (player->undo_log != NULL)
-	{
-		fclose(player->undo_log);
-	}
-
-	player->undo_log = NULL;
 }
 
 bool player_change_level(struct player_t *player, struct level_t *level)
@@ -86,8 +71,6 @@ bool player_change_level(struct player_t *player, struct level_t *level)
 	if (player->level == level) return false;
 
 	player->new_level = level;
-
-	player_change_undo_log(player, level);
 
 	return true;
 }
@@ -183,29 +166,6 @@ void player_info()
 	}
 }
 
-void player_undo_log(struct player_t *player, unsigned index)
-{
-	/* Don't store undo logs for privileged users */
-	if (player->rank >= RANK_ADV_BUILDER) return;
-
-	if (player->undo_log == NULL)
-	{
-		time_t t = time(NULL);
-		snprintf(player->undo_log_name, sizeof player->undo_log_name, "undo/%s_%s_%lu.bin", player->level->name, player->username, t);
-		lcase(player->undo_log_name);
-
-		player->undo_log = fopen(player->undo_log_name, "wb");
-		if (player->undo_log == NULL)
-		{
-			LOG("Unable to open undo log %s", player->undo_log_name);
-			return;
-		}
-	}
-
-	fwrite(&index, sizeof index, 1, player->undo_log);
-	fwrite(&player->level->blocks[index], sizeof player->level->blocks[index], 1, player->undo_log);
-}
-
 void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp)
 {
 	struct level_t *level;
@@ -217,13 +177,6 @@ void player_undo(struct client_t *c, const char *username, const char *levelname
 	char buf[256];
 	snprintf(buf, sizeof buf, "undo/%s_%s_%s.bin", levelname, username, timestamp);
 	lcase(buf);
-
-	struct player_t *player = player_get_by_name(username);
-	if (player != NULL && strcasecmp(player->undo_log_name, buf) == 0)
-	{
-		/* Can't playback existing undo log, so... make a new one */
-		player_change_undo_log(player, level);
-	}
 
 	FILE *f = fopen(buf, "rb");
 

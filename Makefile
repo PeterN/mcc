@@ -14,6 +14,7 @@ LIBSRC += packet.c
 LIBSRC += player.c
 LIBSRC += playerdb.c
 LIBSRC += timer.c
+LIBSRC += undodb.c
 LIBOBJ := $(LIBSRC:.c=.o)
 LIBO := libmcc.so
 

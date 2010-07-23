@@ -11,6 +11,7 @@
 #define MAX_CLIENTS_PER_LEVEL 64
 
 struct client_t;
+struct undodb_t;
 
 static inline bool user_compare(unsigned *a, unsigned *b)
 {
@@ -58,6 +59,8 @@ struct level_t
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
+
+	struct undodb_t *undo;
 
 	int type;
 	int height_range;

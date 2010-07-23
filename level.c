@@ -14,6 +14,7 @@
 #include "player.h"
 #include "playerdb.h"
 #include "network.h"
+#include "undodb.h"
 #include "util.h"
 
 struct level_list_t s_levels;
@@ -717,6 +718,8 @@ void level_unload(struct level_t *level)
 	physics_list_free(&level->physics);
 	block_update_list_free(&level->updates);
 
+	undodb_close(level->undo);
+
 	free(level->blocks);
 	free(level);
 }
@@ -1287,7 +1290,12 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 	if (bt != nt)
 	{
-		player_undo_log(client->player, index);
+		if (level->undo == NULL)
+		{
+			level->undo = undodb_init(level->name);
+		}
+		undodb_log(level->undo, client->player->globalid, x, y, z, b->type, b->data, nt);
+//		player_undo_log(client->player, index);
 
 		bool oldphysics = b->physics;
 
