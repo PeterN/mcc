@@ -904,8 +904,6 @@ static void *level_load_thread(void *arg)
 
 	pthread_mutex_unlock(&l->mutex);
 
-	net_notify_all(buf);
-
 	return NULL;
 }
 
