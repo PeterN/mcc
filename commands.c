@@ -297,7 +297,7 @@ CMD(filter)
 		client_notify(c, "Filtering disabled");
 	}
 
-	level_send(c);
+	c->waiting_for_level = true;
 
 	return false;
 }
@@ -511,6 +511,45 @@ CMD(info)
 	char buf[64];
 	snprintf(buf, sizeof buf, "Block info %s", (c->player->mode == MODE_INFO) ? "on" : "off");
 	client_notify(c, buf);
+
+	return false;
+}
+
+static const char help_instant[] =
+"/instant\n"
+"Toggle instant mode for the current level. Cuboid and physics will not send updates to the client "
+"until instant is turned off again.";
+
+CMD(instant)
+{
+	struct level_t *l = c->player->level;
+
+	if (l == NULL) return false;
+
+	if (l->instant)
+	{
+		l->instant = false;
+
+		unsigned i;
+		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+		{
+			if (l->clients[i] == NULL) continue;
+
+			l->clients[i]->waiting_for_level = true;
+			client_notify(l->clients[i], "Instant mode turned off");
+		}
+	}
+	else
+	{
+		l->instant = true;
+
+		unsigned i;
+		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+		{
+			if (l->clients[i] == NULL) continue;
+			client_notify(l->clients[i], "Instant mode turned on");
+		}
+	}
 
 	return false;
 }
@@ -942,7 +981,7 @@ CMD(place)
 	if (params == 2)
 	{
 		x = c->player->pos.x / 32;
-		y = c->player->pos.y / 32;
+		y = c->player->pos.y / 32 - 1;
 		z = c->player->pos.z / 32;
 	}
 	else
@@ -1448,6 +1487,7 @@ struct command_t s_commands[] = {
 	{ "home", RANK_GUEST, &cmd_home, help_home },
 	{ "identify", RANK_GUEST, &cmd_identify, help_identify },
 	{ "info", RANK_BUILDER, &cmd_info, help_info },
+	{ "instant", RANK_OP, &cmd_instant, help_instant },
 	{ "kick", RANK_OP, &cmd_kick, help_kick },
 	{ "lava", RANK_BUILDER, &cmd_lava, help_lava },
 	{ "levels", RANK_GUEST, &cmd_levels, help_levels },

@@ -64,6 +64,7 @@ struct level_t
 	int sea_height;
 
 	bool changed;
+	bool instant;
 	pthread_t thread;
 	bool thread_valid;
 	bool convert;

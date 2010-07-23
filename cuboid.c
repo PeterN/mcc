@@ -44,7 +44,7 @@ void cuboid_process()
 
 					enum blocktype_t pt2 = convert(c->level, index, b);
 
-					if (pt1 != pt2)
+					if (!c->level->instant && pt1 != pt2)
 					{
 						unsigned j;
 						for (j = 0; j < s_clients.used; j++)

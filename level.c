@@ -373,13 +373,13 @@ static void level_normalize(float *map, int mx, int mz)
 			h -= hmin;
 			h /= (hmax - hmin);
 			h = h < 0.0 ? 0.0 : h >= 1.0f ? 1.0f : h;//(asin(h * 2.0f - 1.0f) / M_PI + 0.5f);
-			if (h < 0.5) {
+/*			if (h < 0.5) {
 				h = sin((h - 0.25f) * 2 * M_PI) / 4.0f + 0.25f;
 			}
 			else
 			{
 				h = sin((h - 0.75f) * 2 * M_PI) / 4.0f + 0.75f;
-			}
+			}*/
 			map[x + z * dmx] = h;
 		}
 	}
@@ -477,8 +477,8 @@ void *level_gen_thread(void *arg)
 	else
 	{
 		float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
-		float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
-		float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);
+/*		float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
+		float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);*/
 
 		level_gen_heightmap(hm, mx, mz, level->type - 2);
 		//level_smooth_slopes(hm, mx, mz, my);
@@ -506,6 +506,7 @@ void *level_gen_thread(void *arg)
 		}
 
 //		block.type = AIR;
+/*
 		for (i = 0; i < 16; i++)
 		{
 			level_gen_heightmap(cmh, mx, mz, level->type - 2);
@@ -561,10 +562,10 @@ void *level_gen_thread(void *arg)
 				}
 			}
 		}
-
+*/
 		free(hm);
-		free(cmd);
-		free(cmh);
+/*		free(cmd);
+		free(cmh);*/
 
 		block.type = WATER;
 		for (i = 0; i < 100; i++)
@@ -711,11 +712,7 @@ void level_gen(struct level_t *level, int type, int height_range, int sea_height
 
 void level_unload(struct level_t *level)
 {
-	char buf[64];
-	snprintf(buf, sizeof buf, "Level '%s' unloaded", level->name);
-	net_notify_all(buf);
-
-	//LOG(buf);
+	LOG("Level '%s' unloaded\n", level->name);
 
 	physics_list_free(&level->physics);
 	block_update_list_free(&level->updates);
@@ -740,6 +737,8 @@ static void *level_load_thread_abort(struct level_t *level, const char *reason)
 			c->player->new_level = c->player->level;
 			c->waiting_for_level = false;
 			LOG("Aborted level change for %s\n", c->player->username);
+
+			client_notify(c, "Level change aborted...");
 		}
 	}
 
@@ -901,13 +900,9 @@ static void *level_load_thread(void *arg)
 
 	gzclose(gz);
 
-	char buf[64];
-	snprintf(buf, sizeof buf, "Level '%s' loaded", l->name);
-
-	//LOG("%s\n", buf);
+	LOG("Level '%s' loaded\n", l->name);
 
 	pthread_mutex_unlock(&l->mutex);
-	//if (level != NULL) *level = l;
 
 	net_notify_all(buf);
 
@@ -1009,11 +1004,7 @@ void *level_save_thread(void *arg)
 
 	gzclose(gz);
 
-	//LOG("Level '%s' saved\n", l->name);
-
-	char buf[64];
-	snprintf(buf, sizeof buf, "Level '%s' saved", l->name);
-	net_notify_all(buf);
+	LOG("Level '%s' saved\n", l->name);
 
 	pthread_mutex_unlock(&l->mutex);
 
@@ -1532,8 +1523,8 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 		int16_t x, y, z;
 		level_get_xyz(level, bu->index, &x, &y, &z);
 
-		/* Don't send client updates when in "no limits" mode */
-		if (limit && pt1 != pt2)
+		/* Don't send client updates when in "no limits" or instant mode */
+		if (limit && !level->instant && pt1 != pt2)
 		{
 			unsigned j;
 			for (j = 0; j < s_clients.used; j++)
