@@ -4,6 +4,8 @@
 #include "mcc.h"
 #include "block.h"
 #include "level.h"
+#include "client.h"
+#include "colour.h"
 
 static struct blocktype_desc_list_t s_blocks;
 
@@ -41,7 +43,15 @@ int register_blocktype(enum blocktype_t type, const char *name, convert_func_t c
 	}
 
 	struct blocktype_desc_t *descp = &s_blocks.items[type];
+
+	if (descp->loaded)
+	{
+		LOG("Block type %s already registered\n", descp->name);
+		return BLOCK_INVALID;
+	}
+
 	descp->name = name;
+	descp->loaded = true;
 	descp->convert_func = convert_func;
 	descp->trigger_func = trigger_func;
 	descp->physics_func = physics_func;
@@ -52,7 +62,10 @@ int register_blocktype(enum blocktype_t type, const char *name, convert_func_t c
 
 void deregister_blocktype(enum blocktype_t type)
 {
+	if (type == BLOCK_INVALID) return;
+
 	struct blocktype_desc_t *descp = &s_blocks.items[type];
+	descp->loaded = false;
 	descp->convert_func = NULL;
 	descp->trigger_func = NULL;
 	descp->physics_func = NULL;
@@ -93,10 +106,7 @@ void physics(struct level_t *level, unsigned index, const struct block_t *block)
 	{
 		btd->physics_func(level, index, block);
 	}
-	else
-	{
-		level->blocks[index].physics = false;
-	}
+	level->blocks[index].physics = false;
 }
 
 void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, int16_t z, bool gravity)
@@ -581,6 +591,7 @@ enum blocktype_t blocktype_get_by_name(const char *name)
 	unsigned i;
 	for (i = 0; i < s_blocks.used; i++)
 	{
+		if (s_blocks.items[i].name == NULL) continue;
 		if (strcasecmp(s_blocks.items[i].name, name) == 0) return i;
 	}
 
@@ -616,4 +627,35 @@ struct block_t block_convert_from_mcs(uint8_t type)
 bool blocktype_has_physics(enum blocktype_t type)
 {
 	return s_blocks.items[type].physics_func != NULL;
+}
+
+void blocktype_list(struct client_t *c)
+{
+	char buf[64];
+	char *bufp = buf;
+	unsigned i;
+
+	memset(buf, 0, sizeof buf);
+
+	for (i = 0; i < s_blocks.used; i++)
+	{
+		const struct blocktype_desc_t *b = &s_blocks.items[i];
+		if (b->name == NULL) continue;
+
+		char buf2[64];
+		snprintf(buf2, sizeof buf2, "%s%s%s%s", !b->loaded ? TAG_YELLOW : "", b->name, !b->loaded ? TAG_WHITE : "", (i < s_blocks.used - 1) ? ", " : "");
+
+		size_t len = strlen(buf2);
+		if (len >= sizeof buf - (bufp - buf))
+		{
+			client_notify(c, buf);
+			memset(buf, 0, sizeof buf);
+			bufp = buf;
+		}
+
+		strcpy(bufp, buf2);
+		bufp += len;
+	}
+
+	client_notify(c, buf);
 }

@@ -106,6 +106,7 @@ typedef void(*physics_func_t)(struct level_t *l, unsigned index, const struct bl
 struct blocktype_desc_t
 {
 	const char *name;
+	bool loaded;
 	convert_func_t convert_func;
 	trigger_func_t trigger_func;
 	physics_func_t physics_func;
@@ -131,5 +132,9 @@ void deregister_blocktype(enum blocktype_t type);
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block);
 int trigger(struct level_t *level, unsigned index, const struct block_t *block);
 void physics(struct level_t *level, unsigned index, const struct block_t *block);
+
+struct client_t;
+
+void blocktype_list(struct client_t *c);
 
 #endif /* BLOCK_H */

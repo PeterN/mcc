@@ -19,12 +19,19 @@ static inline bool user_compare(unsigned *a, unsigned *b)
 }
 LIST(user, unsigned, user_compare)
 
+/* Teleporter types */
+enum {
+	TP_TELEPORT,
+	TP_TRIGGER,
+};
+
 struct teleporter_t
 {
 	char name[32];
 	char dest[32];
 	char dest_level[32];
 	struct position_t pos;
+	int type;
 };
 
 static inline bool teleporter_t_compare(struct teleporter_t *a, struct teleporter_t *b)
@@ -99,7 +106,7 @@ void level_unload_empty(void *arg);
 void level_change_block(struct level_t *level, struct client_t *c, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click);
 void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index);
 
-void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level);
+void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level, int type);
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 void physics_remove(struct level_t *level, unsigned index);

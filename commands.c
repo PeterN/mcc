@@ -16,6 +16,7 @@
 #include "playerdb.h"
 #include "mcc.h"
 #include "network.h"
+#include "module.h"
 
 void notify_file(struct client_t *c, const char *filename)
 {
@@ -169,6 +170,17 @@ CMD(bind)
 			client_notify(c, buf);
 			break;
 	}
+	return false;
+}
+
+static const char help_blocks[] =
+"/blocks\n"
+"List all block types available.";
+
+CMD(blocks)
+{
+	blocktype_list(c);
+
 	return false;
 }
 
@@ -750,6 +762,43 @@ CMD(module_unload)
 	return false;
 }
 
+static const char help_modules[] =
+"/modules\n"
+"List loaded modules.";
+
+CMD(modules)
+{
+	char buf[64];
+	char *bufp;
+	unsigned i;
+
+	strcpy(buf, "Modules: ");
+	bufp = buf + strlen(buf);
+
+	for (i = 0; i < s_modules.used; i++)
+	{
+		const char *name = s_modules.items[i]->name;
+
+		char buf2[64];
+		snprintf(buf2, sizeof buf2, "%s%s", name, (i < s_modules.used - 1) ? ", " : "");
+
+		size_t len = strlen(buf2);
+		if (len >= sizeof buf - (bufp - buf))
+		{
+			client_notify(c, buf);
+			memset(buf, 0, sizeof buf);
+			bufp = buf;
+		}
+
+		strcpy(bufp, buf2);
+		bufp += len;
+	}
+
+	client_notify(c, buf);
+
+	return false;
+}
+
 static const char help_motd[] =
 "/motd\n"
 "Display the server's Message of the Day.";
@@ -1269,7 +1318,7 @@ CMD(teleporter)
 {
 	if (params < 2 || params > 5) return true;
 
-	level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3]);
+	level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3], param[4]);
 
 	return false;
 }
@@ -1477,6 +1526,7 @@ struct command_t s_commands[] = {
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },
 	{ "bind", RANK_ADV_BUILDER, &cmd_bind, help_bind },
+	{ "blocks", RANK_BUILDER, &cmd_blocks, help_blocks },
 	{ "commands", RANK_BANNED, &cmd_commands, help_commands },
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
@@ -1499,6 +1549,7 @@ struct command_t s_commands[] = {
 	{ "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
 	{ "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
 	{ "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
+	{ "modules", RANK_ADMIN, &cmd_modules, help_modules },
 	{ "motd", RANK_BANNED, &cmd_motd, help_motd },
 	{ "newlvl", RANK_ADV_BUILDER, &cmd_newlvl, help_newlvl },
 	{ "opglass", RANK_OP, &cmd_opglass, help_opglass },

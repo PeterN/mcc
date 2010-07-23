@@ -105,6 +105,15 @@ void player_send_position(struct player_t *player)
 
 	if (changed == 0) return;
 
+	if (player->level != NULL)
+	{
+		unsigned index = level_get_index(player->level, player->pos.x, player->pos.y, player->pos.z);
+		if (player->level->blocks[index].teleporter == 1)
+		{
+			level_process_teleporter(player);
+		}
+	}
+
 	//printf("%s changed: %dx%dx%d (%d %d)\n", player->username, player->pos.x, player->pos.y, player->pos.z, player->pos.h, player->pos.p);
 
 	//changed = 4;

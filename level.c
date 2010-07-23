@@ -1388,7 +1388,7 @@ static void level_unmark_teleporter(struct level_t *level, struct position_t *po
 	level->blocks[index].teleporter = 0;
 }
 
-void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level)
+void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level, int type)
 {
 	unsigned i = 0;
 	for (i = 0; i < level->teleporters.used; i++)
@@ -1400,6 +1400,7 @@ void level_set_teleporter(struct level_t *level, const char *name, struct positi
 			t->pos = *pos;
 			if (dest != NULL) strncpy(t->dest, dest, sizeof t->dest);
 			if (dest_level != NULL) strncpy(t->dest_level, dest_level, sizeof t->dest_level);
+			t->type = type;
 			level_mark_teleporter(level, pos);
 			return;
 		}
@@ -1411,9 +1412,40 @@ void level_set_teleporter(struct level_t *level, const char *name, struct positi
 	t.pos = *pos;
 	if (dest != NULL) strncpy(t.dest, dest, sizeof t.dest);
 	if (dest_level != NULL) strncpy(t.dest_level, dest_level, sizeof t.dest_level);
+	t.type = type;
 
 	teleporter_list_add(&level->teleporters, t);
 	level_mark_teleporter(level, pos);
+}
+
+static bool position_match(const struct position_t *a, const struct position_t *b, int area)
+{
+	if (abs(a->x - b->x) >= area) return false;
+	if (abs(a->y - b->y) >= area) return false;
+	if (abs(a->z - b->z) >= area) return false;
+	return true;
+}
+
+void level_process_teleporter(struct player_t *p)
+{
+	struct level_t *l = p->level;
+
+	unsigned i;
+	for (i = 0; i < l->teleporters.used; i++)
+	{
+		struct teleporter_t *t = &l->teleporters.items[i];
+		if (!position_match(&t->pos, &p->pos, 32)) continue;
+
+		switch (t->type)
+		{
+			case TP_TELEPORT:
+				break;
+
+			case TP_TRIGGER:
+				
+				break;
+		}
+	}
 }
 
 static int gettime()
@@ -1539,7 +1571,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 		}
 
 		b->data = bu->newdata;
-		//if (b->physics) b->physics = blocktype_has_physics(b->type);
+		b->physics = blocktype_has_physics(b->type);
 		if (b->physics) physics_list_add(&level->physics, bu->index);
 
 		enum blocktype_t pt2 = convert(level, bu->index, b);
@@ -1594,18 +1626,18 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 		struct block_update_t *bu = &level->updates.items[i];
 		if (index == bu->index) {
 			/* Reset physics bit again */
-			if (bu->newtype == BLOCK_INVALID)
+		/*	if (bu->newtype == BLOCK_INVALID)
 			{
 				level->blocks[index].physics = blocktype_has_physics(level->blocks[index].type);
 			}
 			else
 			{
 				level->blocks[index].physics = blocktype_has_physics(bu->newtype);
-			}
+			}*/
 			return;
 		}
 	}
-
+/*
 	if (newtype == BLOCK_INVALID)
 	{
 		level->blocks[index].physics = blocktype_has_physics(level->blocks[index].type);
@@ -1614,7 +1646,7 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 	{
 		level->blocks[index].physics = blocktype_has_physics(newtype);
 	}
-
+*/
 	struct block_update_t bu;
 	bu.index = index;
 	bu.newtype = newtype;
