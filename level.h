@@ -90,6 +90,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 bool level_send(struct client_t *client);
 void level_gen(struct level_t *level, int type, int height_range, int sea_height);
+bool level_is_loaded(const char *name);
 bool level_get_by_name(const char *name, struct level_t **level);
 bool level_load(const char *name, struct level_t **level);
 void level_save_all(void *arg);

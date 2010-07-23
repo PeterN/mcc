@@ -625,19 +625,23 @@ CMD(levels)
 		char *ext = strrchr(namelist[i]->d_name, '.');
 		if (ext != NULL) *ext = '\0';
 
-		size_t len = strlen(namelist[i]->d_name) + (i < n - 1 ? 2 : 0);
+		bool loaded = level_is_loaded(namelist[i]->d_name);
+
+		char buf2[64];
+		snprintf(buf2, sizeof buf2, "%s%s%s%s", loaded ? TAG_GREEN : "", namelist[i]->d_name, loaded ? TAG_WHITE : "", (i < n - 1) ? ", " : "");
+
+		size_t len = strlen(buf2);
 		if (len >= sizeof buf - (bufp - buf))
 		{
 			client_notify(c, buf);
+			memset(buf, 0, sizeof buf);
 			bufp = buf;
 		}
 
-		strcpy(bufp, namelist[i]->d_name);
+		strcpy(bufp, buf2);
 		bufp += len;
 
 		free(namelist[i]);
-
-		if (i < n - 1) strcpy(bufp - 2, ", ");
 	}
 
 	client_notify(c, buf);

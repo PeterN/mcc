@@ -1028,6 +1028,23 @@ void level_save(struct level_t *l)
 	}
 }
 
+bool level_is_loaded(const char *name)
+{
+	unsigned i;
+	const struct level_t *l;
+
+	for (i = 0; i < s_levels.used; i++)
+	{
+		l = s_levels.items[i];
+		if (l != NULL && strcasecmp(l->name, name) == 0)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool level_get_by_name(const char *name, struct level_t **level)
 {
 	unsigned i;
