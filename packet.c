@@ -122,19 +122,24 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 {
 	char buf[64];
 
-	/* uint8_t version = */ packet_recv_byte(p);
+	if (c->player != NULL)
+	{
+		net_close(c, "already logged in");
+		return;
+	}
+
+	uint8_t version = packet_recv_byte(p);
+	if (version != 7)
+	{
+		net_close(c, "invalid protocol");
+		return;
+	}
+
 	char *username = packet_recv_string(p);
 	char *key = packet_recv_string(p);
 	/* uint8_t unused = */ packet_recv_byte(p);
 
-	if (c->player != NULL)
-	{
-		net_close(c, "already logged in");
-
-		free(username);
-		free(key);
-		return;
-	}
+	LOG("%s - %s\n", username, key);
 
 	const char *type;
 

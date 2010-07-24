@@ -1,4 +1,4 @@
-CFLAGS := -W -g
+CFLAGS := -Wall -g
 LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 
 LIBSRC := block.c
@@ -7,10 +7,13 @@ LIBSRC += colour.c
 LIBSRC += commands.c
 LIBSRC += config.c
 LIBSRC += cuboid.c
+LIBSRC += faultgen.c
+LIBSRC += filter.c
 LIBSRC += level.c
 LIBSRC += module.c
 LIBSRC += network.c
 LIBSRC += packet.c
+LIBSRC += perlin.c
 LIBSRC += player.c
 LIBSRC += playerdb.c
 LIBSRC += timer.c

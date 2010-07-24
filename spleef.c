@@ -15,29 +15,29 @@ static struct spleef_t
 
 static enum blocktype_t convert_spleef1(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	return block->data == 1 ? s.air : s.floor1;
+	//return block->data == 1 ? s.air : s.floor1;
 
-/*	switch (block->data)
+	switch (block->data)
 	{
 		case 0: return s.floor1;
 		case 1: return s.air;
 		case 2: return RED;
-		case 3: return BLUE;
-	}*/
+		default: return BLUE;
+	}
 //	return block->data ? s.air : s.floor1;
 }
 
 static enum blocktype_t convert_spleef2(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	return block->data == 1 ? s.air : s.floor2;
+	//return block->data == 1 ? s.air : s.floor2;
 
-/*	switch (block->data)
+	switch (block->data)
 	{
 		case 0: return s.floor2;
 		case 1: return s.air;
 		case 2: return RED;
-		case 3: return BLUE;
-	}*/
+		default: return BLUE;
+	}
 //
 //	return block->data ? s.air : s.floor2;
 }
@@ -65,19 +65,27 @@ static void physics_spleef(struct level_t *level, unsigned index, const struct b
 	int16_t x, y, z;
 	level_get_xyz(level, index, &x, &y, &z);
 
-	if (level->blocks[index].data < 2) return;
-	if (level->blocks[index].data == 3)
+	switch (block->data)
 	{
-		level_addupdate(level, index, -1, 0);
-		return;
+		case 0:
+		case 1:
+			return;
+
+		case 2:
+			physics_spleef_sub(level, x - 1, y, z);
+			physics_spleef_sub(level, x + 1, y, z);
+			physics_spleef_sub(level, x, y, z - 1);
+			physics_spleef_sub(level, x, y, z + 1);
+			/* Fall through */
+
+		default:
+			level_addupdate(level, index, -1, block->data + 1);
+			break;
+
+		case 10:
+			level_addupdate(level, index, -1, 0);
+			break;
 	}
-
-	physics_spleef_sub(level, x - 1, y, z);
-	physics_spleef_sub(level, x + 1, y, z);
-	physics_spleef_sub(level, x, y, z - 1);
-	physics_spleef_sub(level, x, y, z + 1);
-
-	level_addupdate(level, index, -1, 3);
 }
 
 static enum blocktype_t convert_spleeft(struct level_t *level, unsigned index, const struct block_t *block)
@@ -104,9 +112,9 @@ void module_init(void **data)
 	s.floor2 = blocktype_get_by_name("gold");
 	s.green = blocktype_get_by_name("green");
 
-	s.spleef1 = register_blocktype(-1, "spleef1", &convert_spleef1, &trigger_spleef, &physics_spleef);
-	s.spleef2 = register_blocktype(-1, "spleef2", &convert_spleef2, &trigger_spleef, &physics_spleef);
-	s.spleeft = register_blocktype(-1, "spleeft", &convert_spleeft, &trigger_spleeft, NULL);
+	s.spleef1 = register_blocktype(BLOCK_INVALID, "spleef1", &convert_spleef1, &trigger_spleef, &physics_spleef);
+	s.spleef2 = register_blocktype(BLOCK_INVALID, "spleef2", &convert_spleef2, &trigger_spleef, &physics_spleef);
+	s.spleeft = register_blocktype(BLOCK_INVALID, "spleeft", &convert_spleeft, &trigger_spleeft, NULL);
 }
 
 void module_deinit(void *data)

@@ -125,6 +125,6 @@ void physics_wire3d(struct level_t *l, unsigned index, const struct block_t *blo
 
 void module_init(void **data)
 {
-	s.wire = register_blocktype(-1, "wire", &convert_wire, &trigger_wire, &physics_wire);
-	s.wire3d = register_blocktype(-1, "wire3d", &convert_wire, &trigger_wire, &physics_wire3d);
+	s.wire = register_blocktype(BLOCK_INVALID, "wire", &convert_wire, &trigger_wire, &physics_wire);
+	s.wire3d = register_blocktype(BLOCK_INVALID, "wire3d", &convert_wire, &trigger_wire, &physics_wire3d);
 }

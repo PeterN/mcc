@@ -45,6 +45,8 @@ struct player_t *player_add(const char *username, bool *newuser)
 	sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
 	p->globalid = globalid;
 
+	if (p->rank > RANK_BUILDER) p->rank = RANK_BUILDER;
+
 	enum blocktype_t i;
 	for (i = 0; i < BLOCK_END; i++)
 	{
@@ -107,10 +109,16 @@ void player_send_position(struct player_t *player)
 
 	if (player->level != NULL)
 	{
-		unsigned index = level_get_index(player->level, player->pos.x, player->pos.y, player->pos.z);
-		if (player->level->blocks[index].teleporter == 1)
+		int16_t x = player->pos.x / 32;
+		int16_t y = player->pos.y / 32;
+		int16_t z = player->pos.z / 32;
+		if (x >= 0 && y >= 0 && z >= 0 && x < player->level->x && y < player->level->y && z < player->level->z)
 		{
-			level_process_teleporter(player);
+			unsigned index = level_get_index(player->level, player->pos.x / 32, player->pos.y / 32, player->pos.z / 32);
+			if (player->level->blocks[index].teleporter == 1)
+			{
+				level_process_teleporter(player);
+			}
 		}
 	}
 

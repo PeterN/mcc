@@ -17,6 +17,7 @@
 #include "mcc.h"
 #include "network.h"
 #include "module.h"
+#include "undodb.h"
 
 void notify_file(struct client_t *c, const char *filename)
 {
@@ -37,6 +38,29 @@ void notify_file(struct client_t *c, const char *filename)
 	}
 
 	fclose(f);
+}
+
+struct notify_t
+{
+	struct client_t *c;
+	char buf[64];
+	char *bufp;
+};
+
+void notify_multipart(const char *text, void *arg)
+{
+	struct notify_t *t = arg;
+
+	size_t len = strlen(text);
+	if (len >= sizeof t->buf - (t->bufp - t->buf))
+	{
+		client_notify(t->c, t->buf);
+		memset(t->buf, 0, sizeof t->buf);
+		t->bufp = t->buf;
+	}
+
+	strcpy(t->bufp, text);
+	t->bufp += len;
 }
 
 typedef bool(*command_func_t)(struct client_t *c, int params, const char **param);
@@ -96,6 +120,7 @@ CMD(ban)
 	if (p != NULL)
 	{
 		p->rank = RANK_BANNED;
+		sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), p->username);
 	}
 
 	snprintf(buf, sizeof buf, "%s banned", param[1]);
@@ -191,22 +216,27 @@ static const char help_commands[] =
 CMD(commands)
 {
 	char buf[64];
-	char *bufp = buf;
+	char *bufp;
+
+	strcpy(buf, "Commands: ");
+	bufp = buf + strlen(buf);
 
 	struct command_t *comp = s_commands;
 	for (; comp->command != NULL; comp++)
 	{
 		if (c->player->rank < comp->rank) continue;
 
-		size_t len = strlen(comp->command) + 1;
+		char buf2[64];
+		snprintf(buf2, sizeof buf2, "%s%s", comp->command, (comp + 1)->command == NULL ? "" : ", ");
+		size_t len = strlen(buf2);
 		if (len >= sizeof buf - (bufp - buf))
 		{
 			client_notify(c, buf);
+			memset(buf, 0, sizeof buf);
 			bufp = buf;
 		}
 
-		strcpy(bufp, comp->command);
-		bufp[len - 1] = ' ';
+		strcpy(bufp, buf2);
 		bufp += len;
 	}
 
@@ -507,6 +537,17 @@ static const char help_identify[] =
 CMD(identify)
 {
 	if (params != 2) return true;
+
+	if (playerdb_password_check(c->player->username, param[1]) != 1)
+	{
+		client_notify(c, "Invalid password.");
+		LOG("Identify %s: invalid password\n", c->player->username);
+		return false;
+	}
+
+	c->player->rank = playerdb_get_rank(c->player->username);
+	client_notify(c, "Identified successfully.");
+	LOG("Identify %s: success\n", c->player->username);
 
 	return false;
 }
@@ -1161,6 +1202,7 @@ CMD(resetlvl)
 	}
 
 	level_gen(l, t, hr, sh);
+	return false;
 }
 
 static const char help_rules[] =
@@ -1170,6 +1212,32 @@ static const char help_rules[] =
 CMD(rules)
 {
 	notify_file(c, "rules.txt");
+	return false;
+}
+
+static const char help_setpassword[] =
+"/setpassword <password> <password> [<oldpassword>]\n";
+
+CMD(setpassword)
+{
+	if (params != 3 && params != 4) return true;
+
+	if (strcmp(param[1], param[2]) != 0)
+	{
+		client_notify(c, "Password must match.");
+		return false;
+	}
+
+	if (playerdb_password_check(c->player->username, params == 4 ? param[3] : "") != 1)
+	{
+		client_notify(c, "Invalid password.");
+		LOG("Setpassword %s: invalid password\n", c->player->username);
+		return false;
+	}
+
+	playerdb_set_password(c->player->username, param[1]);
+	client_notify(c, "Password set.");
+	LOG("Setpassword %s: success\n", c->player->username);
 	return false;
 }
 
@@ -1214,6 +1282,7 @@ CMD(setrank)
 	if (p != NULL)
 	{
 		p->rank = newrank;
+		sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), p->username);
 	}
 
 	char buf[64];
@@ -1305,12 +1374,6 @@ CMD(summon)
 	return false;
 }
 
-static char s_pattern[256];
-static int undo_filename_filter(const struct dirent *d)
-{
-	return strncmp(d->d_name, s_pattern, strlen(s_pattern)) == 0;
-}
-
 static const char help_teleporter[] =
 "/teleporter <name> [<dest> [<level>]]\n";
 
@@ -1371,64 +1434,108 @@ CMD(tp)
 	return false;
 }
 
+static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, void *arg)
+{
+	struct client_t *client = arg;
+	struct level_t *l = client->player->level;
+	unsigned index = level_get_index(l, x, y, z);
+	struct block_t *b = &l->blocks[index];
+	struct block_t backup = *b;
+	b->type = oldtype;
+	b->data = olddata;
+	client_add_packet(client, packet_send_set_block(x, y, z, convert(l, index, b)));
+	*b = backup;
+}
+
+static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, void *arg)
+{
+	struct client_t *client = arg;
+	struct level_t *l = client->player->level;
+	unsigned index = level_get_index(l, x, y, z);
+	struct block_t *b = &l->blocks[index];
+
+	b->type = oldtype;
+	b->data = olddata;
+
+	unsigned i;
+	for (i = 0; i < s_clients.used; i++)
+	{
+		struct client_t *c = s_clients.items[i];
+		if (c->player == NULL) continue;
+		if (c->player->level == l)
+		{
+			client_add_packet(c, packet_send_set_block(x, y, z, convert(l, index, b)));
+		}
+	}
+
+	l->changed = true;
+}
+
 static const char help_undo[] =
-"/undo <user> <level> [<time>]\n"
+"/undo <level> [<user> [<count>]]\n"
 "Undo user actions for the specified <user> and <level>.";
 
 CMD(undo)
 {
-	char buf[64];
+	struct notify_t n;
 
-	if (params < 3 || params > 4) return true;
+	if (params < 2 || params > 4) return true;
 
-	if (params == 3)
+	struct level_t *l;
+	if (!level_get_by_name(param[1], &l))
 	{
-		char *bufp;
-		struct dirent **namelist;
-		int n, i;
-
-		strcpy(buf, "Undo log: ");
-		bufp = buf + strlen(buf);
-
-		snprintf(s_pattern, sizeof s_pattern, "%s_%s_", param[2], param[1]);
-
-		n = scandir("undo", &namelist, &undo_filename_filter, alphasort);
-		if (n < 0)
-		{
-			client_notify(c, "Unable to get list of undo logs");
-			return false;
-		}
-
-		for (i = 0; i < n; i++)
-		{
-			struct stat statbuf;
-			//if (stat(namelist[i]->d_name, &statbuf) == 0)
-			{
-				int undo_actions = statbuf.st_size / (sizeof (unsigned) + sizeof (struct block_t));
-				char buf2[64];
-				snprintf(buf2, sizeof buf2, "%s (%d)", namelist[i]->d_name + strlen(s_pattern), undo_actions);
-
-				size_t len = strlen(buf2) + (i < n - 1 ? 2 : 0);
-				if (len >= sizeof buf - (bufp - buf))
-				{
-					client_notify(c, buf);
-					bufp = buf;
-				}
-
-				strcpy(bufp, buf2);
-				bufp += len;
-
-				if (i < n - 1) strcpy(bufp - 2, ", ");
-			}
-
-			free(namelist[i]);
-		}
-
-		client_notify(c, buf);
+		client_notify(c, "Cannot load level.");
 		return false;
 	}
 
-	player_undo(c, param[1], param[2], param[3]);
+	if (l->undo == NULL) l->undo = undodb_init(l->name);
+	if (l->undo == NULL)
+	{
+		client_notify(c, "Undo not available for level.");
+		return false;
+	}
+
+	n.c = c;
+	memset(n.buf, 0, sizeof n.buf);
+
+	if (params == 2)
+	{
+		strcpy(n.buf, "Undo log: ");
+		n.bufp = n.buf + strlen(n.buf);
+		undodb_query(l->undo, &notify_multipart, &n);
+		client_notify(c, n.buf);
+		return false;
+	}
+	
+	int globalid = playerdb_get_globalid(param[2], false, NULL);
+	if (globalid == -1)
+	{
+		client_notify(c, "Unknown username.");
+		return false;
+	}
+
+	if (params == 3)
+	{
+		strcpy(n.buf, "Undo log: ");
+		n.bufp = n.buf + strlen(n.buf);
+		undodb_query_player(l->undo, globalid, &notify_multipart, &n);
+		client_notify(c, n.buf);
+		return false;
+	}
+
+	if (c->player->level != l)
+	{
+		client_notify(c, "Cannot preview undo on a different level.");
+		return false;
+	}
+
+	//,...,...,...client_add_packet(client, packet_send_set_block(x, y, z, pt));
+	int limit = strtol(param[3], NULL, 10);
+
+	undodb_undo_player(l->undo, globalid, limit, params == 4 ? &undo_show : &undo_real, c);
+	return false;
+
+	//player_undo(c, param[1], param[2], param[3]);
 	return false;
 }
 
@@ -1561,6 +1668,7 @@ struct command_t s_commands[] = {
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
+	{ "setpassword", RANK_BUILDER, &cmd_setpassword, help_setpassword },
 	{ "setrank", RANK_OP, &cmd_setrank, help_setrank },
 	{ "setspawn", RANK_BUILDER, &cmd_setspawn, help_setspawn },
 	{ "spawn", RANK_GUEST, &cmd_spawn, help_spawn },

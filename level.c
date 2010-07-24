@@ -5,12 +5,15 @@
 #include <zlib.h>
 #include <pthread.h>
 #include <math.h>
+#include "filter.h"
 #include "level.h"
 #include "block.h"
 #include "client.h"
 #include "cuboid.h"
+#include "faultgen.h"
 #include "mcc.h"
 #include "packet.h"
+#include "perlin.h"
 #include "player.h"
 #include "playerdb.h"
 #include "network.h"
@@ -275,175 +278,6 @@ bool level_send(struct client_t *c)
 	return true;
 }
 
-static const float _amplitudes[][7] = {
-	{16000,   256,   128,	64,	32,	16,	16},
-	/* Very smooth */
-	{16000,  5600,  1968,   688,   240,	16,	16},
-	/* Smooth */
-	{16000, 16000,  6448,  3200,  1024,   128,	16},
-	/* Rough */
-	{16000, 19200, 12800,  8000,  3200,   256,	64},
-	/* Very Rough */
-	{24000, 16000, 19200, 16000,  8000,   512,   320},
-	/* Huh */
-	{1, 1, 1, 1, 1, 1, 1},
-};
-
-static float random_height(int max)
-{
-	return ((float)rand() / INT_MAX - 0.5f) * max;
-}
-
-static bool level_apply_noise(float *map, int mx, int mz, int log_frequency, int amplitude)
-{
-	int size_min = mx < mz ? mx : mz;
-	int step = size_min >> log_frequency;
-	int x, z;
-	int dmx = mx + 1;
-
-	if (step == 0) return false;
-
-	if (log_frequency == 0)
-	{
-		for (z = 0; z <= mz; z += step)
-		{
-			for (x = 0; x <= mx; x += step)
-			{
-				float h = (amplitude > 0) ? random_height(amplitude) : 0;
-				map[x + z * dmx] = h;
-			}
-		}
-		return true;
-	}
-
-	for (z = 0; z <= mz; z += 2 * step)
-	{
-		for (x = 0; x < mx; x += 2 * step)
-		{
-			float h0 = map[x + z * dmx];
-			float h2 = map[x + step + step + z * dmx];
-			float h1 = (h0 + h2) / 2.0f;
-			map[x + step + z * dmx] = h1;
-		}
-	}
-
-	for (z = 0; z < mz; z += 2 * step)
-	{
-		for (x = 0; x <= mx; x += step)
-		{
-			float h0 = map[x + z * dmx];
-			float h2 = map[x + (z + step + step) * dmx];
-			float h1 = (h0 + h2) / 2.0f;
-			map[x + (z + step) * dmx] = h1;
-		}
-	}
-
-	for (z = 0; z <= mz; z += step)
-	{
-		for (x = 0; x <= mx; x += step)
-		{
-			map[x + z * dmx] += random_height(amplitude);
-		}
-	}
-
-	return (step > 1);
-}
-
-static void level_normalize(float *map, int mx, int mz)
-{
-	int x, z;
-	float hmin = 0.0f;
-	float hmax = 0.0f;
-	int dmx = mx + 1;
-
-	for (z = 0; z <= mz; z++)
-	{
-		for (x = 0; x <= mx; x++)
-		{
-			float h = map[x + z * dmx];
-			if (h < hmin) hmin = h;
-			if (h > hmax) hmax = h;
-		}
-	}
-
-	for (z = 0; z <= mz; z++)
-	{
-		for (x = 0; x <= mx; x++)
-		{
-			float h = map[x + z * dmx];
-			h -= hmin;
-			h /= (hmax - hmin);
-			h = h < 0.0 ? 0.0 : h >= 1.0f ? 1.0f : h;//(asin(h * 2.0f - 1.0f) / M_PI + 0.5f);
-/*			if (h < 0.5) {
-				h = sin((h - 0.25f) * 2 * M_PI) / 4.0f + 0.25f;
-			}
-			else
-			{
-				h = sin((h - 0.75f) * 2 * M_PI) / 4.0f + 0.75f;
-			}*/
-			map[x + z * dmx] = h;
-		}
-	}
-}
-
-/*
-static void level_smooth_slopes(float *map, int mx, int mz, float dh_max)
-{
-	int x, z;
-	int dmx = mx + 1;
-	for (z = 0; z <= mz; z++)
-	{
-		for (x = 0; x <= mx; x++)
-		{
-			float h_max = map[(x > 0 ? x - 1 : 0) + z * dmx];
-			float h_max2 = map[x + (z > 0 ? z - 1 : 0) * dmx];
-			if (h_max2 < h_max) h_max = h_max2;
-			h_max += 1.0f / dh_max;
-			if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
-		}
-	}
-	for (z = mz; z >= 0; z--)
-	{
-		for (x = mx; x >= 0; x--)
-		{
-			float h_max = map[(x < mx ? x + 1 : x) + z * dmx];
-			float h_max2 = map[x + (z < mz ? z + 1 : z) * dmx];
-			if (h_max2 < h_max) h_max = h_max2;
-			h_max += 1.0f / dh_max;
-			if (map[x + z * dmx] > h_max) map[x + z * dmx] = h_max;
-		}
-	}
-}
-*/
-
-static void level_gen_heightmap(float *map, int mx, int mz, int type)
-{
-	unsigned iteration_round = 0;
-	bool continue_iteration;
-	int log_size_min;
-	int log_frequency_min;
-	int log_frequency;
-	int amplitude;
-	int size_min = mx < mz ? mx : mz;
-
-	for (log_size_min = 6; (1 << log_size_min) < size_min; log_size_min++) { }
-	log_frequency_min = log_size_min - 6;
-
-	do {
-		log_frequency = iteration_round - log_frequency_min;
-		if (log_frequency >= 0) {
-			amplitude = _amplitudes[type][log_frequency];
-		} else {
-			amplitude = 0;
-		}
-
-		continue_iteration = level_apply_noise(map, mx, mz, iteration_round, amplitude);
-		iteration_round++;
-	} while (continue_iteration);
-
-	level_normalize(map, mx, mz);
-}
-
 void *level_gen_thread(void *arg)
 {
 	int i;
@@ -477,20 +311,34 @@ void *level_gen_thread(void *arg)
 	}
 	else
 	{
-		float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
+		struct faultgen_t *fg = faultgen_init(mx, mz);
+		struct filter_t *ft = filter_init(mx, mz);
+//		const float *hm1 = faultgen_map(fg);
+		faultgen_create(fg);
+		filter_process(ft, faultgen_map(fg));
+		faultgen_deinit(fg);
+		const float *hm1 = filter_map(ft);
+
+
+		struct perlin_t *pp = perlin_init(mx, mz, 0.125 * level->type, 6);
+		const float *hm2 = perlin_map(pp);
+
+		perlin_noise(pp);
+
+//		float *hm = malloc((mx + 1) * (mz + 1) * sizeof *hm);
 /*		float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
 		float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);*/
 
-		level_gen_heightmap(hm, mx, mz, level->type - 2);
+//		level_gen_heightmap(hm, mx, mz, level->type - 2);
 		//level_smooth_slopes(hm, mx, mz, my);
 
-		int dmx = mx + 1;
+		int dmx = mx;
 
 		for (z = 0; z < mz; z++)
 		{
 			for (x = 0; x < mx; x++)
 			{
-				int h = (hm[x + z * dmx] - 0.5) * level->height_range + my / 2;
+				int h = (hm1[x + z * dmx] - 0.5) * level->height_range + my / 2;
 
 				for (y = 0; y < h && y < my; y++)
 				{
@@ -564,9 +412,12 @@ void *level_gen_thread(void *arg)
 			}
 		}
 */
-		free(hm);
+//		free(hm);
 /*		free(cmd);
 		free(cmh);*/
+
+		perlin_deinit(pp);
+//		faultgen_deinit(fg);
 
 		block.type = WATER;
 		for (i = 0; i < 100; i++)
@@ -1171,7 +1022,7 @@ static void level_cuboid(struct level_t *level, unsigned start, unsigned end, en
 
 void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click)
 {
-	if (client->player->rank == RANK_BANNED)
+	if (client->player == NULL || client->player->rank == RANK_BANNED)
 	{
 		/* Ignore banned players :D */
 		return;
@@ -1191,6 +1042,28 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	unsigned index = level_get_index(level, x, y, z);
 	struct block_t *b = &level->blocks[index];
 	enum blocktype_t bt = b->type;
+
+	if (click)
+	{
+		/* Check block distcance */
+		int distance = abs(client->player->pos.x / 32 - x);
+		distance += abs(client->player->pos.y / 32 - y);
+		distance += abs(client->player->pos.z / 32 - z);
+
+		if (distance > 10)
+		{
+			char buf[64];
+			snprintf(buf, sizeof buf, TAG_RED "Kicked %s for building too far", client->player->username);
+			net_notify_all(buf);
+			net_close(client, "distance");
+			return;
+		}
+		if (distance > 8)
+		{
+			client_notify(client, "You cannot build that far away");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+		}
+	}
 
 	if (click && client->player->mode == MODE_INFO)
 	{
@@ -1249,8 +1122,8 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	if (click)
 	{
 		if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
-		else if (client->player->mode == MODE_PLACE_WATER) nt = WATER;
-		else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVA;
+		else if (client->player->mode == MODE_PLACE_WATER) nt = WATERSTILL;
+		else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVASTILL;
 	}
 
 	/* Client thinks it has changed to air */

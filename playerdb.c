@@ -11,6 +11,7 @@ static sqlite3_stmt *s_new_user_stmt;
 static sqlite3_stmt *s_globalid_get_stmt;
 static sqlite3_stmt *s_username_get_stmt;
 static sqlite3_stmt *s_password_stmt;
+static sqlite3_stmt *s_set_password_stmt;
 
 void playerdb_init()
 {
@@ -79,7 +80,15 @@ void playerdb_init()
 		return;
 	}
 
-	res = sqlite3_prepare_v2(s_db, "SELECT COUNT(*) FROM players WHERE username = lower(?) AND password = ?", -1, &s_password_stmt, NULL);
+	res = sqlite3_prepare_v2(s_db, "SELECT COUNT(*) FROM players WHERE username = lower(?) AND (password = ? OR (? = '' AND password IS NULL))", -1, &s_password_stmt, NULL);
+	if (res != SQLITE_OK)
+	{
+		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		sqlite3_close(s_db);
+		return;
+	}
+
+	res = sqlite3_prepare_v2(s_db, "UPDATE players SET password = ? WHERE username = lower(?)", -1, &s_set_password_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
 		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
@@ -96,6 +105,7 @@ void playerdb_close()
 	sqlite3_finalize(s_globalid_get_stmt);
 	sqlite3_finalize(s_username_get_stmt);
 	sqlite3_finalize(s_password_stmt);
+	sqlite3_finalize(s_set_password_stmt);
 	sqlite3_close(s_db);
 }
 
@@ -216,7 +226,12 @@ int playerdb_password_check(const char *username, const char *password)
 		LOG("[playerdb_password_check] Can't bind text: %s\n", sqlite3_errmsg(s_db));
 		return 0;
 	}
-	if (sqlite3_bind_text(s_password_stmt, 1, password, -1, SQLITE_STATIC) != SQLITE_OK)
+	if (sqlite3_bind_text(s_password_stmt, 2, password, -1, SQLITE_STATIC) != SQLITE_OK)
+	{
+		LOG("[playerdb_password_check] Can't bind text: %s\n", sqlite3_errmsg(s_db));
+		return 0;
+	}
+	if (sqlite3_bind_text(s_password_stmt, 3, password, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_password_check] Can't bind text: %s\n", sqlite3_errmsg(s_db));
 		return 0;
@@ -229,3 +244,22 @@ int playerdb_password_check(const char *username, const char *password)
 	return sqlite3_column_int(s_password_stmt, 0);
 }
 
+void playerdb_set_password(const char *username, const char *password)
+{
+	sqlite3_reset(s_set_password_stmt);
+	if (sqlite3_bind_text(s_set_password_stmt, 2, username, -1, SQLITE_STATIC) != SQLITE_OK)
+	{
+		LOG("[playerdb_set_password] Can't bind text: %s\n", sqlite3_errmsg(s_db));
+		return;
+	}
+	if (sqlite3_bind_text(s_set_password_stmt, 1, password, -1, SQLITE_STATIC) != SQLITE_OK)
+	{
+		LOG("[playerdb_set_password] Can't bind text: %s\n", sqlite3_errmsg(s_db));
+		return;
+	}
+	if (sqlite3_step(s_set_password_stmt) != SQLITE_DONE)
+	{
+		LOG("[playerdb_set_password] %s\n", sqlite3_errmsg(s_db));
+		return;
+	}
+}

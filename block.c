@@ -22,7 +22,7 @@ int register_blocktype(enum blocktype_t type, const char *name, convert_func_t c
 		{
 			if (strcasecmp(s_blocks.items[i].name, name) == 0)
 			{
-				type == i;
+				type = i;
 				break;
 			}
 		}
@@ -50,7 +50,7 @@ int register_blocktype(enum blocktype_t type, const char *name, convert_func_t c
 		return BLOCK_INVALID;
 	}
 
-	descp->name = name;
+	descp->name = strdup(name);
 	descp->loaded = true;
 	descp->convert_func = convert_func;
 	descp->trigger_func = trigger_func;
@@ -254,6 +254,13 @@ enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, con
 	return STAIRCASESTEP;
 }
 
+bool trigger_stair(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
+
+	return true;
+}
+
 void physics_stair(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	int16_t x, y, z;
@@ -404,7 +411,7 @@ void blocktype_init()
 	register_blocktype(REDMUSHROOM, "red_shroom", NULL, NULL, NULL);
 	register_blocktype(GOLDSOLID, "gold", NULL, NULL, NULL);
 	register_blocktype(IRON, "iron", NULL, NULL, NULL);
-	register_blocktype(STAIRCASEFULL, "double_stair", NULL, NULL, NULL);
+	register_blocktype(STAIRCASEFULL, "double_stair", NULL, &trigger_stair, NULL);
 	register_blocktype(STAIRCASESTEP, "stair", NULL, NULL, &physics_stair);
 	register_blocktype(BRICK, "brick", NULL, NULL, NULL);
 	register_blocktype(TNT, "tnt", NULL, NULL, NULL);
@@ -412,23 +419,23 @@ void blocktype_init()
 	register_blocktype(STONEVINE, "mossy_cobblestone", NULL, NULL, NULL);
 	register_blocktype(OBSIDIAN, "obsidian", NULL, NULL, NULL);
 
-	register_blocktype(-1, "single_stair", &convert_single_stair, NULL, NULL);
-	register_blocktype(-1, "door", &convert_door, &trigger_door, &physics_door);
-	register_blocktype(-1, "door_obsidian", &convert_door_obsidian, &trigger_door, &physics_door);
-	register_blocktype(-1, "door_glass", &convert_door_glass, &trigger_door, &physics_door);
-	register_blocktype(-1, "door_step", &convert_door_stair, &trigger_door, &physics_door);
-	register_blocktype(-1, "parquet", &convert_parquet, NULL, NULL);
+	register_blocktype(BLOCK_INVALID, "single_stair", &convert_single_stair, NULL, NULL);
+	register_blocktype(BLOCK_INVALID, "door", &convert_door, &trigger_door, &physics_door);
+	register_blocktype(BLOCK_INVALID, "door_obsidian", &convert_door_obsidian, &trigger_door, &physics_door);
+	register_blocktype(BLOCK_INVALID, "door_glass", &convert_door_glass, &trigger_door, &physics_door);
+	register_blocktype(BLOCK_INVALID, "door_step", &convert_door_stair, &trigger_door, &physics_door);
+	register_blocktype(BLOCK_INVALID, "parquet", &convert_parquet, NULL, NULL);
 
 	module_load("wireworld.so");
 
-	register_blocktype(-1, "active_sponge", &convert_active_sponge, NULL, &physics_active_sponge);
+	register_blocktype(BLOCK_INVALID, "active_sponge", &convert_active_sponge, NULL, &physics_active_sponge);
 
 	module_load("tnt.so");
 	module_load("spleef.so");
 
-/*	register_blocktype(-1, "active_tnt", &convert_active_tnt, &trigger_active_tnt, NULL);
-	register_blocktype(-1, "explosion", &convert_explosion, NULL, &physics_explosion);
-	register_blocktype(-1, "fuse", &convert_fuse, &trigger_fuse, &physics_fuse);*/
+/*	register_blocktype(BLOCK_INVALID, "active_tnt", &convert_active_tnt, &trigger_active_tnt, NULL);
+	register_blocktype(BLOCK_INVALID, "explosion", &convert_explosion, NULL, &physics_explosion);
+	register_blocktype(BLOCK_INVALID, "fuse", &convert_fuse, &trigger_fuse, &physics_fuse);*/
 }
 
 /*static const char *s_op_blocks[] = {

@@ -118,6 +118,14 @@ void net_close(struct client_t *c, const char *reason)
 {
 	char buf[64];
 
+	/* Send client disconnect message straight away */
+	if (reason != NULL)
+	{
+		struct packet_t *p = packet_send_disconnect_player(reason);
+		send(c->sock, p->buffer, p->loc - p->buffer, MSG_NOSIGNAL);
+		free(p);
+	}
+
 	close(c->sock);
 
 	/* Mark client for deletion */
