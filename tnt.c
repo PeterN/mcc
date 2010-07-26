@@ -167,7 +167,7 @@ void module_init(void **data)
 {
 	s.tnt = blocktype_get_by_name("tnt");
 	
-	s.active_tnt = register_blocktype(BLOCK_INVALID, "active_tnt", &convert_active_tnt, &trigger_active_tnt, NULL);
-	s.explosion = register_blocktype(BLOCK_INVALID, "explosion", &convert_explosion, NULL, &physics_explosion);
-	s.fuse = register_blocktype(BLOCK_INVALID, "fuse", &convert_fuse, &trigger_fuse, &physics_fuse);
+	s.active_tnt = register_blocktype(BLOCK_INVALID, "active_tnt", &convert_active_tnt, &trigger_active_tnt, NULL, NULL, false);
+	s.explosion = register_blocktype(BLOCK_INVALID, "explosion", &convert_explosion, NULL, NULL, &physics_explosion, false);
+	s.fuse = register_blocktype(BLOCK_INVALID, "fuse", &convert_fuse, &trigger_fuse, NULL, &physics_fuse, false);
 }

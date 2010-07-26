@@ -155,7 +155,8 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	}
 
 	bool newuser;
-	player = player_add(username, &newuser);
+	int identified;
+	player = player_add(username, c, &newuser, &identified);
 
 	/* No longer need these */
 	free(username);
@@ -188,6 +189,14 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	}
 
 	net_notify_all(buf);
+	if (identified == 2)
+	{
+		client_notify(c, TAG_LIME "Automatically identified.");
+	}
+	else if (identified == 1)
+	{
+		client_notify(c, TAG_YELLOW "You must identify to use privileged commands.");
+	}
 
 	if (player_change_level(c->player, l)) level_send(c);
 

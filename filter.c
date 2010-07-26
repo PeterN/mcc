@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "filter.h"
+#include "mcc.h"
 
 struct filter_t
 {
@@ -21,9 +22,11 @@ void filter_deinit(struct filter_t *f)
 	free(f);
 }
 
-void filter_process(struct filter_t *f, float *map)
+void filter_process(struct filter_t *f, const float *map)
 {
 	int x, y, dx, dy;
+
+	LOG("filter: processing\n");
 
 	for (x = 0; x < f->x; x++)
 	{
@@ -51,6 +54,8 @@ void filter_process(struct filter_t *f, float *map)
 			*h /= divide;
 		}
 	}
+
+	LOG("filter: complete\n");
 }
 
 const float *filter_map(struct filter_t *f)

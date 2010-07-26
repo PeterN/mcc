@@ -26,6 +26,8 @@ void cuboid_process()
 			{
 				if (c->owner_is_op || b->owner == 0 || b->owner == c->owner)
 				{
+					delete(c->level, index, b);
+
 					bool oldphysics = b->physics;
 
 					/* Handle physics */

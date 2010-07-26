@@ -9,7 +9,7 @@
 
 static struct blocktype_desc_list_t s_blocks;
 
-int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, physics_func_t physics_func)
+int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear)
 {
 	struct blocktype_desc_t desc;
 	memset(&desc, 0, sizeof desc);
@@ -50,10 +50,11 @@ int register_blocktype(enum blocktype_t type, const char *name, convert_func_t c
 		return BLOCK_INVALID;
 	}
 
-	descp->name = strdup(name);
+	descp->name = name;
 	descp->loaded = true;
 	descp->convert_func = convert_func;
 	descp->trigger_func = trigger_func;
+	descp->delete_func = delete_func;
 	descp->physics_func = physics_func;
 	LOG("Registered %s as %d\n", descp->name, type);
 
@@ -65,9 +66,11 @@ void deregister_blocktype(enum blocktype_t type)
 	if (type == BLOCK_INVALID) return;
 
 	struct blocktype_desc_t *descp = &s_blocks.items[type];
+	descp->name = strdup(descp->name);
 	descp->loaded = false;
 	descp->convert_func = NULL;
 	descp->trigger_func = NULL;
+	descp->delete_func = NULL;
 	descp->physics_func = NULL;
 	LOG("Deregistered %s / %d\n", descp->name, type);
 }
@@ -91,11 +94,18 @@ int trigger(struct level_t *l, unsigned index, const struct block_t *block)
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->trigger_func != NULL)
 	{
-		//LOG("Calling trigger\n");
 		return btd->trigger_func(l, index, block) ? 2 : 1;
 	}
-	//LOG("No trigger\n");
 	return 0;
+}
+
+void delete(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
+	if (btd->delete_func != NULL)
+	{
+		btd->delete_func(l, index, block);
+	}
 }
 
 void physics(struct level_t *level, unsigned index, const struct block_t *block)
@@ -109,7 +119,23 @@ void physics(struct level_t *level, unsigned index, const struct block_t *block)
 	level->blocks[index].physics = false;
 }
 
-void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, int16_t z, bool gravity)
+bool light_check(struct level_t *level, unsigned index)
+{
+	int16_t x, y, z;
+	if (!level_get_xyz(level, index, &x, &y, &z)) return true;
+
+	y++;
+	for (; y < level->y; y++)
+	{
+		enum blocktype_t type = level->blocks[level_get_index(level, x, y, z)].type;
+		const struct blocktype_desc_t *btd = &s_blocks.items[type];
+		if (!btd->clear) return false;
+	}
+
+	return true;
+}
+
+void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, int16_t z, bool gravity, int data)
 {
 	// Test x,y,z are valid!
 	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
@@ -122,7 +148,8 @@ void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, i
 		default: return;
 		case WATER:
 		case LAVA:
-			level_addupdate(l, index, -1, 0);
+			/* Reactivate water */
+			if (data == 0) level_addupdate(l, index, -1, 0);
 			return;
 
 		case SAND:
@@ -135,18 +162,83 @@ void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, i
 	}
 }
 
+bool sponge_test(struct level_t *l, int16_t x, int16_t y, int16_t z)
+{
+	/* Check neighbouring blocks for sponge */
+	int16_t dx, dy, dz, ax, ay, az;
+
+	for (dx = -2; dx <= 2; dx++)
+	{
+		for (dy = -2; dy <= 2; dy++)
+		{
+			for (dz = -2; dz <= 2; dz++)
+			{
+				if (dx == 0 && dy == 0 && dz == 0) continue;
+
+				ax = x + dx;
+				ay = y + dy;
+				az = z + dz;
+
+				if (ax < 0 || ay < 0 || az < 0 || ax >= l->x || ay >= l->y || az >= l->z) continue;
+
+				unsigned index = level_get_index(l, ax, ay, az);
+				if (l->blocks[index].type == SPONGE) return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 void physics_air(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	int16_t x, y, z;
 	level_get_xyz(l, index, &x, &y, &z);
 
-	if (l->blocks[index].fixed) return;
+	if (block->fixed) return;
 
-	physics_air_sub(l, index, x, y + 1, z, true);
-	physics_air_sub(l, index, x - 1, y, z, false);
-	physics_air_sub(l, index, x + 1, y, z, false);
-	physics_air_sub(l, index, x, y, z - 1, false);
-	physics_air_sub(l, index, x, y, z + 1, false);
+	int flood = block->data;
+	if (flood == 0)
+	{
+		/* Check for sponge near us */
+		if (sponge_test(l, x, y, z))
+		{
+//			if (flood == 0)
+//			{
+				level_addupdate(l, index, -1, 1);
+				flood = 1;
+//			}
+		}
+//		else
+//		{
+//			if (flood == 1)
+//			{
+//				level_addupdate(l, index, -1, 0);
+//				flood = 0;
+//			}
+//		}
+	}
+
+	physics_air_sub(l, index, x, y + 1, z, true, flood);
+	physics_air_sub(l, index, x - 1, y, z, false, flood);
+	physics_air_sub(l, index, x + 1, y, z, false, flood);
+	physics_air_sub(l, index, x, y, z - 1, false, flood);
+	physics_air_sub(l, index, x, y, z + 1, false, flood);
+}
+
+void physics_dirt(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	if (block->data > 90)
+	{
+		if (light_check(l, index))
+		{
+			level_addupdate(l, index, GRASS, 0);
+		}
+	}
+	else
+	{
+		level_addupdate(l, index, BLOCK_INVALID, block->data + 1);
+	}
 }
 
 void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
@@ -155,9 +247,9 @@ void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z
 	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
 
 	unsigned index = level_get_index(l, x, y, z);
-	if (l->blocks[index].type == AIR && !l->blocks[index].fixed)
+	if (l->blocks[index].type == AIR && !l->blocks[index].fixed && l->blocks[index].data == 0)
 	{
-		level_addupdate(l, index, type, 0);
+		if (!sponge_test(l, x, y, z)) level_addupdate(l, index, type, 0);
 	}
 }
 
@@ -201,6 +293,67 @@ void physics_gravity(struct level_t *l, unsigned index, const struct block_t *bl
 	}
 }
 
+void delete_sponge(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	int16_t x, y, z, dx, dy, dz, ax, ay, az;
+	level_get_xyz(l, index, &x, &y, &z);
+
+	for (dx = -2; dx <= 2; dx++)
+	{
+		for (dy = -2; dy <= 2; dy++)
+		{
+			for (dz = -2; dz <= 2; dz++)
+			{
+				if (dx == 0 && dy == 0 && dz == 0) continue;
+
+				ax = x + dx;
+				ay = y + dy;
+				az = z + dz;
+
+				if (ax < 0 || ay < 0 || az < 0 || ax >= l->x || ay >= l->y || az >= l->z) continue;
+
+				unsigned index2 = level_get_index(l, ax, ay, az);
+				if (l->blocks[index2].type == AIR)
+				{
+					level_addupdate(l, index2, AIR, 0);
+				}
+			}
+		}
+	}
+}
+
+void physics_sponge(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	int16_t x, y, z, dx, dy, dz, ax, ay, az;
+	level_get_xyz(l, index, &x, &y, &z);
+
+	for (dx = -2; dx <= 2; dx++)
+	{
+		for (dy = -2; dy <= 2; dy++)
+		{
+			for (dz = -2; dz <= 2; dz++)
+			{
+				if (dx == 0 && dy == 0 && dz == 0) continue;
+
+				ax = x + dx;
+				ay = y + dy;
+				az = z + dz;
+
+				if (ax < 0 || ay < 0 || az < 0 || ax >= l->x || ay >= l->y || az >= l->z) continue;
+
+				unsigned index2 = level_get_index(l, ax, ay, az);
+				switch (l->blocks[index2].type)
+				{
+					case WATER:
+					case WATERSTILL:
+						level_addupdate(l, index2, AIR, 1);
+						break;
+				}
+			}
+		}
+	}
+}
+
 enum blocktype_t convert_active_sponge(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	return AIR;
@@ -228,25 +381,29 @@ void physics_active_sponge(struct level_t *l, unsigned index, const struct block
 	int16_t x, y, z;
 	level_get_xyz(l, index, &x, &y, &z);
 
-	//if (block->data == 0)
-	//{
-		//block->data = 1;
-
+	if (block->data == 0)
+	{
 		physics_active_sponge_sub(l, x - 1, y, z, block->type);
 		physics_active_sponge_sub(l, x + 1, y, z, block->type);
 		physics_active_sponge_sub(l, x, y - 1, z, block->type);
 		physics_active_sponge_sub(l, x, y, z - 1, block->type);
 		physics_active_sponge_sub(l, x, y, z + 1, block->type);
-		level_addupdate(l, index, AIR, 0);
-	//}
-	//else
-	//{
-	 //   block->data--;
-	 //   if (block->data == 0)
-	 //   {
 
-		//}
-	//}
+		/* Leave a 'trail' of 10 blocks of active sponge to prevent
+		 * active water/lava coming back so soon. */
+		level_addupdate(l, index, BLOCK_INVALID, 10);
+	}
+	else
+	{
+		if (block->data - 1 == 0)
+		{
+			level_addupdate(l, index, AIR, 0);
+		}
+		else
+		{
+			level_addupdate(l, index, BLOCK_INVALID, block->data - 1);
+		}
+	}
 }
 
 enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, const struct block_t *block)
@@ -258,7 +415,7 @@ bool trigger_stair(struct level_t *l, unsigned index, const struct block_t *bloc
 {
 	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
 
-	return true;
+	return false;
 }
 
 void physics_stair(struct level_t *l, unsigned index, const struct block_t *block)
@@ -318,20 +475,7 @@ bool trigger_door(struct level_t *l, unsigned index, const struct block_t *block
 	if (block->data == 0)
 	{
 		level_addupdate(l, index, -1, 20);
-
-/*
-		int16_t x, y, z;
-		level_get_xyz(l, index, &x, &y, &z);
-
-		trigger_door_sub(l, x - 1, y, z, block->type);
-		trigger_door_sub(l, x + 1, y, z, block->type);
-		trigger_door_sub(l, x, y - 1, z, block->type);
-		trigger_door_sub(l, x, y + 1, z, block->type);
-		trigger_door_sub(l, x, y, z - 1, block->type);
-		trigger_door_sub(l, x, y, z + 1, block->type);*/
 	}
-
-	//LOG("Door trigger: %d\n", block->data);
 
 	return false;
 }
@@ -368,225 +512,72 @@ enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const st
 
 void blocktype_init()
 {
-	register_blocktype(AIR, "air", NULL, NULL, &physics_air);
-	register_blocktype(ROCK, "stone", NULL, NULL, NULL);
-	register_blocktype(GRASS, "grass", NULL, NULL, NULL);
-	register_blocktype(DIRT, "dirt", NULL, NULL, NULL);
-	register_blocktype(STONE, "cobblestone", NULL, NULL, NULL);
-	register_blocktype(WOOD, "wood", NULL, NULL, NULL);
-	register_blocktype(SHRUB, "plant", NULL, NULL, NULL);
-	register_blocktype(ADMINIUM, "adminium", NULL, NULL, NULL);
-	register_blocktype(WATER, "active_water", NULL, NULL, &physics_active_water);
-	register_blocktype(WATERSTILL, "water", NULL, NULL, NULL);
-	register_blocktype(LAVA, "active_lava", NULL, NULL, NULL);
-	register_blocktype(LAVASTILL, "lava", NULL, NULL, NULL);
-	register_blocktype(SAND, "sand", NULL, NULL, &physics_gravity);
-	register_blocktype(GRAVEL, "gravel", NULL, NULL, &physics_gravity);
-	register_blocktype(GOLDROCK, "gold_ore", NULL, NULL, NULL);
-	register_blocktype(IRONROCK, "iron_ore", NULL, NULL, NULL);
-	register_blocktype(COAL, "coal", NULL, NULL, NULL);
-	register_blocktype(TRUNK, "tree", NULL, NULL, NULL);
-	register_blocktype(LEAF, "leaves", NULL, NULL, NULL);
-	register_blocktype(SPONGE, "sponge", NULL, NULL, NULL);
-	register_blocktype(GLASS, "glass", NULL, NULL, NULL);
-	register_blocktype(RED, "red", NULL, NULL, NULL);
-	register_blocktype(ORANGE, "orange", NULL, NULL, NULL);
-	register_blocktype(YELLOW, "yellow", NULL, NULL, NULL);
-	register_blocktype(LIGHTGREEN, "greenyellow", NULL, NULL, NULL);
-	register_blocktype(GREEN, "green", NULL, NULL, NULL);
-	register_blocktype(AQUAGREEN, "springgreen", NULL, NULL, NULL);
-	register_blocktype(CYAN, "cyan", NULL, NULL, NULL);
-	register_blocktype(LIGHTBLUE, "blue", NULL, NULL, NULL);
-	register_blocktype(BLUE, "blueviolet", NULL, NULL, NULL);
-	register_blocktype(PURPLE, "indigo", NULL, NULL, NULL);
-	register_blocktype(LIGHTPURPLE, "purple", NULL, NULL, NULL);
-	register_blocktype(PINK, "magenta", NULL, NULL, NULL);
-	register_blocktype(DARKPINK, "pink", NULL, NULL, NULL);
-	register_blocktype(DARKGREY, "black", NULL, NULL, NULL);
-	register_blocktype(LIGHTGREY, "grey", NULL, NULL, NULL);
-	register_blocktype(WHITE, "white", NULL, NULL, NULL);
-	register_blocktype(YELLOWFLOWER, "yellow_flower", NULL, NULL, NULL);
-	register_blocktype(REDFLOWER, "red_flower", NULL, NULL, NULL);
-	register_blocktype(MUSHROOM, "brown_shroom", NULL, NULL, NULL);
-	register_blocktype(REDMUSHROOM, "red_shroom", NULL, NULL, NULL);
-	register_blocktype(GOLDSOLID, "gold", NULL, NULL, NULL);
-	register_blocktype(IRON, "iron", NULL, NULL, NULL);
-	register_blocktype(STAIRCASEFULL, "double_stair", NULL, &trigger_stair, NULL);
-	register_blocktype(STAIRCASESTEP, "stair", NULL, NULL, &physics_stair);
-	register_blocktype(BRICK, "brick", NULL, NULL, NULL);
-	register_blocktype(TNT, "tnt", NULL, NULL, NULL);
-	register_blocktype(BOOKCASE, "bookcase", NULL, NULL, NULL);
-	register_blocktype(STONEVINE, "mossy_cobblestone", NULL, NULL, NULL);
-	register_blocktype(OBSIDIAN, "obsidian", NULL, NULL, NULL);
+	register_blocktype(AIR, "air", NULL, NULL, NULL, &physics_air, true);
+	register_blocktype(ROCK, "stone", NULL, NULL, NULL, NULL, false);
+	register_blocktype(GRASS, "grass", NULL, NULL, NULL, NULL, false);
+	register_blocktype(DIRT, "dirt", NULL, NULL, NULL, &physics_dirt, false);
+	register_blocktype(STONE, "cobblestone", NULL, NULL, NULL, NULL, false);
+	register_blocktype(WOOD, "wood", NULL, NULL, NULL, NULL, false);
+	register_blocktype(SHRUB, "plant", NULL, NULL, NULL, NULL, true);
+	register_blocktype(ADMINIUM, "adminium", NULL, NULL, NULL, NULL, false);
+	register_blocktype(WATER, "active_water", NULL, NULL, NULL, &physics_active_water, false);
+	register_blocktype(WATERSTILL, "water", NULL, NULL, NULL, NULL, false);
+	register_blocktype(LAVA, "active_lava", NULL, NULL, NULL, NULL, false);
+	register_blocktype(LAVASTILL, "lava", NULL, NULL, NULL, NULL, false);
+	register_blocktype(SAND, "sand", NULL, NULL, NULL, &physics_gravity, false);
+	register_blocktype(GRAVEL, "gravel", NULL, NULL, NULL, &physics_gravity, false);
+	register_blocktype(GOLDROCK, "gold_ore", NULL, NULL, NULL, NULL, false);
+	register_blocktype(IRONROCK, "iron_ore", NULL, NULL, NULL, NULL, false);
+	register_blocktype(COAL, "coal", NULL, NULL, NULL, NULL, false);
+	register_blocktype(TRUNK, "tree", NULL, NULL, NULL, NULL, false);
+	register_blocktype(LEAF, "leaves", NULL, NULL, NULL, NULL, true);
+	register_blocktype(SPONGE, "sponge", NULL, NULL, &delete_sponge, &physics_sponge, false);
+	register_blocktype(GLASS, "glass", NULL, NULL, NULL, NULL, true);
+	register_blocktype(RED, "red", NULL, NULL, NULL, NULL, false);
+	register_blocktype(ORANGE, "orange", NULL, NULL, NULL, NULL, false);
+	register_blocktype(YELLOW, "yellow", NULL, NULL, NULL, NULL, false);
+	register_blocktype(LIGHTGREEN, "greenyellow", NULL, NULL, NULL, NULL, false);
+	register_blocktype(GREEN, "green", NULL, NULL, NULL, NULL, false);
+	register_blocktype(AQUAGREEN, "springgreen", NULL, NULL, NULL, NULL, false);
+	register_blocktype(CYAN, "cyan", NULL, NULL, NULL, NULL, false);
+	register_blocktype(LIGHTBLUE, "blue", NULL, NULL, NULL, NULL, false);
+	register_blocktype(BLUE, "blueviolet", NULL, NULL, NULL, NULL, false);
+	register_blocktype(PURPLE, "indigo", NULL, NULL, NULL, NULL, false);
+	register_blocktype(LIGHTPURPLE, "purple", NULL, NULL, NULL, NULL, false);
+	register_blocktype(PINK, "magenta", NULL, NULL, NULL, NULL, false);
+	register_blocktype(DARKPINK, "pink", NULL, NULL, NULL, NULL, false);
+	register_blocktype(DARKGREY, "black", NULL, NULL, NULL, NULL, false);
+	register_blocktype(LIGHTGREY, "grey", NULL, NULL, NULL, NULL, false);
+	register_blocktype(WHITE, "white", NULL, NULL, NULL, NULL, false);
+	register_blocktype(YELLOWFLOWER, "yellow_flower", NULL, NULL, NULL, NULL, true);
+	register_blocktype(REDFLOWER, "red_flower", NULL, NULL, NULL, NULL, true);
+	register_blocktype(MUSHROOM, "brown_shroom", NULL, NULL, NULL, NULL, true);
+	register_blocktype(REDMUSHROOM, "red_shroom", NULL, NULL, NULL, NULL, true);
+	register_blocktype(GOLDSOLID, "gold", NULL, NULL, NULL, NULL, false);
+	register_blocktype(IRON, "iron", NULL, NULL, NULL, NULL, false);
+	register_blocktype(STAIRCASEFULL, "double_stair", NULL, &trigger_stair, NULL, NULL, false);
+	register_blocktype(STAIRCASESTEP, "stair", NULL, NULL, NULL, &physics_stair, false);
+	register_blocktype(BRICK, "brick", NULL, NULL, NULL, NULL, false);
+	register_blocktype(TNT, "tnt", NULL, NULL, NULL, NULL, false);
+	register_blocktype(BOOKCASE, "bookcase", NULL, NULL, NULL, NULL, false);
+	register_blocktype(STONEVINE, "mossy_cobblestone", NULL, NULL, NULL, NULL, false);
+	register_blocktype(OBSIDIAN, "obsidian", NULL, NULL, NULL, NULL, false);
 
-	register_blocktype(BLOCK_INVALID, "single_stair", &convert_single_stair, NULL, NULL);
-	register_blocktype(BLOCK_INVALID, "door", &convert_door, &trigger_door, &physics_door);
-	register_blocktype(BLOCK_INVALID, "door_obsidian", &convert_door_obsidian, &trigger_door, &physics_door);
-	register_blocktype(BLOCK_INVALID, "door_glass", &convert_door_glass, &trigger_door, &physics_door);
-	register_blocktype(BLOCK_INVALID, "door_step", &convert_door_stair, &trigger_door, &physics_door);
-	register_blocktype(BLOCK_INVALID, "parquet", &convert_parquet, NULL, NULL);
+	register_blocktype(BLOCK_INVALID, "single_stair", &convert_single_stair, NULL, NULL, NULL, false);
+	register_blocktype(BLOCK_INVALID, "door", &convert_door, &trigger_door, NULL, &physics_door, false);
+	register_blocktype(BLOCK_INVALID, "door_obsidian", &convert_door_obsidian, &trigger_door, NULL, &physics_door, false);
+	register_blocktype(BLOCK_INVALID, "door_glass", &convert_door_glass, &trigger_door, NULL, &physics_door, true);
+	register_blocktype(BLOCK_INVALID, "door_step", &convert_door_stair, &trigger_door, NULL, &physics_door, false);
+	register_blocktype(BLOCK_INVALID, "parquet", &convert_parquet, NULL, NULL, NULL, false);
 
 	module_load("wireworld.so");
 
-	register_blocktype(BLOCK_INVALID, "active_sponge", &convert_active_sponge, NULL, &physics_active_sponge);
+	register_blocktype(BLOCK_INVALID, "active_sponge", &convert_active_sponge, NULL, NULL, &physics_active_sponge, false);
 
 	module_load("tnt.so");
 	module_load("spleef.so");
 
-/*	register_blocktype(BLOCK_INVALID, "active_tnt", &convert_active_tnt, &trigger_active_tnt, NULL);
-	register_blocktype(BLOCK_INVALID, "explosion", &convert_explosion, NULL, &physics_explosion);
-	register_blocktype(BLOCK_INVALID, "fuse", &convert_fuse, &trigger_fuse, &physics_fuse);*/
 }
-
-/*static const char *s_op_blocks[] = {
-	"op_glass",
-	"opsidian",
-	"op_brick",
-	"op_stone",
-	"op_cobblestone",
-	"op_air",
-	"op_water",
-};*/
-
-/*static const char *s_phys_blocks[] = {
-	"wood_float",
-	"door",
-	"lava_fast",
-	"door2",
-	"door3",
-};*/
-
-/* Physics blocks that are currently active */
-/*static const char *s_active_blocks[] = {
-	"air_flood",
-	"door_air",
-	"air_flood_layer",
-	"air_flood_up",
-	"air_flood_down",
-	"door2_air",
-	"door3_air",
-};*/
-
-bool blocktype_is_placable(enum blocktype_t type)
-{
-	switch (type)
-	{
-		case AIR:
-		case GRASS:
-		case ADMINIUM:
-		case WATER:
-		case WATERSTILL:
-		case LAVA:
-		case LAVASTILL:
-			return false;
-
-		default:
-			return type <= OBSIDIAN;
-	}
-}
-
-/*bool blocktype_passes_light(enum blocktype_t type)
-{
-	switch (type)
-	{
-		case AIR:
-		case GLASS:
-		case OP_AIR:
-		case OP_GLASS:
-		case LEAF:
-		case REDFLOWER:
-		case YELLOWFLOWER:
-		case MUSHROOM:
-		case REDMUSHROOM:
-		case SHRUB:
-		case DOOR3:
-		case DOOR_AIR:
-		case DOOR2_AIR:
-		case DOOR3_AIR:
-			return true;
-
-		default:
-			return false;
-	}
-}
-
-bool blocktype_is_phys(enum blocktype_t type)
-{
-	switch (type)
-	{
-		case WATER:
-		case LAVA:
-		case SAND:
-		case GRAVEL:
-		case TRUNK:
-		case LEAF:
-		case SPONGE:
-		case WOOD_FLOAT:
-		case LAVA_FAST:
-		case AIR_FLOOD:
-		case DOOR_AIR:
-		case AIR_FLOOD_LAYER:
-		case AIR_FLOOD_DOWN:
-		case AIR_FLOOD_UP:
-		case DOOR2_AIR:
-		case DOOR3_AIR:
-			return true;
-
-		default:
-			return false;
-	}
-}
-
-enum blocktype_t blocktype_convert_to_client(enum blocktype_t type)
-{
-	switch (type)
-	{
-		case OP_GLASS: return GLASS;
-		case OPSIDIAN: return OBSIDIAN;
-		case OP_BRICK: return BRICK;
-		case OP_STONE: return ROCK;
-		case OP_COBBLESTONE: return STONE;
-		case OP_AIR: return AIR;
-		case OP_WATER: return WATERSTILL;
-
-		case WOOD_FLOAT: return WOOD;
-		case DOOR: return TRUNK;
-		case LAVA_FAST: return LAVA;
-		case DOOR2: return OBSIDIAN;
-		case DOOR3: return GLASS;
-
-		case AIR_FLOOD:
-		case DOOR_AIR:
-		case AIR_FLOOD_LAYER:
-		case AIR_FLOOD_DOWN:
-		case AIR_FLOOD_UP:
-		case DOOR2_AIR:
-		case DOOR3_AIR:
-			return AIR;
-
-		default:
-			return type;
-	}
-}
-
-enum blocktype_t blocktype_convert_to_save(enum blocktype_t type)
-{
-	switch (type)
-	{
-		case DOOR_AIR: return DOOR;
-		case DOOR2_AIR: return DOOR2;
-		case DOOR3_AIR: return DOOR3;
-
-		case AIR_FLOOD:
-		case AIR_FLOOD_LAYER:
-		case AIR_FLOOD_DOWN:
-		case AIR_FLOOD_UP:
-			return AIR;
-
-		default:
-			return type;
-	}
-}*/
 
 const char *blocktype_get_name(enum blocktype_t type)
 {

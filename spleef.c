@@ -112,9 +112,9 @@ void module_init(void **data)
 	s.floor2 = blocktype_get_by_name("gold");
 	s.green = blocktype_get_by_name("green");
 
-	s.spleef1 = register_blocktype(BLOCK_INVALID, "spleef1", &convert_spleef1, &trigger_spleef, &physics_spleef);
-	s.spleef2 = register_blocktype(BLOCK_INVALID, "spleef2", &convert_spleef2, &trigger_spleef, &physics_spleef);
-	s.spleeft = register_blocktype(BLOCK_INVALID, "spleeft", &convert_spleeft, &trigger_spleeft, NULL);
+	s.spleef1 = register_blocktype(BLOCK_INVALID, "spleef1", &convert_spleef1, &trigger_spleef, NULL, &physics_spleef, false);
+	s.spleef2 = register_blocktype(BLOCK_INVALID, "spleef2", &convert_spleef2, &trigger_spleef, NULL, &physics_spleef, false);
+	s.spleeft = register_blocktype(BLOCK_INVALID, "spleeft", &convert_spleeft, &trigger_spleeft, NULL, NULL, false);
 }
 
 void module_deinit(void *data)

@@ -19,6 +19,9 @@
 #include "module.h"
 #include "undodb.h"
 
+static const char s_on[] = TAG_RED "on";
+static const char s_off[] = TAG_GREEN "off";
+
 void notify_file(struct client_t *c, const char *filename)
 {
 	char buf[64];
@@ -125,6 +128,30 @@ CMD(ban)
 
 	snprintf(buf, sizeof buf, "%s banned", param[1]);
 	net_notify_all(buf);
+	return false;
+}
+
+static const char help_banip[] =
+"/banip <ip>\n"
+"Ban an IP address.";
+
+CMD(banip)
+{
+	if (params != 2) return true;
+
+	playerdb_ban_ip(param[1]);
+
+	unsigned i;
+	for (i = 0; i < s_clients.used; i++)
+	{
+		struct client_t *client = s_clients.items[i];
+		if (strcmp(client->ip, param[1]) == 0)
+		{
+			net_close(client, "Banned");
+		}
+	}
+
+	LOG("%s banned IP %s\n", c->player->username, param[1]);
 	return false;
 }
 
@@ -286,6 +313,47 @@ CMD(cuboid)
 	return false;
 }
 
+static const char help_dellvl[] =
+"/dellvl <level>\n"
+"Delete a level.";
+
+CMD(dellvl)
+{
+	if (params != 2) return true;
+
+	if (level_is_loaded(param[1]))
+	{
+		struct level_t *l;
+		level_get_by_name(param[1], &l);
+
+		struct level_t *l2;
+		level_get_by_name("main", &l2);
+
+		unsigned i;
+		for (i = 0; i < s_clients.used; i++)
+		{
+			struct client_t *c = s_clients.items[i];
+			if (c->player == NULL) continue;
+			if (c->player->level == l)
+			{
+				c->player->new_level = l2;
+				client_notify(c, "Moving to main, level deleted.");
+			}
+			if (c->player->new_level == l)
+			{
+				c->player->new_level = c->player->level;
+				c->waiting_for_level = false;
+				client_notify(c, "Level change aborted, level deleted.");
+				continue;
+			}
+		}
+
+		l->delete = true;
+	}
+
+	return false;
+}
+
 static const char help_disown[] =
 "/disown\n"
 "Toggle disown mode. When enabled, any blocks placed will have their owner reset to none. "
@@ -296,7 +364,7 @@ CMD(disown)
 	ToggleBit(c->player->flags, FLAG_DISOWN);
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Disown %s", HasBit(c->player->flags, FLAG_DISOWN) ? "on" : "off");
+	snprintf(buf, sizeof buf, "Disown %s", HasBit(c->player->flags, FLAG_DISOWN) ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -354,7 +422,7 @@ CMD(fixed)
 	ToggleBit(c->player->flags, FLAG_PLACE_FIXED);
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, FLAG_PLACE_FIXED) ? "on" : "off");
+	snprintf(buf, sizeof buf, "Fixed %s", HasBit(c->player->flags, FLAG_PLACE_FIXED) ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -411,7 +479,7 @@ CMD(follow)
 	/* Despawn followed player to prevent following player jitter */
 	client_add_packet(c, packet_send_despawn_player(p->levelid));
 
-	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
+	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? s_on : s_off);
 	client_notify(c, buf);
 
 	snprintf(buf, sizeof buf, "Now following %s", p->username);
@@ -485,7 +553,7 @@ CMD(hide)
 	}
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? "on" : "off");
+	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -549,6 +617,8 @@ CMD(identify)
 	client_notify(c, "Identified successfully.");
 	LOG("Identify %s: success\n", c->player->username);
 
+	playerdb_log_identify(c->player->globalid, 1);
+
 	return false;
 }
 
@@ -562,7 +632,7 @@ CMD(info)
 	player_toggle_mode(c->player, MODE_INFO);
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Block info %s", (c->player->mode == MODE_INFO) ? "on" : "off");
+	snprintf(buf, sizeof buf, "Block info %s", (c->player->mode == MODE_INFO) ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -640,7 +710,7 @@ CMD(lava)
 	player_toggle_mode(c->player, MODE_PLACE_LAVA);
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Lava %s", (c->player->mode == MODE_PLACE_LAVA) ? "on" : "off");
+	snprintf(buf, sizeof buf, "Lava %s", (c->player->mode == MODE_PLACE_LAVA) ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -674,25 +744,28 @@ CMD(levels)
 
 	for (i = 0; i < n; i++)
 	{
-		/* Chop name off at extension */
-		char *ext = strrchr(namelist[i]->d_name, '.');
-		if (ext != NULL) *ext = '\0';
-
-		bool loaded = level_is_loaded(namelist[i]->d_name);
-
-		char buf2[64];
-		snprintf(buf2, sizeof buf2, "%s%s%s%s", loaded ? TAG_GREEN : "", namelist[i]->d_name, loaded ? TAG_WHITE : "", (i < n - 1) ? ", " : "");
-
-		size_t len = strlen(buf2);
-		if (len >= sizeof buf - (bufp - buf))
+		if (!strstr(namelist[i]->d_name, "_home"))
 		{
-			client_notify(c, buf);
-			memset(buf, 0, sizeof buf);
-			bufp = buf;
-		}
+			/* Chop name off at extension */
+			char *ext = strrchr(namelist[i]->d_name, '.');
+			if (ext != NULL) *ext = '\0';
 
-		strcpy(bufp, buf2);
-		bufp += len;
+			bool loaded = level_is_loaded(namelist[i]->d_name);
+
+			char buf2[64];
+			snprintf(buf2, sizeof buf2, "%s%s%s%s", loaded ? TAG_GREEN : "", namelist[i]->d_name, loaded ? TAG_WHITE : "", (i < n - 1) ? ", " : "");
+
+			size_t len = strlen(buf2);
+			if (len >= sizeof buf - (bufp - buf))
+			{
+				client_notify(c, buf);
+				memset(buf, 0, sizeof buf);
+				bufp = buf;
+			}
+
+			strcpy(bufp, buf2);
+			bufp += len;
+		}
 
 		free(namelist[i]);
 	}
@@ -875,7 +948,7 @@ CMD(newlvl)
 
 	if ((x & (x - 1)) != 0 || (y & (y - 1)) != 0 || (z & (z - 1)) != 0)
 	{
-		client_notify(c, "Dimension must be power of two");
+		client_notify(c, "Dimension must be power of two (16, 32, 64, 128, 256, 512)");
 		return false;
 	}
 
@@ -941,7 +1014,7 @@ CMD(paint)
 	ToggleBit(c->player->flags, FLAG_PAINT);
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Paint %s", HasBit(c->player->flags, FLAG_PAINT) ? "on" : "off");
+	snprintf(buf, sizeof buf, "Paint %s", HasBit(c->player->flags, FLAG_PAINT) ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -1333,7 +1406,7 @@ CMD(solid)
 	player_toggle_mode(c->player, MODE_PLACE_SOLID);
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Solid %s", (c->player->mode == MODE_PLACE_SOLID) ? "on" : "off");
+	snprintf(buf, sizeof buf, "Solid %s", (c->player->mode == MODE_PLACE_SOLID) ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -1434,6 +1507,20 @@ CMD(tp)
 	return false;
 }
 
+static const char help_unbanip[] =
+"/unbanip <ip>\n"
+"Unban an IP address.";
+
+CMD(unbanip)
+{
+	if (params != 2) return true;
+
+	playerdb_unban_ip(param[1]);
+
+	LOG("%s unbanned IP %s\n", c->player->username, param[1]);
+	return false;
+}
+
 static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, void *arg)
 {
 	struct client_t *client = arg;
@@ -1472,14 +1559,14 @@ static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata,
 }
 
 static const char help_undo[] =
-"/undo <level> [<user> [<count>]]\n"
+"/undo <level> [<user> [<count> [commit]]]\n"
 "Undo user actions for the specified <user> and <level>.";
 
 CMD(undo)
 {
 	struct notify_t n;
 
-	if (params < 2 || params > 4) return true;
+	if (params < 2 || params > 5) return true;
 
 	struct level_t *l;
 	if (!level_get_by_name(param[1], &l))
@@ -1595,7 +1682,7 @@ CMD(water)
 	player_toggle_mode(c->player, MODE_PLACE_WATER);
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Water %s", (c->player->mode == MODE_PLACE_WATER) ? "on" : "off");
+	snprintf(buf, sizeof buf, "Water %s", (c->player->mode == MODE_PLACE_WATER) ? s_on : s_off);
 	client_notify(c, buf);
 
 	return false;
@@ -1632,11 +1719,13 @@ struct command_t s_commands[] = {
 	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },
+	{ "banip", RANK_OP, &cmd_banip, help_banip },
 	{ "bind", RANK_ADV_BUILDER, &cmd_bind, help_bind },
 	{ "blocks", RANK_BUILDER, &cmd_blocks, help_blocks },
 	{ "commands", RANK_BANNED, &cmd_commands, help_commands },
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
+	{ "dellvl", RANK_ADMIN, &cmd_dellvl, help_dellvl },
 	{ "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "exit", RANK_ADMIN, &cmd_exit, help_exit },
 	{ "fixed", RANK_OP, &cmd_fixed, help_fixed },
@@ -1677,6 +1766,7 @@ struct command_t s_commands[] = {
 	{ "teleporter", RANK_ADV_BUILDER, &cmd_teleporter, help_teleporter },
 	{ "time", RANK_GUEST, &cmd_time, help_time },
 	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
+	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
 	{ "water", RANK_BUILDER, &cmd_water, help_water },

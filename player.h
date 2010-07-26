@@ -68,7 +68,7 @@ struct player_t
 bool player_t_compare(struct player_t **a, struct player_t **b);
 LIST(player, struct player_t *, player_t_compare);
 
-struct player_t *player_add(const char *username, bool *newuser);
+struct player_t *player_add(const char *username, struct client_t *c, bool *newuser, int *identified);
 void player_del(struct player_t *player);
 struct player_t *player_get_by_name(const char *username);
 

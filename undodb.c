@@ -4,6 +4,7 @@
 #include <sqlite3.h>
 #include "mcc.h"
 #include "undodb.h"
+#include "playerdb.h"
 #include "util.h"
 
 struct undodb_t

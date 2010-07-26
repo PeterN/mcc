@@ -78,6 +78,7 @@ struct level_t
 	pthread_t thread;
 	bool thread_valid;
 	bool convert;
+	bool delete;
 	pthread_mutex_t mutex;
 };
 
@@ -109,6 +110,7 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
 void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level, int type);
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
+void level_addupdate_override(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 void physics_remove(struct level_t *level, unsigned index);
 
 void level_process_physics(bool can_init);

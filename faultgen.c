@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "faultgen.h"
+#include "mcc.h"
 
 struct faultgen_t
 {
@@ -15,8 +16,8 @@ struct faultgen_t *faultgen_init(int x, int y)
 	struct faultgen_t *f = malloc(sizeof *f + sizeof *f->map * x * y);
 	f->x = x;
 	f->y = y;
-	f->disp_max = 0.01f;
-	f->disp_delta = -0.0025f;
+	f->disp_max = 0.05f;
+	f->disp_delta = -0.005f;
 
 	return f;
 }
@@ -39,10 +40,14 @@ void faultgen_create(struct faultgen_t *f)
 
 	int i;
 
+	LOG("faultgen: generating %d by %d map\n", f->x, f->y);
+
 	for (i = 0; i < f->x * f->y; i++)
 	{
 		f->map[i] = 0.5;
 	}
+
+	LOG("faultgen: starting %d iterations\n", f->x + f->y);
 
 	for (i = 0; i < f->x + f->y; i++)
 	{
@@ -61,14 +66,31 @@ void faultgen_create(struct faultgen_t *f)
 				float *m = &f->map[x + y * f->x];
 
 				*m += h;
-				if (*m > 1) *m = 1;
-				if (*m < 0) *m = 0;
+				//if (*m > 1) *m = 1;
+				//if (*m < 0) *m = 0;
 			}
 		}
 
 		disp += f->disp_delta;
 		if (disp < disp_min) disp = f->disp_max;
 	}
+
+	LOG("faultgen: normalizing\n");
+
+	float min = +INFINITY;
+	float max = -INFINITY;
+	for (i = 0; i < f->x * f->y; i++)
+	{
+		if (f->map[i] < min) min = f->map[i];
+		if (f->map[i] > max) max = f->map[i];
+	}
+
+	for (i = 0; i < f->x * f->y; i++)
+	{
+		f->map[i] = (f->map[i] - min) / (max - min);
+	}
+
+	LOG("faultgen: complete\n");
 }
 
 const float *faultgen_map(struct faultgen_t *f)

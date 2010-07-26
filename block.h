@@ -101,14 +101,17 @@ struct block_t
 
 typedef enum blocktype_t(*convert_func_t)(struct level_t *level, unsigned index, const struct block_t *block);
 typedef bool(*trigger_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
+typedef void(*delete_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 typedef void(*physics_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 
 struct blocktype_desc_t
 {
 	const char *name;
 	bool loaded;
+	bool clear;
 	convert_func_t convert_func;
 	trigger_func_t trigger_func;
+	delete_func_t delete_func;
 	physics_func_t physics_func;
 };
 
@@ -127,10 +130,11 @@ enum blocktype_t blocktype_get_by_name(const char *name);
 struct block_t block_convert_from_mcs(uint8_t type);
 bool blocktype_has_physics(enum blocktype_t type);
 
-int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, physics_func_t physics_func);
+int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear);
 void deregister_blocktype(enum blocktype_t type);
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block);
 int trigger(struct level_t *level, unsigned index, const struct block_t *block);
+void delete(struct level_t *level, unsigned index, const struct block_t *block);
 void physics(struct level_t *level, unsigned index, const struct block_t *block);
 
 struct client_t;

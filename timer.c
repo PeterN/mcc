@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 #include <time.h>
 #include "list.h"
 #include "timer.h"

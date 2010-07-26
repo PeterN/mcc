@@ -12,6 +12,12 @@ static sqlite3_stmt *s_globalid_get_stmt;
 static sqlite3_stmt *s_username_get_stmt;
 static sqlite3_stmt *s_password_stmt;
 static sqlite3_stmt *s_set_password_stmt;
+static sqlite3_stmt *s_get_last_ip_stmt;
+static sqlite3_stmt *s_log_visit_stmt;
+static sqlite3_stmt *s_log_identify_stmt;
+static sqlite3_stmt *s_check_ban_stmt;
+static sqlite3_stmt *s_banip_stmt;
+static sqlite3_stmt *s_unbanip_stmt;
 
 void playerdb_init()
 {
@@ -26,7 +32,7 @@ void playerdb_init()
 	}
 
 	char *err;
-	sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, rank INT, password TEXT, first_visit DATETIME, last_visit DATETIME)", NULL, NULL, &err);
+	sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, rank INT, password TEXT, first_visit DATETIME, last_visit DATETIME, last_ip TEXT, identified INT)", NULL, NULL, &err);
 	if (err != NULL)
 	{
 		LOG("Errrrr: %s", err);
@@ -95,6 +101,54 @@ void playerdb_init()
 		sqlite3_close(s_db);
 		return;
 	}
+
+	res = sqlite3_prepare_v2(s_db, "SELECT last_ip FROM players WHERE id = ? AND identified = 1", -1, &s_get_last_ip_stmt, NULL);
+	if (res != SQLITE_OK)
+	{
+		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		sqlite3_close(s_db);
+		return;
+	}
+
+	res = sqlite3_prepare_v2(s_db, "UPDATE players SET last_visit = ?, last_ip = ?, identified = ? WHERE id = ?", -1, &s_log_visit_stmt, NULL);
+	if (res != SQLITE_OK)
+	{
+		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		sqlite3_close(s_db);
+		return;
+	}
+
+	res = sqlite3_prepare_v2(s_db, "UPDATE players SET identified = ? WHERE id = ?", -1, &s_log_identify_stmt, NULL);
+	if (res != SQLITE_OK)
+	{
+		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		sqlite3_close(s_db);
+		return;
+	}
+
+	res = sqlite3_prepare_v2(s_db, "SELECT COUNT(*) FROM bans WHERE net = ?", -1, &s_check_ban_stmt, NULL);
+	if (res != SQLITE_OK)
+	{
+		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		sqlite3_close(s_db);
+		return;
+	}
+
+	res = sqlite3_prepare_v2(s_db, "INSERT INTO bans (net, date) VALUES (?, ?)", -1, &s_banip_stmt, NULL);
+	if (res != SQLITE_OK)
+	{
+		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		sqlite3_close(s_db);
+		return;
+	}
+
+	res = sqlite3_prepare_v2(s_db, "DELETE FROM bans WHERE net = ?", -1, &s_unbanip_stmt, NULL);
+	if (res != SQLITE_OK)
+	{
+		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		sqlite3_close(s_db);
+		return;
+	}
 }
 
 void playerdb_close()
@@ -106,6 +160,12 @@ void playerdb_close()
 	sqlite3_finalize(s_username_get_stmt);
 	sqlite3_finalize(s_password_stmt);
 	sqlite3_finalize(s_set_password_stmt);
+	sqlite3_finalize(s_get_last_ip_stmt);
+	sqlite3_finalize(s_log_visit_stmt);
+	sqlite3_finalize(s_log_identify_stmt);
+	sqlite3_finalize(s_check_ban_stmt);
+	sqlite3_finalize(s_banip_stmt);
+	sqlite3_finalize(s_unbanip_stmt);
 	sqlite3_close(s_db);
 }
 
@@ -262,4 +322,64 @@ void playerdb_set_password(const char *username, const char *password)
 		LOG("[playerdb_set_password] %s\n", sqlite3_errmsg(s_db));
 		return;
 	}
+}
+
+const char *playerdb_get_last_ip(int globalid)
+{
+	int res;
+	sqlite3_reset(s_get_last_ip_stmt);
+	if (sqlite3_bind_int(s_get_last_ip_stmt, 1, globalid) != SQLITE_OK)
+	{
+		LOG("[playerdb_get_last_ip] Can't bind int: %s\n", sqlite3_errmsg(s_db));
+		return "unknown";
+	}
+	res = sqlite3_step(s_get_last_ip_stmt);
+	if (res == SQLITE_ROW)
+	{
+		return (const char *)sqlite3_column_text(s_get_last_ip_stmt, 0);
+	}
+
+	return "";
+}
+
+/* UPDATE players SET last_visit = ?, last_ip = ? WHERE id = ? */
+void playerdb_log_visit(int globalid, const char *ip, int identified)
+{
+	sqlite3_reset(s_log_visit_stmt);
+	sqlite3_bind_int(s_log_visit_stmt, 1, time(NULL));
+	sqlite3_bind_text(s_log_visit_stmt, 2, ip, -1, SQLITE_STATIC);
+	sqlite3_bind_int(s_log_visit_stmt, 3, identified);
+	sqlite3_bind_int(s_log_visit_stmt, 4, globalid);
+	sqlite3_step(s_log_visit_stmt);
+}
+
+void playerdb_log_identify(int globalid, int identified)
+{
+	sqlite3_reset(s_log_identify_stmt);
+	sqlite3_bind_int(s_log_identify_stmt, 1, identified);
+	sqlite3_bind_int(s_log_identify_stmt, 2, globalid);
+	sqlite3_step(s_log_identify_stmt);
+}
+
+bool playerdb_check_ban(const char *ip)
+{
+	sqlite3_reset(s_check_ban_stmt);
+	sqlite3_bind_text(s_check_ban_stmt, 1, ip, -1, SQLITE_STATIC);
+	sqlite3_step(s_check_ban_stmt);
+	return sqlite3_column_int(s_check_ban_stmt, 0) > 0;
+}
+
+void playerdb_ban_ip(const char *ip)
+{
+	sqlite3_reset(s_banip_stmt);
+	sqlite3_bind_text(s_banip_stmt, 1, ip, -1, SQLITE_STATIC);
+	sqlite3_bind_int(s_log_visit_stmt, 2, time(NULL));
+	sqlite3_step(s_banip_stmt);
+}
+
+void playerdb_unban_ip(const char *ip)
+{
+	sqlite3_reset(s_unbanip_stmt);
+	sqlite3_bind_text(s_unbanip_stmt, 1, ip, -1, SQLITE_STATIC);
+	sqlite3_step(s_unbanip_stmt);
 }

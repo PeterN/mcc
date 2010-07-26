@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "perlin.h"
+#include "mcc.h"
 
 struct perlin_t
 {
@@ -72,8 +73,11 @@ static float perlin_noise_2d(const struct perlin_t *pp, float x, float y)
 
 void perlin_noise(struct perlin_t *pp)
 {
-	float min = 0, max = 0;
+	float min = +INFINITY;
+	float max = -INFINITY;
 	int x, y;
+
+	LOG("perlin: generating %d by %d map\n", pp->x, pp->y);
 
 	for (x = 0; x < pp->x; x++)
 	{
@@ -87,10 +91,14 @@ void perlin_noise(struct perlin_t *pp)
 		}
 	}
 
+	LOG("perlin: normalizing\n");
+
 	for (x = 0; x < pp->x * pp->y; x++)
 	{
 		pp->map[x] = (pp->map[x] - min) / (max - min);
 	}
+
+	LOG("perlin: complete\n");
 }
 
 struct perlin_t *perlin_init(int x, int y, float persistence, int octaves)

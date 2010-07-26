@@ -332,6 +332,8 @@ void *level_gen_thread(void *arg)
 //		level_gen_heightmap(hm, mx, mz, level->type - 2);
 		//level_smooth_slopes(hm, mx, mz, my);
 
+		LOG("levelgen: creating ground\n");
+
 		int dmx = mx;
 
 		for (z = 0; z < mz; z++)
@@ -339,10 +341,13 @@ void *level_gen_thread(void *arg)
 			for (x = 0; x < mx; x++)
 			{
 				int h = (hm1[x + z * dmx] - 0.5) * level->height_range + my / 2;
+				float hm2p = hm2[x + z * dmx];
+				int rh = 5;
+				if (hm2p < 0.25) rh = hm2p * 20 - 2;
 
 				for (y = 0; y < h && y < my; y++)
 				{
-					block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : (y <= level->sea_height) ? SAND : GRASS;
+					block.type = (y < h - rh) ? ROCK : (y < h - 1) ? DIRT : (y <= level->sea_height) ? SAND : GRASS;
 					level_set_block(level, &block, level_get_index(level, x, y, z));
 				}
 
@@ -419,8 +424,10 @@ void *level_gen_thread(void *arg)
 		perlin_deinit(pp);
 //		faultgen_deinit(fg);
 
+		LOG("levelgen: flooding sealevel\n");
+
 		block.type = WATER;
-		for (i = 0; i < 100; i++)
+		for (i = 0; i < 0; i++)
 		{
 			for (z = 0; z < mz; z++)
 			{
@@ -449,6 +456,8 @@ void *level_gen_thread(void *arg)
 			}
 		}
 
+		LOG("levelgen: placing grass\n");
+
 		/* Grow grass on soil */
 		for (z = 0; z < mz; z++)
 		{
@@ -467,6 +476,8 @@ void *level_gen_thread(void *arg)
 			}
 		}
 	}
+
+	LOG("levelgen: setting spawn\n");
 
 	level->spawn.x = mx * 16;
 	level->spawn.z = mz * 16;
@@ -518,6 +529,8 @@ void *level_gen_thread(void *arg)
 
 	level->physics.used = 0;
 
+	LOG("levelgen: activating physics\n");
+
 	/* Activate physics */
 	int count = mx * my * mz;
 	for (i = 0; i < count; i++)
@@ -527,7 +540,13 @@ void *level_gen_thread(void *arg)
 		if (b->physics) physics_list_add(&level->physics, i);
 	}
 
-	level_prerun(level);
+	LOG("levelgen: %lu physics blocks, prerunning\n", level->physics.used);
+
+	//level_prerun(level);
+
+	LOG("levelgen: %lu physics blocks remaining\n", level->physics.used);
+
+	LOG("levelgen: complete\n");
 
 	level->changed = true;
 
@@ -570,6 +589,20 @@ void level_unload(struct level_t *level)
 	block_update_list_free(&level->updates);
 
 	undodb_close(level->undo);
+
+	if (level->delete)
+	{
+		char filename[256];
+		snprintf(filename, sizeof filename, "levels/%s.mcl", level->name);
+		lcase(filename);
+		unlink(filename);
+
+		snprintf(filename, sizeof filename, "undo/%s.db", level->name);
+		lcase(filename);
+		unlink(filename);
+
+		LOG("Level '%s' deleted\n", level->name);
+	}
 
 	free(level->blocks);
 	free(level);
@@ -1062,6 +1095,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		{
 			client_notify(client, "You cannot build that far away");
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+			return;
 		}
 	}
 
@@ -1187,6 +1221,16 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		undodb_log(level->undo, client->player->globalid, x, y, z, b->type, b->data, nt);
 //		player_undo_log(client->player, index);
 
+		delete(level, index, b);
+//		int r = trigger(level, index, b);
+//.		if (r > 0)
+//		{
+//			if (r == 2) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+
+//			//LOG("Triggered!");
+//			return;
+//		}
+
 		bool oldphysics = b->physics;
 
 		b->type = nt;
@@ -1198,7 +1242,10 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		if (oldphysics != b->physics)
 		{
 			if (oldphysics) physics_list_del_item(&level->physics, index);
-			if (b->physics) physics_list_add(&level->physics, index);
+			if (b->physics) {
+				physics_list_add(&level->physics, index);
+				//level_addupdate(level, index, BLOCK_INVALID, 0);
+			}
 		}
 
 		level->changed = true;
@@ -1498,28 +1545,35 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 	{
 		struct block_update_t *bu = &level->updates.items[i];
 		if (index == bu->index) {
-			/* Reset physics bit again */
-		/*	if (bu->newtype == BLOCK_INVALID)
-			{
-				level->blocks[index].physics = blocktype_has_physics(level->blocks[index].type);
-			}
-			else
-			{
-				level->blocks[index].physics = blocktype_has_physics(bu->newtype);
-			}*/
 			return;
 		}
 	}
-/*
-	if (newtype == BLOCK_INVALID)
+
+	struct block_update_t bu;
+	bu.index = index;
+	bu.newtype = newtype;
+	bu.newdata = newdata;
+	block_update_list_add(&level->updates, bu);
+}
+
+void level_addupdate_override(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
+{
+	/* Time sink? */
+	unsigned i;
+	for (i = 0; i < level->updates.used; i++)
 	{
-		level->blocks[index].physics = blocktype_has_physics(level->blocks[index].type);
+		struct block_update_t *bu = &level->updates.items[i];
+		if (index == bu->index) {
+			/* Override update */
+			if (bu->newtype == WATER)
+			{
+				bu->newtype = newtype;
+				bu->newdata = newdata;
+			}
+			return;
+		}
 	}
-	else
-	{
-		level->blocks[index].physics = blocktype_has_physics(newtype);
-	}
-*/
+
 	struct block_update_t bu;
 	bu.index = index;
 	bu.newtype = newtype;

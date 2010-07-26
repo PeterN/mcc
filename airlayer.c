@@ -42,7 +42,7 @@ void physics_air_layer(struct level_t *l, unsigned index, const struct block_t *
 
 void module_init(void **data)
 {
-	s.air_layer = register_blocktype(-1, "air_layer", &convert_air_layer, NULL, &physics_air_layer);
+	s.air_layer = register_blocktype(-1, "air_layer", &convert_air_layer, NULL, NULL, &physics_air_layer, true);
 }
 
 void module_deinit(void *data)

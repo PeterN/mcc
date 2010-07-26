@@ -18,6 +18,7 @@ struct client_t
 	bool hidden;
 
 	struct sockaddr_storage sin;
+	char ip[16];
 
 	struct packet_t *packet_recv;
 	struct packet_t *packet_send;

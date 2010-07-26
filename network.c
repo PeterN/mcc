@@ -13,6 +13,7 @@
 #include "player.h"
 #include "network.h"
 #include "mcc.h"
+#include "playerdb.h"
 
 static inline bool socket_t_compare(const struct socket_t *a, const struct socket_t *b)
 {
@@ -75,6 +76,16 @@ bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 	return true;
 }
 
+bool getip(const struct sockaddr *addr, size_t addr_len, char *ip, size_t ip_len)
+{
+	int res = getnameinfo(addr, addr_len, ip, ip_len, NULL, 0, NI_NUMERICHOST | NI_NUMERICSERV);
+	if (res != 0)
+	{
+		perror("getnameinfo");
+	}
+	return res == 0;
+}
+
 static struct sockaddr_in serv_addr;
 
 static int s_listenfd;
@@ -133,7 +144,7 @@ void net_close(struct client_t *c, const char *reason)
 
 	if (c->player == NULL)
 	{
-		LOG("Closing connection: %s\n", reason == NULL ? "closed" : reason);
+		LOG("Closing connection from %s: %s\n", c->ip, reason == NULL ? "closed" : reason);
 	}
 	else
 	{
@@ -166,7 +177,7 @@ void net_close(struct client_t *c, const char *reason)
 		}
 		net_notify_all(buf);
 
-		LOG("Closing connection %s (%d): %s\n", c->player->username, c->player->globalid, reason);
+		LOG("Closing connection from %s - %s (%d): %s\n", c->ip, c->player->username, c->player->globalid, reason);
 		player_del(c->player);
 	}
 }
@@ -317,8 +328,21 @@ void net_run()
 
 			c = calloc(1, sizeof *c);
 			c->sock = fd;
-			c->sin  = sin;
-			client_list_add(&s_clients, c);
+			c->sin = sin;
+//			c->sin_len = sin_len;
+
+			getip((struct sockaddr *)&sin, sin_len, c->ip, sizeof c->ip);
+			LOG("network: accepted connection from %s\n", c->ip);
+
+			if (playerdb_check_ban(c->ip))
+			{
+				net_close(c, "Banned");
+				free(c);
+			}
+			else
+			{
+				client_list_add(&s_clients, c);
+			}
 		}
 	}
 

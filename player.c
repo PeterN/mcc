@@ -32,7 +32,7 @@ struct player_t *player_get_by_name(const char *username)
 	return NULL;
 }
 
-struct player_t *player_add(const char *username, bool *newuser)
+struct player_t *player_add(const char *username, struct client_t *c, bool *newuser, int *identified)
 {
 	int globalid = playerdb_get_globalid(username, true, newuser);
 	if (globalid == -1) return NULL;
@@ -45,7 +45,25 @@ struct player_t *player_add(const char *username, bool *newuser)
 	sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
 	p->globalid = globalid;
 
-	if (p->rank > RANK_BUILDER) p->rank = RANK_BUILDER;
+	if (p->rank > RANK_BUILDER)
+	{
+		const char *last_ip = playerdb_get_last_ip(globalid);
+		if (last_ip != NULL && strcmp(c->ip, last_ip) == 0)
+		{
+			*identified = 2;
+		}
+		else
+		{
+			p->rank = RANK_BUILDER;
+			*identified = 1;
+		}
+	}
+	else
+	{
+		*identified = 0;
+	}
+
+	playerdb_log_visit(globalid, c->ip, (*identified) == 2);
 
 	enum blocktype_t i;
 	for (i = 0; i < BLOCK_END; i++)
@@ -71,6 +89,7 @@ void player_del(struct player_t *player)
 bool player_change_level(struct player_t *player, struct level_t *level)
 {
 	if (player->level == level) return false;
+	if (level->delete) return false;
 
 	player->new_level = level;
 
