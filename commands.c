@@ -744,7 +744,7 @@ CMD(levels)
 
 	for (i = 0; i < n; i++)
 	{
-		if (!strstr(namelist[i]->d_name, "_home"))
+		if (i > 0 && strcmp(namelist[i - 1]->d_name, namelist[i]->d_name) != 0 && strstr(namelist[i]->d_name, "_home") == NULL)
 		{
 			/* Chop name off at extension */
 			char *ext = strrchr(namelist[i]->d_name, '.');
