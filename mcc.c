@@ -86,8 +86,8 @@ int main(int argc, char **argv)
 	g_server.motd = "Test server for Just Another Minecraft Server +noclip";
 	g_server.max_players = 200;
 	g_server.players = 0;
-	g_server.port = 25565;
-	g_server.public = true;
+	g_server.port = 25566;
+	g_server.public = false;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();

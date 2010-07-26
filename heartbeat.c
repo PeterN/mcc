@@ -45,10 +45,10 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 						//"Accept: */*\r\n"
 						//"Connection: close"
 						//"User-Agent: mcc/0.1\r\n"
-						"Content-Length: %lu\r\n"
+						"Content-Length: %llu\r\n"
 						"Content-Type: application/x-www-form-urlencoded\r\n\r\n"
 						"%s",
-						url, host, strlen(postdata), postdata);
+						url, host, (long long unsigned)strlen(postdata), postdata);
 
 			int res = write(fd, request, strlen(request));
 			if (res < 0)

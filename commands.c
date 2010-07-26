@@ -744,12 +744,12 @@ CMD(levels)
 
 	for (i = 0; i < n; i++)
 	{
+		/* Chop name off at extension */
+		char *ext = strrchr(namelist[i]->d_name, '.');
+		if (ext != NULL) *ext = '\0';
+
 		if (i > 0 && strcmp(namelist[i - 1]->d_name, namelist[i]->d_name) != 0 && strstr(namelist[i]->d_name, "_home") == NULL)
 		{
-			/* Chop name off at extension */
-			char *ext = strrchr(namelist[i]->d_name, '.');
-			if (ext != NULL) *ext = '\0';
-
 			bool loaded = level_is_loaded(namelist[i]->d_name);
 
 			char buf2[64];

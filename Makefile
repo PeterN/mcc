@@ -1,4 +1,4 @@
-CFLAGS := -Wall -g
+CFLAGS := -Wall -g -DINFINITY=HUGE_VAL
 LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 
 LIBSRC := block.c
@@ -9,6 +9,9 @@ LIBSRC += config.c
 LIBSRC += cuboid.c
 LIBSRC += faultgen.c
 LIBSRC += filter.c
+LIBSRC += hashtable.c
+LIBSRC += hashtable_itr.c
+LIBSRC += hashtable_utility.c
 LIBSRC += level.c
 LIBSRC += module.c
 LIBSRC += network.c
@@ -24,6 +27,10 @@ LIBO := libmcc.so
 HBSRC := heartbeat.c
 HBOBJ := $(HBSRC:.c=.o)
 HBO := heartbeat.so
+
+IPCSRC := ipc.c
+IPCOBJ := $(IPCSRC:.c=.o)
+IPCO := ipc.so
 
 IRCSRC := irc.c
 IRCOBJ := $(IRCSRC:.c=.o)
@@ -50,16 +57,19 @@ ALOBJ := $(ALSRC:.c=.o)
 ALO := airlayer.so
 
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO)
+all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO)
 
 clean:
-	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO)
+	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
 
 $(HBO): $(HBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,$(HBO) -o $(HBO) $(HBOBJ)
+
+$(IPCO): $(IPCOBJ)
+	$(CC) -shared -fPIC -Wl,-soname,$(IPCO) -o $(IPCO) $(IPCOBJ)
 
 $(IRCO): $(IRCOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,$(IRCO) -o $(IRCO) $(IRCOBJ)

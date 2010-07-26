@@ -902,7 +902,7 @@ void *level_save_thread(void *arg)
 
 	/* Copy the file to back up */
 	int src = open(filename, O_RDONLY);
-	int dst = open(backup, O_WRONLY | O_CREAT);
+	int dst = open(backup, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
 	char buf[1024];
 	size_t len;
 	while ((len = read(src, buf, sizeof buf)) > 0)
