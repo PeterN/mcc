@@ -12,7 +12,12 @@ struct ipc_t
 	int fd;
 };
 
-void ipc_init(struct ipc_t *ipc)
+static void ipc_run(int fd, bool can_write, bool can_read, void *arg)
+{
+	struct ipc_t *ipc = arg;
+}
+
+static void ipc_init(struct ipc_t *ipc)
 {
 	struct sockaddr_un saun;
 
@@ -24,7 +29,7 @@ void ipc_init(struct ipc_t *ipc)
 	}
 
 	saun.sun_family = AF_UNIX;
-	strncpy(saun.sun_path, "mcc", sizeof saun.sun_path);
+	strncpy(saun.sun_path, "/tmp/mccsocket", sizeof saun.sun_path);
 
 	if (bind(ipc->fd, (const struct sockaddr *)&saun, sizeof saun) < 0)
 	{
@@ -37,6 +42,8 @@ void ipc_init(struct ipc_t *ipc)
 		perror("listen");
 		return;
 	}
+
+	register_socket(ipc->fd, &ipc_run, ipc);
 }
 
 void module_init(void **arg)

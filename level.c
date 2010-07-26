@@ -337,13 +337,22 @@ void *level_gen_thread(void *arg)
 
 		LOG("levelgen: creating ground\n");
 
+		float avg = 0;
+		for (i = 0; i < mx * mz; i++)
+		{
+			avg += hm1[i];
+		}
+		avg /= mx * mz;
+
+		LOG("levelgen: average height %f\n", avg);
+
 		int dmx = mx;
 
 		for (z = 0; z < mz; z++)
 		{
 			for (x = 0; x < mx; x++)
 			{
-				int h = (hm1[x + z * dmx] - 0.5) * level->height_range + my / 2;
+				int h = (hm1[x + z * dmx] - avg * 0.5) * level->height_range + my / 2;
 				float hm2p = hm2[x + z * dmx];
 				int rh = 5;
 				if (hm2p < 0.25) rh = hm2p * 20 - 2;
@@ -1473,7 +1482,13 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 
 	/*if (i > 0) { LOG("Removed %d physics blocks\n", i); }*/
 
-	//LOG("Physics ran in %d (%lu blocks)\n", level->physics_runtime, level->physics2.used);
+	if (level->physics_runtime > 50)
+	{
+		LOG("Physics ran in %dms (%lu blocks)\n", level->physics_runtime, level->physics2.used);
+	}
+
+	level->physics_runtime_last = level->physics_runtime;
+	level->physics_count_last = level->physics2.used;
 
 	level->physics_done = 1;
 	level->physics2.used = 0;
@@ -1548,7 +1563,13 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 
 	level->updates_runtime += gettime() - s;
 
-	//LOG("Updates ran in %d (%lu blocks)\n", level->updates_runtime, level->updates.used);
+	if (level->updates_runtime > 50)
+	{
+		LOG("Updates ran in %dms (%lu blocks)\n", level->updates_runtime, level->updates.used);
+	}
+
+	level->updates_runtime_last = level->updates_runtime;
+	level->updates_count_last = level->updates.used;
 
 	//LOG("Hmm (%lu / %lu blocks)\n", level->physics.used, level->physics2.used);
 

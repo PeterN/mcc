@@ -40,10 +40,7 @@ void client_process(struct client_t *c, char *message);
 void client_send_spawn(const struct client_t *c, bool hiding);
 void client_send_despawn(const struct client_t *c, bool hiding);
 
-static inline void client_notify(struct client_t *c, const char *message)
-{
-	client_add_packet(c, packet_send_message(0, message));
-}
+void client_notify(struct client_t *c, const char *message);
 
 void client_info();
 

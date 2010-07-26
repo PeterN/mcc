@@ -515,7 +515,7 @@ void blocktype_init()
 	register_blocktype(AIR, "air", NULL, NULL, NULL, &physics_air, true);
 	register_blocktype(ROCK, "stone", NULL, NULL, NULL, NULL, false);
 	register_blocktype(GRASS, "grass", NULL, NULL, NULL, NULL, false);
-	register_blocktype(DIRT, "dirt", NULL, NULL, NULL, &physics_dirt, false);
+	register_blocktype(DIRT, "dirt", NULL, NULL, NULL, NULL, false);
 	register_blocktype(STONE, "cobblestone", NULL, NULL, NULL, NULL, false);
 	register_blocktype(WOOD, "wood", NULL, NULL, NULL, NULL, false);
 	register_blocktype(SHRUB, "plant", NULL, NULL, NULL, NULL, true);

@@ -64,6 +64,9 @@ struct level_t
 	unsigned updates_iter;
 	unsigned physics_runtime, updates_runtime;
 
+	unsigned physics_runtime_last, updates_runtime_last;
+	unsigned physics_count_last, updates_count_last;
+
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
 

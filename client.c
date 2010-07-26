@@ -39,6 +39,36 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 	*ip = p;
 }
 
+void client_notify(struct client_t *c, const char *message)
+{
+	char buf[64];
+	const char *bufp = message;
+	const char *bufe = message + strlen(message);
+
+	while (bufp < bufe)
+	{
+		const char *last_space = NULL;
+		const char *bufpp = bufp;
+		while (bufpp - bufp < sizeof buf)
+		{
+			if (*bufpp == '\0' || *bufpp == '\n')
+			{
+				last_space = bufpp;
+				break;
+			}
+			else if (*bufpp == ' ') last_space = bufpp;
+			bufpp++;
+		}
+
+		memset(buf, 0, sizeof buf);
+		memcpy(buf, bufp, last_space - bufp);
+
+		client_add_packet(c, packet_send_message(0, buf));
+
+		bufp = last_space + 1;
+	}
+}
+
 bool client_notify_by_username(const char *username, const char *message)
 {
 	unsigned i;
@@ -58,7 +88,8 @@ bool client_notify_by_username(const char *username, const char *message)
 
 void client_process(struct client_t *c, char *message)
 {
-	char buf[64];
+	/* Max length of username + message is 64 + 64 */
+	char buf[128];
 
 	if (message[0] == '!' || message[0] == '/')
 	{
@@ -110,9 +141,9 @@ void client_process(struct client_t *c, char *message)
 				return;
 			}
 
-			case ';':
-				snprintf(buf, sizeof buf, "* %s %s", c->player->colourusername, message + 1);
-				break;
+//			case ';':
+//				snprintf(buf, sizeof buf, "* %s %s", c->player->colourusername, message + 1);
+//				break;
 
 			case '\'':
 				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message + 1);

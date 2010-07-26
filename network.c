@@ -379,7 +379,7 @@ void net_notify_all(const char *message)
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
-		client_add_packet(c, packet_send_message(0, message));
+		client_notify(c, message);
 	}
 
 	LOG("%s\n", message);

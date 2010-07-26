@@ -7,7 +7,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <sys/resource.h>
 #include <time.h>
 #include "client.h"
 #include "level.h"
@@ -1120,6 +1119,23 @@ CMD(pervisit)
 	return false;
 }
 
+static const char help_physics[] =
+"/physics\n"
+"Show physics statistics for this level.";
+
+CMD(physics)
+{
+	char buf[64];
+	const struct level_t *l = c->player->level;
+
+	snprintf(buf, sizeof buf, "Physics runtime: %ums  count: %u", l->physics_runtime_last, l->physics_count_last);
+	client_notify(c, buf);
+	snprintf(buf, sizeof buf, "Updates runtime: %ums  count: %u", l->updates_runtime_last, l->updates_count_last);
+	client_notify(c, buf);
+
+	return false;
+}
+
 static const char help_place[] =
 "/place <type> [<x> <y> <z>]\n"
 "Place a block at the specified coordinates.";
@@ -1359,7 +1375,7 @@ CMD(setrank)
 	}
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), p->username);
+	snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), param[1]);
 	net_notify_all(buf);
 
 	return false;
@@ -1633,7 +1649,7 @@ static const char help_uptime[] =
 CMD(uptime)
 {
 	time_t uptime = time(NULL) - g_server.start_time;
-	char buf[64], *bufp = buf;
+	char buf[128], *bufp = buf;
 
 	int seconds = uptime % 60;
 	int minutes = uptime / 60 % 60;
@@ -1663,12 +1679,19 @@ CMD(uptime)
 	snprintf(buf, sizeof buf, "Server CPU usage is %f%%", g_server.cpu_time);
 	client_notify(c, buf);
 
-	struct rusage usage;
-	if (getrusage(RUSAGE_SELF, &usage) == 0)
+	FILE *f = fopen("/proc/self/status", "r");
+	char buf2[1024];
+
+	while (fgets(buf2, sizeof buf2, f) != NULL)
 	{
-		snprintf(buf, sizeof buf, "Server memory usage: %lu", usage.ru_ixrss);
-		client_notify(c, buf);
+		if (strncmp(buf2, "VmRSS:", 6) == 0)
+		{
+			snprintf(buf, sizeof buf, "Server memory usage: %s", buf2 + 6);
+			client_notify(c, buf);
+			break;
+		}
 	}
+	fclose(f);
 
 	return false;
 }
@@ -1694,23 +1717,41 @@ static const char help_whois[] =
 
 CMD(whois)
 {
-	char buf[64];
+	char buf[128];
 
 	if (params != 2) return true;
+
+	unsigned globalid = playerdb_get_globalid(param[1], false, NULL);
+	if (globalid == -1)
+	{
+		snprintf(buf, sizeof buf, "%s is not known here.", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
 
 	struct player_t *p = player_get_by_name(param[1]);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
 		client_notify(c, buf);
-		return false;
-	}
 
-	//if (c->rank >= RANK_OP)
-	//{
-		//snprintf(buf, sizeof buf, "%s is on '%s'"
-	//}
-	//client_notify(c, buf);
+		if (c->player->rank >= RANK_OP)
+		{
+			snprintf(buf, sizeof buf, "%s last connected from %s", param[1], playerdb_get_last_ip(globalid));
+			client_notify(c, buf);
+		}
+	}
+	else
+	{
+		snprintf(buf, sizeof buf, "%s" TAG_WHITE " is online, on level %s", p->colourusername, p->level->name);
+		client_notify(c, buf);
+
+		if (c->player->rank >= RANK_OP)
+		{
+			snprintf(buf, sizeof buf, "%s is connected from %s", p->username, p->client->ip);
+			client_notify(c, buf);
+		}
+	}
 
 	return false;
 }
@@ -1752,6 +1793,7 @@ struct command_t s_commands[] = {
 	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
 	{ "perbuild", RANK_BUILDER, &cmd_perbuild, help_perbuild },
 	{ "pervisit", RANK_BUILDER, &cmd_pervisit, help_pervisit },
+	{ "physics", RANK_OP, &cmd_physics, help_physics },
 	{ "place", RANK_ADV_BUILDER, &cmd_place, help_place },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
