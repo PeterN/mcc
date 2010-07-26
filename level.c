@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <zlib.h>
 #include <pthread.h>
@@ -540,11 +543,11 @@ void *level_gen_thread(void *arg)
 		if (b->physics) physics_list_add(&level->physics, i);
 	}
 
-	LOG("levelgen: %lu physics blocks, prerunning\n", level->physics.used);
+	LOG("levelgen: %llu physics blocks, prerunning\n", (long long unsigned)level->physics.used);
 
 	//level_prerun(level);
 
-	LOG("levelgen: %lu physics blocks remaining\n", level->physics.used);
+	LOG("levelgen: %llu physics blocks remaining\n", (long long unsigned)level->physics.used);
 
 	LOG("levelgen: complete\n");
 
@@ -846,7 +849,7 @@ void *level_save_thread(void *arg)
 
 	l->changed = false;
 
-	char filename[64];
+	char filename[256];
 	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
 	lcase(filename);
 
@@ -891,7 +894,26 @@ void *level_save_thread(void *arg)
 
 	LOG("Level '%s' saved\n", l->name);
 
+	char backup[256];
+	snprintf(backup, sizeof backup, "levels/backups/%s-%lld.mcl", l->name, (long long int)time(NULL));
+	lcase(backup);
+
 	pthread_mutex_unlock(&l->mutex);
+
+	/* Copy the file to back up */
+	int src = open(filename, O_RDONLY);
+	int dst = open(backup, O_WRONLY | O_CREAT);
+	char buf[1024];
+	size_t len;
+	while ((len = read(src, buf, sizeof buf)) > 0)
+	{
+		write(dst, buf, len);
+	}
+
+	close(src);
+	close(dst);
+
+	LOG("Backed up %s to %s\n", filename, backup);
 
 	return NULL;
 }
