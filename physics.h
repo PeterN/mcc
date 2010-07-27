@@ -12,6 +12,7 @@ LIST(physics, unsigned, unsigned_compare)
 struct block_update_t
 {
 	unsigned index;
+	enum blocktype_t oldtype;
 	enum blocktype_t newtype;
 	uint16_t newdata;
 	//struct block_t block;

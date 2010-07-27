@@ -178,33 +178,37 @@ int playerdb_get_globalid(const char *username, bool add, bool *added)
 
 	for (i = 0; i < (add ? 2 : 1); i++)
 	{
-		sqlite3_reset(s_globalid_get_stmt);
 		if (sqlite3_bind_text(s_globalid_get_stmt, 1, username, -1, SQLITE_STATIC) != SQLITE_OK)
 		{
 			LOG("[playerid_get_globalid] Can't bind text: %s\n", sqlite3_errmsg(s_db));
+			sqlite3_reset(s_globalid_get_stmt);
 			return -1;
 		}
-		res = sqlite3_step(s_globalid_get_stmt);
-		if (res == SQLITE_ROW)
+		if (sqlite3_step(s_globalid_get_stmt) == SQLITE_ROW)
 		{
-			return sqlite3_column_int(s_globalid_get_stmt, 0);
+			res = sqlite3_column_int(s_globalid_get_stmt, 0);
+			sqlite3_reset(s_globalid_get_stmt);
+			return res;
 		}
+		sqlite3_reset(s_globalid_get_stmt);
 
 		if (i == 0 && add)
 		{
 			/* New user! */
-			sqlite3_reset(s_new_user_stmt);
 			if (sqlite3_bind_text(s_new_user_stmt, 1, username, -1, SQLITE_STATIC) != SQLITE_OK)
 			{
 				LOG("[playerdb_get_globalid] Can't bind text: %s\n", sqlite3_errmsg(s_db));
+				sqlite3_reset(s_new_user_stmt);
 				return -1;
 			}
 			res = sqlite3_step(s_new_user_stmt);
 			if (res != SQLITE_DONE)
 			{
 				LOG("Unable to create new user '%s'\n", username);
+				sqlite3_reset(s_new_user_stmt);
 				return -1;
 			}
+			sqlite3_reset(s_new_user_stmt);
 
 			if (added != NULL) *added = true;
 		}
@@ -216,170 +220,173 @@ int playerdb_get_globalid(const char *username, bool add, bool *added)
 
 const char *playerdb_get_username(int globalid)
 {
-	int res;
-	sqlite3_reset(s_username_get_stmt);
+	static char buf[64];
+	
 	if (sqlite3_bind_int(s_username_get_stmt, 1, globalid) != SQLITE_OK)
 	{
 		LOG("[playerdb_get_username] Can't bind int: %s\n", sqlite3_errmsg(s_db));
-		return "unknown";
 	}
-	res = sqlite3_step(s_username_get_stmt);
-	if (res == SQLITE_ROW)
+	else if (sqlite3_step(s_username_get_stmt) == SQLITE_ROW)
 	{
-		return (const char *)sqlite3_column_text(s_username_get_stmt, 0);
+		snprintf(buf, sizeof buf, "%s", sqlite3_column_text(s_username_get_stmt, 0));
+		sqlite3_reset(s_username_get_stmt);
+		return buf;
 	}
 
+	sqlite3_reset(s_username_get_stmt);
 	return "unknown";
 }
 
 int playerdb_get_rank(const char *username)
 {
-	int res;
-	sqlite3_reset(s_rank_get_stmt);
+	enum rank_t res = RANK_GUEST;
+
 	if (sqlite3_bind_text(s_rank_get_stmt, 1, username, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_get_rank] Can't bind text: %s\n", sqlite3_errmsg(s_db));
-		return RANK_GUEST;
 	}
-	res = sqlite3_step(s_rank_get_stmt);
-	if (res == SQLITE_ROW)
+	else if (sqlite3_step(s_rank_get_stmt) == SQLITE_ROW)
 	{
-		return sqlite3_column_int(s_rank_get_stmt, 0);
+		res = (enum rank_t) sqlite3_column_int(s_rank_get_stmt, 0);
+	}
+	else
+	{
+		LOG("Unable to get rank for '%s'", username);
 	}
 
-	LOG("Unable to get rank for '%s'", username);
+	sqlite3_reset(s_rank_get_stmt);
 
-	/* New user! */
-	/*sqlite3_reset(s_new_user_stmt);
-	sqlite3_bind_text(s_new_user_stmt, 1, username, -1, SQLITE_STATIC);
-	sqlite3_step(s_new_user_stmt);*/
-
-	/* Default rank */
-	return RANK_GUEST;
+	return res;
 }
 
 void playerdb_set_rank(const char *username, int rank)
 {
-	sqlite3_reset(s_rank_set_stmt);
 	if (sqlite3_bind_int(s_rank_set_stmt, 1, rank) != SQLITE_OK)
 	{
 		LOG("[playerdb_set_rank] Can't bind int: %s\n", sqlite3_errmsg(s_db));
-		return;
 	}
-	if (sqlite3_bind_text(s_rank_set_stmt, 2, username, -1, SQLITE_STATIC) != SQLITE_OK)
+	else if (sqlite3_bind_text(s_rank_set_stmt, 2, username, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_set_rank] Can't bind text: %s\n", sqlite3_errmsg(s_db));
-		return;
 	}
-	if (sqlite3_step(s_rank_set_stmt) != SQLITE_DONE)
+	else if (sqlite3_step(s_rank_set_stmt) != SQLITE_DONE)
 	{
 		LOG("[playerdb_set_rank] %s\n", sqlite3_errmsg(s_db));
-		return;
 	}
+
+	sqlite3_reset(s_rank_set_stmt);
 }
 
 int playerdb_password_check(const char *username, const char *password)
 {
-	sqlite3_reset(s_password_stmt);
+	int res = 0;
 	if (sqlite3_bind_text(s_password_stmt, 1, username, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_password_check] Can't bind text: %s\n", sqlite3_errmsg(s_db));
-		return 0;
 	}
-	if (sqlite3_bind_text(s_password_stmt, 2, password, -1, SQLITE_STATIC) != SQLITE_OK)
+	else if (sqlite3_bind_text(s_password_stmt, 2, password, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_password_check] Can't bind text: %s\n", sqlite3_errmsg(s_db));
-		return 0;
 	}
-	if (sqlite3_bind_text(s_password_stmt, 3, password, -1, SQLITE_STATIC) != SQLITE_OK)
+	else if (sqlite3_bind_text(s_password_stmt, 3, password, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_password_check] Can't bind text: %s\n", sqlite3_errmsg(s_db));
-		return 0;
 	}
-	if (sqlite3_step(s_password_stmt) != SQLITE_ROW)
+	else if (sqlite3_step(s_password_stmt) != SQLITE_ROW)
 	{
 		LOG("[playerdb_password_check] %s\n", sqlite3_errmsg(s_db));
-		return 0;
 	}
-	return sqlite3_column_int(s_password_stmt, 0);
+	else
+	{
+		res = sqlite3_column_int(s_password_stmt, 0);
+	}
+
+	sqlite3_reset(s_password_stmt);
+
+	return res;
 }
 
 void playerdb_set_password(const char *username, const char *password)
 {
-	sqlite3_reset(s_set_password_stmt);
 	if (sqlite3_bind_text(s_set_password_stmt, 2, username, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_set_password] Can't bind text: %s\n", sqlite3_errmsg(s_db));
-		return;
 	}
-	if (sqlite3_bind_text(s_set_password_stmt, 1, password, -1, SQLITE_STATIC) != SQLITE_OK)
+	else if (sqlite3_bind_text(s_set_password_stmt, 1, password, -1, SQLITE_STATIC) != SQLITE_OK)
 	{
 		LOG("[playerdb_set_password] Can't bind text: %s\n", sqlite3_errmsg(s_db));
-		return;
 	}
-	if (sqlite3_step(s_set_password_stmt) != SQLITE_DONE)
+	else if (sqlite3_step(s_set_password_stmt) != SQLITE_DONE)
 	{
 		LOG("[playerdb_set_password] %s\n", sqlite3_errmsg(s_db));
-		return;
 	}
+	sqlite3_reset(s_set_password_stmt);
 }
 
 const char *playerdb_get_last_ip(int globalid)
 {
+	static char buf[64];
 	int res;
-	sqlite3_reset(s_get_last_ip_stmt);
 	if (sqlite3_bind_int(s_get_last_ip_stmt, 1, globalid) != SQLITE_OK)
 	{
 		LOG("[playerdb_get_last_ip] Can't bind int: %s\n", sqlite3_errmsg(s_db));
+		sqlite3_reset(s_get_last_ip_stmt);
 		return "unknown";
 	}
 	res = sqlite3_step(s_get_last_ip_stmt);
 	if (res == SQLITE_ROW)
 	{
-		return (const char *)sqlite3_column_text(s_get_last_ip_stmt, 0);
+		snprintf(buf, sizeof buf, "%s", sqlite3_column_text(s_get_last_ip_stmt, 0));
+		sqlite3_reset(s_get_last_ip_stmt);
+		return buf;
 	}
 
+	sqlite3_reset(s_get_last_ip_stmt);
 	return "";
 }
 
 /* UPDATE players SET last_visit = ?, last_ip = ? WHERE id = ? */
 void playerdb_log_visit(int globalid, const char *ip, int identified)
 {
-	sqlite3_reset(s_log_visit_stmt);
 	sqlite3_bind_int(s_log_visit_stmt, 1, time(NULL));
 	sqlite3_bind_text(s_log_visit_stmt, 2, ip, -1, SQLITE_STATIC);
 	sqlite3_bind_int(s_log_visit_stmt, 3, identified);
 	sqlite3_bind_int(s_log_visit_stmt, 4, globalid);
 	sqlite3_step(s_log_visit_stmt);
+	sqlite3_reset(s_log_visit_stmt);
 }
 
 void playerdb_log_identify(int globalid, int identified)
 {
-	sqlite3_reset(s_log_identify_stmt);
 	sqlite3_bind_int(s_log_identify_stmt, 1, identified);
 	sqlite3_bind_int(s_log_identify_stmt, 2, globalid);
 	sqlite3_step(s_log_identify_stmt);
+	sqlite3_reset(s_log_identify_stmt);
 }
 
 bool playerdb_check_ban(const char *ip)
 {
-	sqlite3_reset(s_check_ban_stmt);
+	int res;
+
 	sqlite3_bind_text(s_check_ban_stmt, 1, ip, -1, SQLITE_STATIC);
 	sqlite3_step(s_check_ban_stmt);
-	return sqlite3_column_int(s_check_ban_stmt, 0) > 0;
+	res = sqlite3_column_int(s_check_ban_stmt, 0) > 0;
+	sqlite3_reset(s_check_ban_stmt);
+
+	return res;
 }
 
 void playerdb_ban_ip(const char *ip)
 {
-	sqlite3_reset(s_banip_stmt);
 	sqlite3_bind_text(s_banip_stmt, 1, ip, -1, SQLITE_STATIC);
 	sqlite3_bind_int(s_log_visit_stmt, 2, time(NULL));
 	sqlite3_step(s_banip_stmt);
+	sqlite3_reset(s_banip_stmt);
 }
 
 void playerdb_unban_ip(const char *ip)
 {
-	sqlite3_reset(s_unbanip_stmt);
 	sqlite3_bind_text(s_unbanip_stmt, 1, ip, -1, SQLITE_STATIC);
 	sqlite3_step(s_unbanip_stmt);
+	sqlite3_reset(s_unbanip_stmt);
 }

@@ -323,7 +323,7 @@ void *level_gen_thread(void *arg)
 		const float *hm1 = filter_map(ft);
 
 
-		struct perlin_t *pp = perlin_init(mx, mz, 0.125 * level->type, 6);
+		struct perlin_t *pp = perlin_init(mx, mz, 0.250 * level->type, 6);
 		const float *hm2 = perlin_map(pp);
 
 		perlin_noise(pp);
@@ -1058,7 +1058,7 @@ bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int1
 	return true;
 }
 
-static void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t old_type, enum blocktype_t new_type, const struct player_t *p)
+void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t old_type, enum blocktype_t new_type, const struct player_t *p)
 {
 	struct cuboid_t c;
 
@@ -1498,8 +1498,11 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 {
 	/* Don't run updates until physics are complete */
 	if (level->physics_done == 0) return;
+	if (level->physics_pause) return;
 
 	//LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
+
+	int s = gettime();
 
 	if (level->updates_iter == 0)
 	{
@@ -1508,17 +1511,26 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 	   // LOG("Starting update run with %lu blocks\n", level->updates.used)
 
 		level->updates_runtime = 0;
+
+		int i;
+		for (i = 0; i < level->updates.used; i++)
+		{
+			struct block_update_t *bu = &level->updates.items[i];
+			struct block_t *b = &level->blocks[bu->index];
+			b->touched = b->type != bu->oldtype;
+		}
 	}
 
 	//LOG("Done %d out of %lu\n", level->updates_iter, level->updates.used);
-
-	int s = gettime();
 
 	int n = 40;
 	for (; level->updates_iter < level->updates.used; level->updates_iter++)
 	{
 		struct block_update_t *bu = &level->updates.items[level->updates_iter];
 		struct block_t *b = &level->blocks[bu->index];
+
+		/* Already touched this block */
+		if (b->touched) continue;
 
 		enum blocktype_t pt1 = convert(level, bu->index, b);
 
@@ -1527,6 +1539,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 			b->type = bu->newtype;
 		}
 
+		b->touched = true;
 		b->data = bu->newdata;
 		b->physics = blocktype_has_physics(b->type);
 		if (b->physics) physics_list_add(&level->physics, bu->index);
@@ -1583,6 +1596,8 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
 {
 	/* Time sink? */
+	/* Yes */
+	/*
 	unsigned i;
 	for (i = 0; i < level->updates.used; i++)
 	{
@@ -1590,10 +1605,11 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 		if (index == bu->index) {
 			return;
 		}
-	}
+	}*/
 
 	struct block_update_t bu;
 	bu.index = index;
+	bu.oldtype = level->blocks[index].type;
 	bu.newtype = newtype;
 	bu.newdata = newdata;
 	block_update_list_add(&level->updates, bu);

@@ -1,4 +1,4 @@
-CFLAGS := -Wall -g -DINFINITY=HUGE_VAL
+CFLAGS := -Wall -g -O3 -DINFINITY=HUGE_VAL -D_GNU_SOURCE
 LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 
 LIBSRC := block.c
@@ -37,6 +37,10 @@ MCCSRC := mcc.c
 MCCOBJ := $(MCCSRC:.c=.o)
 MCCO := mcc
 
+SETRANKSRC := setrank.c
+SETRANKOBJ := $(SETRANKSRC:.c=.o)
+SETRANKO := setrank
+
 WWSRC := wireworld.c
 WWOBJ := $(WWSRC:.c=.o)
 WWO := wireworld.so
@@ -53,11 +57,14 @@ ALSRC := airlayer.c
 ALOBJ := $(ALSRC:.c=.o)
 ALO := airlayer.so
 
+BANIPSRC := banip.c
+BANIPOBJ := $(BANIPSRC:.c=.o)
+BANIPO := banip
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO)
+all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO)
 
 clean:
-	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO)
+	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
@@ -85,6 +92,13 @@ $(ALO): $(ALOBJ) $(LIBO)
 
 $(MCCO): $(MCCOBJ) $(LIBO)
 	$(CC) $(LDFLAGS) $(MCCOBJ) -L. -lmcc -o $@
+
+$(SETRANKO): $(SETRANKOBJ) $(LIBO)
+	$(CC) $(LDFLAGS) $(SETRANKOBJ) -L. -lmcc -o $@
+
+$(BANIPO): $(BANIPOBJ) $(LIBO)
+	$(CC) $(LDFLAGS) $(BANIPOBJ) -L. -lmcc -o $@
+
 
 .c.o:
 	$(CC) -c -fPIC $(CFLAGS) $< -o $@

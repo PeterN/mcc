@@ -4,6 +4,7 @@
 #include "client.h"
 #include "commands.h"
 #include "player.h"
+#include "playerdb.h"
 #include "packet.h"
 #include "level.h"
 #include "network.h"
@@ -86,6 +87,41 @@ bool client_notify_by_username(const char *username, const char *message)
 	return false;
 }
 
+bool client_botcheck(struct client_t *c, char *message)
+{
+	bool bot = false;
+	bool botuser = false;
+	if (strcasestr(message, "place one brown mushroom") != NULL) bot = true;
+	else if (strcasestr(message, "pasting file") != NULL) bot = true;
+	else if (strcasestr(message, "place 2 brown shrooms") != NULL) bot = true;
+	else if (strcasestr(message, "place 2 shrooms") != NULL) bot = true;
+	else if (strncasecmp(message, ".paste ", 7) == 0) botuser = true;
+	else if (strncasecmp(message, ".say ", 5) == 0) botuser = true;
+	else if (strncasecmp(message, ".copy ", 6) == 0) botuser = true;
+	else if (strncasecmp(message, ".drawline ", 10) == 0) botuser = true;
+	else if (strncasecmp(message, "!paste ", 7) == 0) botuser = true;
+	else if (strncasecmp(message, "!say ", 5) == 0) botuser = true;
+	else if (strncasecmp(message, "!copy ", 6) == 0) botuser = true;
+	else if (strncasecmp(message, "!drawline ", 10) == 0) botuser = true;
+
+	if (bot)
+	{
+		LOG("%s triggered bot detection: %s\n", c->player->username, message);
+		playerdb_set_rank(c->player->username, RANK_BANNED);
+		net_close(c, "Bot detected");
+		return true;
+	}
+	if (botuser)
+	{
+		LOG("%s triggered bot user detection: %s\n", c->player->username, message);
+		playerdb_set_rank(c->player->username, RANK_BANNED);
+		net_close(c, "Bot user detected");
+		return true;
+	}
+
+	return false;
+}
+
 void client_process(struct client_t *c, char *message)
 {
 	/* Max length of username + message is 64 + 64 */
@@ -150,6 +186,7 @@ void client_process(struct client_t *c, char *message)
 				break;
 
 			default:
+				if (client_botcheck(c, message)) return;
 				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message);
 				break;
 		}

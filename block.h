@@ -93,10 +93,11 @@ struct block_t
 {
 	uint16_t fixed:1;
 	uint16_t physics:1;
-	uint16_t type:13;
+	uint16_t type:12;
 	uint16_t teleporter:1;
 	uint16_t data:16;
-	uint32_t owner;
+	uint32_t owner:31;
+	uint32_t touched:1;
 };
 
 typedef enum blocktype_t(*convert_func_t)(struct level_t *level, unsigned index, const struct block_t *block);
@@ -106,7 +107,7 @@ typedef void(*physics_func_t)(struct level_t *l, unsigned index, const struct bl
 
 struct blocktype_desc_t
 {
-	const char *name;
+	char *name;
 	bool loaded;
 	bool clear;
 	convert_func_t convert_func;

@@ -23,7 +23,7 @@ static const char s_off[] = TAG_GREEN "off";
 
 void notify_file(struct client_t *c, const char *filename)
 {
-	char buf[64];
+	char buf[128];
 	FILE *f = fopen(filename, "r");
 	if (f == NULL)
 	{
@@ -1130,7 +1130,35 @@ static const char help_physics[] =
 CMD(physics)
 {
 	char buf[64];
-	const struct level_t *l = c->player->level;
+	struct level_t *l = c->player->level;
+
+	if (params == 2)
+	{
+		if (strcasecmp(param[1], "pause") == 0)
+		{
+			l->physics_pause = true;
+			snprintf(buf, sizeof buf, "Physics paused on %s", l->name);
+			net_notify_all(buf);
+		}
+		else if (strcasecmp(param[1], "resume") == 0)
+		{
+			l->physics_pause = false;
+			snprintf(buf, sizeof buf, "Physics resumed on %s", l->name);
+			net_notify_all(buf);
+		}
+		else if (strcasecmp(param[1], "reset") == 0)
+		{
+			l->physics.used = 0;
+			l->physics2.used = 0;
+			l->updates.used = 0;
+			l->physics_iter = 0;
+			l->updates_iter = 0;
+			l->physics_done = 0;
+			snprintf(buf, sizeof buf, "Physics reset on %s", l->name);
+			net_notify_all(buf);
+		}
+		return false;
+	}
 
 	snprintf(buf, sizeof buf, "Physics runtime: %ums  count: %u", l->physics_runtime_last, l->physics_count_last);
 	client_notify(c, buf);
@@ -1259,6 +1287,52 @@ CMD(replace)
 
 	return false;
 }
+
+static const char help_replaceall[] =
+"/replaceall <oldtype> <newtype>\n"
+"";
+
+CMD(replaceall)
+{
+	char buf[64];
+
+	if (params != 3) return true;
+
+	enum blocktype_t oldtype = blocktype_get_by_name(param[1]);
+	if (oldtype == BLOCK_INVALID)
+	{
+		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
+		return false;
+	}
+	else if (oldtype == ADMINIUM && c->player->rank < RANK_OP)
+	{
+		snprintf(buf, sizeof buf, "You do not have permission to replace adminium");
+		return false;
+	}
+
+	enum blocktype_t newtype = blocktype_get_by_name(param[2]);
+	if (newtype == BLOCK_INVALID)
+	{
+		snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+		return false;
+	}
+	else if (newtype == ADMINIUM && c->player->rank < RANK_OP)
+	{
+		snprintf(buf, sizeof buf, "You do not have permission to place adminium");
+		return false;
+	}
+
+	snprintf(buf, sizeof buf, "Replacing all %s with %s on %s", param[1], param[2], c->player->level->name);
+	client_notify(c, buf);
+
+	struct level_t *l = c->player->level;
+	unsigned end = level_get_index(l, l->x - 1, l->y - 1, l->z - 1);
+
+	level_cuboid(c->player->level, 0, end, oldtype, newtype, c->player);
+
+	return false;
+}
+
 
 static const char help_resetlvl[] =
 "/resetlvl <type> <height_range> <sea_height>\n"
@@ -1690,7 +1764,7 @@ CMD(uptime)
 	{
 		if (strncmp(buf2, "VmRSS:", 6) == 0)
 		{
-			snprintf(buf, sizeof buf, "Server memory usage: %s", buf2 + 6);
+			snprintf(buf, sizeof buf, "Server memory usage: %s", buf2 + 7);
 			client_notify(c, buf);
 			break;
 		}
@@ -1801,6 +1875,7 @@ struct command_t s_commands[] = {
 	{ "place", RANK_ADV_BUILDER, &cmd_place, help_place },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
+	{ "replaceall", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
 	{ "setpassword", RANK_BUILDER, &cmd_setpassword, help_setpassword },

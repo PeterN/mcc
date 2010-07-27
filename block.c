@@ -50,7 +50,8 @@ int register_blocktype(enum blocktype_t type, const char *name, convert_func_t c
 		return BLOCK_INVALID;
 	}
 
-	descp->name = name;
+	free(descp->name);
+	descp->name = strdup(name);
 	descp->loaded = true;
 	descp->convert_func = convert_func;
 	descp->trigger_func = trigger_func;
@@ -66,7 +67,6 @@ void deregister_blocktype(enum blocktype_t type)
 	if (type == BLOCK_INVALID) return;
 
 	struct blocktype_desc_t *descp = &s_blocks.items[type];
-	descp->name = strdup(descp->name);
 	descp->loaded = false;
 	descp->convert_func = NULL;
 	descp->trigger_func = NULL;

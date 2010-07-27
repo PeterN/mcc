@@ -40,6 +40,17 @@ static inline bool teleporter_t_compare(struct teleporter_t *a, struct teleporte
 }
 LIST(teleporter, struct teleporter_t, teleporter_t_compare)
 
+enum event_t
+{
+	EVENT_TICK,
+	EVENT_CHAT,
+	EVENT_MOVE,
+	EVENT_SPAWN,
+	EVENT_DESPAWN,
+};
+
+typedef void(*event_hook_t)(struct level_t *l, enum event_t event, struct player_t *p, void *arg);
+
 struct level_t
 {
 	char name[64];
@@ -67,6 +78,8 @@ struct level_t
 	unsigned physics_runtime_last, updates_runtime_last;
 	unsigned physics_count_last, updates_count_last;
 
+	event_hook_t event_hook;
+
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
 
@@ -78,6 +91,7 @@ struct level_t
 
 	bool changed;
 	bool instant;
+	bool physics_pause;
 	pthread_t thread;
 	bool thread_valid;
 	bool convert;
