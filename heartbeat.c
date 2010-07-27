@@ -74,11 +74,21 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 				break;
 			}
 
-			char *b = strstr(buf, "\r\n\r\n") + 4;
-			char *c = strstr(b, "\r\n");
-			*c = '\0';
-
-			printf("%s\n", b);
+			char *b = strstr(buf, "\r\n\r\n");
+			if (b != NULL)
+			{
+				b += 4;
+				char *c = strstr(b, "\r\n");
+				if (c != NULL)
+				{
+					*c = '\0';
+				}
+				printf("%s\n", b);
+			}
+			else
+			{
+				printf("%s\n", buf);
+			}
 			break;
 		}
 

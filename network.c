@@ -127,12 +127,29 @@ void net_init(int port)
 
 void net_close(struct client_t *c, const char *reason)
 {
-	char buf[64];
+	char buf[128];
+	struct packet_t *p;
+	unsigned packets = 0;
+
+	/* Remove all queued packets */
+	while (c->packet_send != NULL)
+	{
+		p = c->packet_send;
+		c->packet_send = p->next;
+		free(p);
+
+		packets++;
+	}
+
+	if (packets > 0)
+	{
+		LOG("Remove %u packets from queue\n", packets);
+	}
 
 	/* Send client disconnect message straight away */
 	if (reason != NULL)
 	{
-		struct packet_t *p = packet_send_disconnect_player(reason);
+		p = packet_send_disconnect_player(reason);
 		send(c->sock, p->buffer, p->loc - p->buffer, MSG_NOSIGNAL);
 		free(p);
 	}

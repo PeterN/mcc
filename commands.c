@@ -765,9 +765,13 @@ CMD(levels)
 			strcpy(bufp, buf2);
 			bufp += len;
 		}
-
-		free(namelist[i]);
+		if (i > 0)
+		{
+			free(namelist[i - 1]);
+		}
 	}
+
+	free(namelist[i - 1]);
 
 	client_notify(c, buf);
 

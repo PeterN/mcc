@@ -39,10 +39,9 @@ struct player_t *player_add(const char *username, struct client_t *c, bool *newu
 
 	struct player_t *p = malloc(sizeof *p);
 	memset(p, 0, sizeof *p);
-	p->colourusername = malloc(strlen(username + 3));
 	p->username = p->colourusername + 2;
 	p->rank = playerdb_get_rank(username);
-	sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
+	snprintf(p->colourusername, sizeof p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
 	p->globalid = globalid;
 
 	if (p->rank > RANK_BUILDER)
@@ -98,7 +97,66 @@ bool player_change_level(struct player_t *player, struct level_t *level)
 
 void player_move(struct player_t *player, struct position_t *pos)
 {
+	int dx = abs(player->pos.x - pos->x);
+	int dy = abs(player->pos.y - pos->y);
+	int dz = abs(player->pos.z - pos->z);
+	/* We only care that speed is above a threshold, therefore
+	 * we don't need to find the square root. */
+
+	unsigned i;
+	player->speed = 0;
+	for (i = 0; i < sizeof player->speed - 1; i++)
+	{
+		player->speeds[i] = player->speeds[i + 1];
+		player->speed += player->speeds[i];
+	}
+	player->speeds[i] = dx + dy + dz;
+	player->speed += player->speeds[i];
+
 	player->pos = *pos;
+}
+
+static unsigned gettime()
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+
+	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+bool player_check_spam(struct player_t *player)
+{
+	int len = 60;
+	int ofs = player->spampos1 > player->spampos2 ? len : 0;
+	int now = gettime();
+	player->spam[player->spampos2] = now;
+
+	while (player->spam[player->spampos1] < now - 2000 && player->spampos1 < player->spampos2 + ofs)
+	{
+		player->spampos1++;
+		if (player->spampos1 >= len) { player->spampos1 = 0; ofs = 0; }
+	}
+
+	int blocks = player->spampos2 + ofs - player->spampos1;
+	if (blocks > 20)
+	{
+		char buf[128];
+		snprintf(buf, sizeof buf, "Anti-grief: %d blocks in %u ms", blocks, player->spam[player->spampos2] - player->spam[player->spampos1]);
+		LOG("%s by %s\n", buf, player->username);
+
+		if (blocks > 30)
+		{
+			net_close(player->client, buf);
+			return true;
+		}
+
+		player->warnings++;
+	}
+
+	player->spampos2++;
+	if (player->spampos2 >= len) player->spampos2 = 0;
+
+	return false;
 }
 
 void player_send_position(struct player_t *player)

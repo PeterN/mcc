@@ -124,14 +124,14 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	if (c->player != NULL)
 	{
-		net_close(c, "already logged in");
+		net_close(c, "Already logged in");
 		return;
 	}
 
 	uint8_t version = packet_recv_byte(p);
 	if (version != 7)
 	{
-		net_close(c, "invalid protocol");
+		net_close(c, "Invalid protocol");
 		return;
 	}
 
@@ -164,7 +164,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	if (player == NULL)
 	{
-		net_close(c, "cannot get global id");
+		net_close(c, "Cannot get global id");
 		return;
 	}
 
@@ -175,7 +175,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	if (player->rank == RANK_BANNED)
 	{
-		net_close(c, "banned");
+		net_close(c, "Banned");
 		return;
 	}
 
@@ -184,7 +184,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	struct level_t *l;
 	if (!level_get_by_name("main", &l))
 	{
-		net_close(c, "cannot load main level");
+		net_close(c, "Cannot load main level");
 		return;
 	}
 
@@ -216,13 +216,29 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-		net_close(c, "not logged in");
+		net_close(c, "Not logged in");
 		return;
 	}
 
 	if (m > 1)
 	{
-		net_close(c, "invalid set block data");
+		net_close(c, "Invalid set block data");
+		return;
+	}
+
+	if (c->player->speed > 500)
+	{
+		net_close(c, "Anti-grief: average speed too high to place blocks");
+		return;
+	}
+	else if (c->player->speed > 300)
+	{
+		c->player->warnings++;
+		client_notify(c, "Warning! Your average speed is high.");
+	}
+
+	if (player_check_spam(c->player))
+	{
 		return;
 	}
 
@@ -242,13 +258,13 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-		net_close(c, "not logged in");
+		net_close(c, "Not logged in");
 		return;
 	}
 
 	if (player_id != 0xFF)
 	{
-		net_close(c, "invalid position data");
+		net_close(c, "Invalid position data");
 		return;
 	}
 
@@ -262,7 +278,7 @@ void packet_recv_message(struct client_t *c, struct packet_t *p)
 
 	if (c->player == NULL)
 	{
-		net_close(c, "not logged in");
+		net_close(c, "Not logged in");
 		return;
 	}
 

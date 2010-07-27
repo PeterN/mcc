@@ -44,7 +44,7 @@ struct player_t
 {
 	unsigned globalid;
 	unsigned levelid;
-	char *colourusername;
+	char colourusername[128];
 	char *username;
 	enum rank_t rank;
 	enum mode_t mode;
@@ -52,6 +52,11 @@ struct player_t
 
 	struct position_t pos;
 	struct position_t oldpos;
+	int speed;
+	int speeds[10];
+	int warnings;
+	unsigned spam[60];
+	int spampos1, spampos2;
 
 	struct level_t *level, *new_level;
 	struct client_t *client;
@@ -89,5 +94,6 @@ static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 }
 
 void player_send_positions();
+bool player_check_spam(struct player_t *player);
 
 #endif /* PLAYER_H */
