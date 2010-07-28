@@ -37,6 +37,18 @@ void module_unload(struct module_t *m)
 	module_list_del_item(&s_modules, m);
 }
 
+struct module_t *module_get_by_name(const char *name)
+{
+	unsigned i;
+	for (i = 0; i < s_modules.used; i++)
+	{
+		struct module_t *m = s_modules.items[i];
+		if (strcasecmp(m->name, name) == 0) return m;
+	}
+
+	return NULL;
+}
+
 void module_init(struct module_t *m)
 {
 	LOG("Initializing module %s\n", m->name);

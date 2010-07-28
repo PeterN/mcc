@@ -875,7 +875,14 @@ CMD(module_unload)
 {
 	if (params != 2) return true;
 
-	module_load(param[1]);
+	struct module_t *m = module_get_by_name(param[1]);
+	if (m == 0)
+	{
+		client_notify(c, "Module not loaded");
+		return false;
+	}
+
+	module_unload(m);
 	return false;
 }
 

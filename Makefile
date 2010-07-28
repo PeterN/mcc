@@ -1,4 +1,4 @@
-CFLAGS := -Wall -g -O3 -DINFINITY=HUGE_VAL -D_GNU_SOURCE
+CFLAGS := -Wall -g -DINFINITY=HUGE_VAL -D_GNU_SOURCE
 LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 
 LIBSRC := block.c
@@ -9,6 +9,7 @@ LIBSRC += config.c
 LIBSRC += cuboid.c
 LIBSRC += faultgen.c
 LIBSRC += filter.c
+LIBSRC += hook.c
 LIBSRC += level.c
 LIBSRC += module.c
 LIBSRC += network.c

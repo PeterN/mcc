@@ -24,6 +24,7 @@ extern struct module_list_t s_modules;
 
 void module_load(const char *name);
 void module_unload(struct module_t *m);
+struct module_t *module_get_by_name(const char *name);
 void module_init(struct module_t *m);
 void module_deinit(struct module_t *m);
 

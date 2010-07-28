@@ -192,6 +192,7 @@ void net_close(struct client_t *c, const char *reason)
 		{
 			snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected (%s)", c->player->colourusername, reason);
 		}
+		call_hook(HOOK_CHAT, buf);
 		net_notify_all(buf);
 
 		LOG("Closing connection from %s - %s (%d): %s\n", c->ip, c->player->username, c->player->globalid, reason);

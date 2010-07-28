@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <netinet/in.h>
+#include "hook.h"
 #include "list.h"
 #include "packet.h"
 

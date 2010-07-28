@@ -191,6 +191,7 @@ void client_process(struct client_t *c, char *message)
 				break;
 		}
 
+		call_hook(HOOK_CHAT, buf);
 		net_notify_all(buf);
 	}
 }
