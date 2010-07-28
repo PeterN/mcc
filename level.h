@@ -40,22 +40,22 @@ static inline bool teleporter_t_compare(struct teleporter_t *a, struct teleporte
 }
 LIST(teleporter, struct teleporter_t, teleporter_t_compare)
 
-struct event_data_t
+struct level_hook_data_t
 {
 	size_t len;
 	void *data;
 };
 
-enum event_t
+enum
 {
-	EVENT_TICK,
-	EVENT_CHAT,
-	EVENT_MOVE,
-	EVENT_SPAWN,
-	EVENT_DESPAWN,
+	EVENT_TICK = 1,
+	EVENT_CHAT = 2,
+	EVENT_MOVE = 4,
+	EVENT_SPAWN = 8,
+	EVENT_DESPAWN = 16,
 };
 
-typedef void(*event_hook_t)(struct level_t *l, enum event_t event, struct player_t *p, void *arg);
+typedef void(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *arg);
 
 struct level_t
 {
@@ -84,8 +84,8 @@ struct level_t
 	unsigned physics_runtime_last, updates_runtime_last;
 	unsigned physics_count_last, updates_count_last;
 
-	event_hook_t event_hook;
-	struct event_data_t event_data;
+	level_hook_func_t level_hook_func;
+	struct level_hook_data_t level_hook_data;
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
@@ -96,13 +96,14 @@ struct level_t
 	int height_range;
 	int sea_height;
 
-	bool changed;
-	bool instant;
-	bool physics_pause;
+	uint8_t changed:1;
+	uint8_t instant:1;
+	uint8_t physics_pause:1;
+	uint8_t convert:1;
+	uint8_t delete:1;
+	uint8_t thread_valid:1;
+
 	pthread_t thread;
-	bool thread_valid;
-	bool convert;
-	bool delete;
 	pthread_mutex_t mutex;
 };
 
@@ -135,9 +136,11 @@ void level_set_teleporter(struct level_t *level, const char *name, struct positi
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 void level_addupdate_override(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
-void physics_remove(struct level_t *level, unsigned index);
 
 void level_process_physics(bool can_init);
 void level_process_updates(bool can_init);
+
+void register_level_hook_func(const char *name, level_hook_func_t level_hook_func);
+void deregister_level_hook_func(const char *name);
 
 #endif /* LEVEL_H */

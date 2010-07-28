@@ -126,8 +126,8 @@ void irc_message(int hook, void *data, void *arg)
 			int col = irc_convert_colour(buf[i + 1]);
 			if (col == 0)
 			{
-				buf[i] = 15;
-				buf[i + 1] = 15;
+				buf[i] = 3;
+				buf[i + 1] = ' ';
 			}
 			if (col >= 10)
 			{

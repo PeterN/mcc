@@ -1122,7 +1122,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 			net_close(client, "distance");
 			return;
 		}
-		if (distance > 8)
+		if (distance > 9)
 		{
 			client_notify(client, "You cannot build that far away");
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
@@ -1253,14 +1253,6 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 //		player_undo_log(client->player, index);
 
 		delete(level, index, b);
-//		int r = trigger(level, index, b);
-//.		if (r > 0)
-//		{
-//			if (r == 2) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-
-//			//LOG("Triggered!");
-//			return;
-//		}
 
 		bool oldphysics = b->physics;
 
@@ -1407,11 +1399,6 @@ static int gettime()
 	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-/*void physics_remove(struct level_t *level, unsigned index)
-{
-	physics_list_add(&level->physics_remove, index);
-}*/
-
 static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 {
 	/* Don't run physics if updates are being done */
@@ -1456,33 +1443,8 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 		}
 	}
 
-	/* Process the list of physics blocks to remove */
-	//LOG("%lu blocks to remove...\n", level->physics_remove.used);
-	/*if (level->physics_remove.used > 0)
-	{
-		qsort(level->physics_remove.items, level->physics_remove.used, sizeof (unsigned), &unsigned_cmp);
-
-		level->physics_runtime += gettime() - s;
-		level->physics_remove.used = 0;
-	}*/
-
-	/*
-	int i;
-	for (i = 0; i < level->physics_remove.used; i++)
-	{
-		unsigned index = level->physics_remove.items[i];
-		physics_list_del_item(&level->physics, index);
-		level->blocks[index].physics = false;
-		if (i % 10000 == 0) { LOG("@ %d\n", i); }
-	}
-
-	level->physics_runtime += gettime() - s;
-	level->physics_remove.used = 0;
-	*/
-
-	/*if (i > 0) { LOG("Removed %d physics blocks\n", i); }*/
-
-	if (level->physics_runtime > 50)
+	/* Log if physics took too long */
+	if (level->physics_runtime > 40)
 	{
 		LOG("Physics ran in %dms (%lu blocks)\n", level->physics_runtime, level->physics2.used);
 	}
@@ -1595,18 +1557,6 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
 {
-	/* Time sink? */
-	/* Yes */
-	/*
-	unsigned i;
-	for (i = 0; i < level->updates.used; i++)
-	{
-		struct block_update_t *bu = &level->updates.items[i];
-		if (index == bu->index) {
-			return;
-		}
-	}*/
-
 	struct block_update_t bu;
 	bu.index = index;
 	bu.oldtype = level->blocks[index].type;
@@ -1687,4 +1637,14 @@ void level_process_updates(bool can_init)
 
 		level_run_updates(level, can_init, true);
 	}
+}
+
+
+
+void register_level_hook_func(const char *name, level_hook_func_t level_hook_func)
+{
+}
+
+void deregister_level_hook_func(const char *name)
+{
 }

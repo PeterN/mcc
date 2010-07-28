@@ -105,6 +105,10 @@ static bool trigger_spleeft(struct level_t *level, unsigned index, const struct 
 	return true;
 }
 
+static void spleef_level_hook(int event, struct level_t *l, struct client_t *c, void *arg)
+{
+}
+
 void module_init(void **data)
 {
 	s.air = blocktype_get_by_name("air");
@@ -115,8 +119,15 @@ void module_init(void **data)
 	s.spleef1 = register_blocktype(BLOCK_INVALID, "spleef1", &convert_spleef1, &trigger_spleef, NULL, &physics_spleef, false);
 	s.spleef2 = register_blocktype(BLOCK_INVALID, "spleef2", &convert_spleef2, &trigger_spleef, NULL, &physics_spleef, false);
 	s.spleeft = register_blocktype(BLOCK_INVALID, "spleeft", &convert_spleeft, &trigger_spleeft, NULL, NULL, false);
+
+	register_level_hook_func("spleef", &spleef_level_hook);
 }
 
 void module_deinit(void *data)
 {
+	deregister_blocktype(s.spleef1);
+	deregister_blocktype(s.spleef2);
+	deregister_blocktype(s.spleeft);
+
+	deregister_level_hook_func("spleef");
 }
