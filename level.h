@@ -19,43 +19,26 @@ static inline bool user_compare(unsigned *a, unsigned *b)
 }
 LIST(user, unsigned, user_compare)
 
-/* Teleporter types */
-enum {
-	TP_TELEPORT,
-	TP_TRIGGER,
-};
-
-struct teleporter_t
-{
-	char name[32];
-	char dest[32];
-	char dest_level[32];
-	struct position_t pos;
-	int type;
-};
-
-static inline bool teleporter_t_compare(struct teleporter_t *a, struct teleporter_t *b)
-{
-	return strcasecmp(a->name, b->name) == 0;
-}
-LIST(teleporter, struct teleporter_t, teleporter_t_compare)
-
 struct level_hook_data_t
 {
-	size_t len;
+	unsigned size;
 	void *data;
 };
 
 enum
 {
-	EVENT_TICK = 1,
-	EVENT_CHAT = 2,
-	EVENT_MOVE = 4,
-	EVENT_SPAWN = 8,
-	EVENT_DESPAWN = 16,
+	EVENT_TICK    = 1 << 0,
+	EVENT_CHAT    = 1 << 1,
+	EVENT_MOVE    = 1 << 2,
+	EVENT_SPAWN   = 1 << 3,
+	EVENT_DESPAWN = 1 << 4,
+	EVENT_LOAD    = 1 << 5,
+	EVENT_SAVE    = 1 << 6,
+	EVENT_UNLOAD  = 1 << 7,
+	EVENT_INIT    = 1 << 8,
 };
 
-typedef void(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *arg);
+typedef void(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg);
 
 struct level_t
 {
@@ -75,7 +58,6 @@ struct level_t
 	struct block_t *blocks;
 	struct physics_list_t physics, physics2;
 	struct block_update_list_t updates;
-	struct teleporter_list_t teleporters;
 
 	unsigned physics_iter, physics_done;
 	unsigned updates_iter;
@@ -84,6 +66,7 @@ struct level_t
 	unsigned physics_runtime_last, updates_runtime_last;
 	unsigned physics_count_last, updates_count_last;
 
+	char level_hook_name[16];
 	level_hook_func_t level_hook_func;
 	struct level_hook_data_t level_hook_data;
 
@@ -132,8 +115,6 @@ void level_unload_empty(void *arg);
 void level_change_block(struct level_t *level, struct client_t *c, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click);
 void level_change_block_force(struct level_t *level, struct block_t *block, unsigned index);
 
-void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level, int type);
-
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 void level_addupdate_override(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 
@@ -142,5 +123,9 @@ void level_process_updates(bool can_init);
 
 void register_level_hook_func(const char *name, level_hook_func_t level_hook_func);
 void deregister_level_hook_func(const char *name);
+
+void level_hook_attach(struct level_t *l, const char *name);
+
+void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data);
 
 #endif /* LEVEL_H */

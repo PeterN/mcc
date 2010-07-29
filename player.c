@@ -192,10 +192,12 @@ void player_send_position(struct player_t *player)
 		if (x >= 0 && y >= 0 && z >= 0 && x < player->level->x && y < player->level->y && z < player->level->z)
 		{
 			unsigned index = level_get_index(player->level, player->pos.x / 32, player->pos.y / 32, player->pos.z / 32);
-			if (player->level->blocks[index].teleporter == 1)
-			{
-				level_process_teleporter(player);
-			}
+//			if (player->level->blocks[index].teleporter == 1)
+//			{
+//				level_process_teleporter(player);
+//			}
+
+			call_level_hook(EVENT_MOVE, player->level, player->client, &index);
 		}
 	}
 

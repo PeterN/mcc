@@ -105,8 +105,34 @@ static bool trigger_spleeft(struct level_t *level, unsigned index, const struct 
 	return true;
 }
 
-static void spleef_level_hook(int event, struct level_t *l, struct client_t *c, void *arg)
+struct spleef_position_t
 {
+	int16_t x, y;
+};
+
+struct spleef_board_t
+{
+	int16_t x[2], z[2], y;
+	int16_t positions;
+	struct spleef_position_t position[4];
+};
+
+struct spleef_data_t
+{
+	int16_t boards;
+	struct spleef_board_t board[1];
+};
+
+static void spleef_handle_chat(struct level_t *l, struct client_t *c, char *data, struct spleef_data_t *arg)
+{
+}
+
+static void spleef_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
+{
+	switch (event)
+	{
+		case EVENT_CHAT: spleef_handle_chat(l, c, data, arg->data);
+	}
 }
 
 void module_init(void **data)

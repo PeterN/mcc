@@ -789,6 +789,19 @@ static void *level_load_thread(void *arg)
 			}
 		}
 
+		if (version == 4)
+		{
+			unsigned u;
+			if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "level_hooks");
+
+			gzread(gz, l->level_hook_name, sizeof l->level_hook_name);
+			gzread(gz, &l->level_hook_data.size, sizeof l->level_hook_data.size);
+			l->level_hook_data.data = malloc(l->level_hook_data.size);
+			gzread(gz, l->level_hook_data.data, l->level_hook_data.size);
+
+			level_hook_attach(l, l->level_hook_name);
+		}
+
 		int count = l->x * l->y * l->z;
 		for (i = 0; i < count; i++)
 		{
@@ -870,7 +883,7 @@ void *level_save_thread(void *arg)
 	}
 
 	unsigned header  = 'MCLV';
-	unsigned version = 3;
+	unsigned version = 4;
 	gzwrite(gz, &header, sizeof header);
 	gzwrite(gz, &version, sizeof version);
 
@@ -897,6 +910,20 @@ void *level_save_thread(void *arg)
 	for (i = 0; i < l->userbuild.used; i++)
 	{
 		gzwrite(gz, &l->userbuild.items[i], sizeof l->userbuild.items[i]);
+	}
+
+	if (*l->level_hook_name == '\0')
+	{
+		i = 0;
+		gzwrite(gz, &i, sizeof i);
+	}
+	else
+	{
+		i = 1;
+		gzwrite(gz, &i, sizeof i);
+		gzwrite(gz, l->level_hook_name, sizeof l->level_hook_name);
+		gzwrite(gz, &l->level_hook_data.size, sizeof l->level_hook_data.size);
+		gzwrite(gz, l->level_hook_data.data, l->level_hook_data.size);
 	}
 
 	gzclose(gz);
@@ -1331,66 +1358,6 @@ static void level_unmark_teleporter(struct level_t *level, struct position_t *po
 	level->blocks[index].teleporter = 0;
 }
 
-void level_set_teleporter(struct level_t *level, const char *name, struct position_t *pos, const char *dest, const char *dest_level, int type)
-{
-	unsigned i = 0;
-	for (i = 0; i < level->teleporters.used; i++)
-	{
-		struct teleporter_t *t = &level->teleporters.items[i];
-		if (strcasecmp(t->name, name) == 0)
-		{
-			level_unmark_teleporter(level, &t->pos);
-			t->pos = *pos;
-			if (dest != NULL) strncpy(t->dest, dest, sizeof t->dest);
-			if (dest_level != NULL) strncpy(t->dest_level, dest_level, sizeof t->dest_level);
-			t->type = type;
-			level_mark_teleporter(level, pos);
-			return;
-		}
-	}
-
-	struct teleporter_t t;
-	memset(&t, 0, sizeof t);
-	strncpy(t.name, name, sizeof t.name);
-	t.pos = *pos;
-	if (dest != NULL) strncpy(t.dest, dest, sizeof t.dest);
-	if (dest_level != NULL) strncpy(t.dest_level, dest_level, sizeof t.dest_level);
-	t.type = type;
-
-	teleporter_list_add(&level->teleporters, t);
-	level_mark_teleporter(level, pos);
-}
-
-static bool position_match(const struct position_t *a, const struct position_t *b, int area)
-{
-	if (abs(a->x - b->x) >= area) return false;
-	if (abs(a->y - b->y) >= area) return false;
-	if (abs(a->z - b->z) >= area) return false;
-	return true;
-}
-
-void level_process_teleporter(struct player_t *p)
-{
-	struct level_t *l = p->level;
-
-	unsigned i;
-	for (i = 0; i < l->teleporters.used; i++)
-	{
-		struct teleporter_t *t = &l->teleporters.items[i];
-		if (!position_match(&t->pos, &p->pos, 32)) continue;
-
-		switch (t->type)
-		{
-			case TP_TELEPORT:
-				break;
-
-			case TP_TRIGGER:
-				
-				break;
-		}
-	}
-}
-
 static int gettime()
 {
 	struct timespec ts;
@@ -1553,6 +1520,11 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 	level->physics_iter = 0;
 
 	level->physics_done = 0;
+
+	if (limit)
+	{
+		call_level_hook(EVENT_TICK, level, NULL, NULL);
+	}
 }
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
@@ -1640,11 +1612,86 @@ void level_process_updates(bool can_init)
 }
 
 
+struct level_hook_t
+{
+	char name[16];
+	level_hook_func_t level_hook_func;
+};
+
+static inline bool level_hook_compare(struct level_hook_t *a, struct level_hook_t *b)
+{
+	return strcmp(a->name, b->name) == 0;
+}
+
+LIST(level_hook, struct level_hook_t, level_hook_compare)
+
+static struct level_hook_list_t s_level_hooks;
 
 void register_level_hook_func(const char *name, level_hook_func_t level_hook_func)
 {
+	struct level_hook_t lh;
+	strncpy(lh.name, name, sizeof lh.name);
+	lh.level_hook_func = level_hook_func;
+
+	level_hook_list_add(&s_level_hooks, lh);
+
+	LOG("Registered level hook %s\n", name);
+
+	unsigned i;
+	for (i = 0; i < s_levels.used; i++)
+	{
+		struct level_t *l = s_levels.items[i];
+		if (l == NULL) continue;
+		if (l->level_hook_func == NULL && strcasecmp(l->level_hook_name, name) == 0)
+		{
+			level_hook_attach(l, name);
+		}
+	}
 }
 
 void deregister_level_hook_func(const char *name)
 {
+	struct level_hook_t lh;
+	strncpy(lh.name, name, sizeof lh.name);
+
+	unsigned i;
+	for (i = 0; i < s_levels.used; i++)
+	{
+		struct level_t *l = s_levels.items[i];
+		if (l == NULL) continue;
+		if (l->level_hook_func != NULL && strcasecmp(l->level_hook_name, name) == 0)
+		{
+			l->level_hook_func = NULL;
+			LOG("Detached level hook %s from %s\n", name, l->name);
+		}
+	}
+
+	level_hook_list_del_item(&s_level_hooks, lh);
+	LOG("Deregistered level hook %s\n", name);
+}
+
+void level_hook_attach(struct level_t *l, const char *name)
+{
+	unsigned i;
+	for (i = 0; i < s_level_hooks.used; i++)
+	{
+		if (strcasecmp(s_level_hooks.items[i].name, name) == 0)
+		{
+			strcpy(l->level_hook_name, s_level_hooks.items[i].name);
+			l->level_hook_func = s_level_hooks.items[i].level_hook_func;
+			LOG("Attached level hook %s to %s\n", name, l->name);
+			call_level_hook(EVENT_INIT, l, NULL, NULL);
+			return;
+		}
+	}
+
+	*l->level_hook_name = '\0';
+	l->level_hook_func = NULL;
+}
+
+void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data)
+{
+	if (l->level_hook_func == NULL) return;
+
+	l->level_hook_func(hook, l, c, data, &l->level_hook_data);
 }

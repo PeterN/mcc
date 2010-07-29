@@ -192,14 +192,15 @@ void client_process(struct client_t *c, char *message)
 		}
 
 		call_hook(HOOK_CHAT, buf);
+		call_level_hook(EVENT_CHAT, c->player->level, c, message);
 		net_notify_all(buf);
 	}
 }
 
-void client_send_spawn(const struct client_t *c, bool hiding)
+void client_send_spawn(struct client_t *c, bool hiding)
 {
 	if (c->player == NULL || c->player->level == NULL) return;
-	const struct level_t *level = c->player->level;
+	struct level_t *level = c->player->level;
 
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -210,12 +211,14 @@ void client_send_spawn(const struct client_t *c, bool hiding)
 			//printf("Told %s (%d) about %s joining %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
 		}
 	}
+
+	call_level_hook(EVENT_SPAWN, level, c, NULL);
 }
 
-void client_send_despawn(const struct client_t *c, bool hiding)
+void client_send_despawn(struct client_t *c, bool hiding)
 {
 	if (c->player == NULL || c->player->level == NULL) return;
-	const struct level_t *level = c->player->level;
+	struct level_t *level = c->player->level;
 
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -226,6 +229,8 @@ void client_send_despawn(const struct client_t *c, bool hiding)
 			//printf("Told %s (%d) about %s leaving %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
 		}
 	}
+
+	call_level_hook(EVENT_DESPAWN, level, c, NULL);
 }
 
 void client_info()

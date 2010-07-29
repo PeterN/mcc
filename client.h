@@ -38,8 +38,8 @@ struct client_t *client_get_by_player(struct player_t *p);
 
 void client_add_packet(struct client_t *c, struct packet_t *p);
 void client_process(struct client_t *c, char *message);
-void client_send_spawn(const struct client_t *c, bool hiding);
-void client_send_despawn(const struct client_t *c, bool hiding);
+void client_send_spawn(struct client_t *c, bool hiding);
+void client_send_despawn(struct client_t *c, bool hiding);
 
 void client_notify(struct client_t *c, const char *message);
 

@@ -147,6 +147,7 @@ void irc_message(int hook, void *data, void *arg)
 		}
 	}
 
+/*
 	for (i = 0; i < strlen(buf); i++)
 	{
 		if (buf[i] < 32) {
@@ -156,7 +157,8 @@ void irc_message(int hook, void *data, void *arg)
 		}
 	}
 	printf("\n");
-	irc_queue(s, buf);
+*/
+//	irc_queue(s, buf);
 }
 
 void irc_run(int fd, bool can_write, bool can_read, void *arg)

@@ -597,6 +597,16 @@ CMD(home)
 	return false;
 }
 
+static const char help_hookattach[] =
+"/hookattach <hook>";
+
+CMD(hookattach)
+{
+	if (params != 2) return true;
+
+	level_hook_attach(c->player->level, param[1]);
+}
+
 static const char help_identify[] =
 "/identify <password>\n"
 "Identify your account so that you may use privileged commands.";
@@ -1548,18 +1558,6 @@ CMD(summon)
 	return false;
 }
 
-static const char help_teleporter[] =
-"/teleporter <name> [<dest> [<level>]]\n";
-
-CMD(teleporter)
-{
-	if (params < 2 || params > 5) return true;
-
-	level_set_teleporter(c->player->level, param[1], &c->player->pos, param[2], param[3], param[4]);
-
-	return false;
-}
-
 static const char help_time[] =
 "/time\n"
 "Displays time at the server.";
@@ -1861,6 +1859,7 @@ struct command_t s_commands[] = {
 	{ "help", RANK_GUEST, &cmd_help, help_help },
 	{ "hide", RANK_OP, &cmd_hide, help_hide },
 	{ "home", RANK_GUEST, &cmd_home, help_home },
+	{ "hookattach", RANK_ADMIN, &cmd_hookattach, help_hookattach },
 	{ "identify", RANK_GUEST, &cmd_identify, help_identify },
 	{ "info", RANK_BUILDER, &cmd_info, help_info },
 	{ "instant", RANK_OP, &cmd_instant, help_instant },
@@ -1891,7 +1890,6 @@ struct command_t s_commands[] = {
 	{ "spawn", RANK_GUEST, &cmd_spawn, help_spawn },
 	{ "solid", RANK_OP, &cmd_solid, help_solid },
 	{ "summon", RANK_OP, &cmd_summon, help_summon },
-	{ "teleporter", RANK_ADV_BUILDER, &cmd_teleporter, help_teleporter },
 	{ "time", RANK_GUEST, &cmd_time, help_time },
 	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
 	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
