@@ -72,7 +72,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	{
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
-		strncpy(p->target, data + 20, sizeof p->target);
+		strncpy(p->target_level, data + 20, sizeof p->target);
 		client_notify(c, "Portal target-level set");
 	}
 }
