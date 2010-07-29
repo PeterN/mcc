@@ -3,4 +3,7 @@
 *.db
 *.txt
 mcc
+setrank
+banip
 levels/
+Makefile.bak
