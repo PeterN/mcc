@@ -25,7 +25,7 @@ struct portal_data_t
 	struct portal_t *edit;
 };
 
-static struct portal_t *portal_get_by_name(char *name, struct portal_data_t *arg)
+static struct portal_t *portal_get_by_name(const char *name, struct portal_data_t *arg, bool create)
 {
 	int i;
 	for (i = 0; i < arg->portals; i++)
@@ -33,7 +33,7 @@ static struct portal_t *portal_get_by_name(char *name, struct portal_data_t *arg
 		if (strcasecmp(arg->portal[i].name, name) == 0) return &arg->portal[i];
 	}
 
-	if (i < MAX_PORTALS)
+	if (create && i < MAX_PORTALS)
 	{
 		strncpy(arg->portal[i].name, name, sizeof arg->portal[i].name);
 		arg->portals++;
@@ -45,9 +45,11 @@ static struct portal_t *portal_get_by_name(char *name, struct portal_data_t *arg
 
 static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data, struct portal_data_t *arg)
 {
+	if (!level_user_can_build(l, c->player)) return;
+
 	if (strncasecmp(data, "portal edit ", 12) == 0)
 	{
-		struct portal_t *p = portal_get_by_name(data + 12, arg);
+		struct portal_t *p = portal_get_by_name(data + 12, arg, true);
 		if (p == NULL) return;
 		arg->edit = p;
 		char buf[128];
@@ -60,6 +62,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		if (p == NULL) return;
 		p->pos = c->player->pos;
 		client_notify(c, "Portal position set");
+		l->changed = true;
 	}
 	else if (strncasecmp(data, "portal target ", 14) == 0)
 	{
@@ -67,6 +70,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		if (p == NULL) return;
 		strncpy(p->target, data + 14, sizeof p->target);
 		client_notify(c, "Portal target set");
+		l->changed = true;
 	}
 	else if (strncasecmp(data, "portal target-level ", 20) == 0)
 	{
@@ -74,6 +78,45 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		if (p == NULL) return;
 		strncpy(p->target_level, data + 20, sizeof p->target);
 		client_notify(c, "Portal target-level set");
+		l->changed = true;
+	}
+	else if (strcasecmp(data, "portal list") == 0)
+	{
+		unsigned i;
+		for (i = 0; i < arg->portals; i++)
+		{
+			struct portal_t *p = &arg->portal[i];
+			if (*p->name != '\0')
+			{
+				char buf[128];
+				snprintf(buf, sizeof buf, TAG_YELLOW "Portal %s at %dx%dx%d goes to %s on %s", p->name, p->pos.x, p->pos.y, p->pos.z, p->target, p->target_level);
+				client_notify(c, buf);
+			}
+		}
+	}
+}
+
+static void portal_teleport(struct client_t *c, const char *target, struct portal_data_t *arg)
+{
+	char buf[128];
+	struct portal_t *p = portal_get_by_name(target, arg, false);
+
+	if (p == NULL)
+	{
+		snprintf(buf, sizeof buf, TAG_YELLOW "Portal target %s not found", target);
+		client_notify(c, buf);
+	}
+	else if (p->pos.x == 0 && p->pos.y == 0 && p->pos.z == 0)
+	{
+		snprintf(buf, sizeof buf, TAG_YELLOW "Portal target %s has no position", target);
+		client_notify(c, buf);
+	}
+	else
+	{
+//		snprintf(buf, sizeof buf, TAG_YELLOW "Teleporting to %s", target);
+//		client_notify(c, buf);
+		c->player->pos = p->pos;
+		client_add_packet(c, packet_send_teleport_player(0xFF, &c->player->pos));
 	}
 }
 
@@ -87,9 +130,9 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 		{
 			if (HasBit(c->player->flags, 7)) return;
 
-			char buf[128];
-			snprintf(buf, sizeof buf, "Reached portal %s", p->name);
-			client_notify(c, buf);
+//			char buf[128];
+//			snprintf(buf, sizeof buf, "Reached portal %s", p->name);
+//			client_notify(c, buf);
 
 			SetBit(c->player->flags, 7);
 
@@ -97,28 +140,20 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 			if (*p->target == '\0') return;
 			if (*p->target_level == '\0')
 			{
-				struct portal_t *p2 = portal_get_by_name(p->target, arg);
-				if (p2 == NULL)
-				{
-					snprintf(buf, sizeof buf, "Portal target %s not found", p->target);
-					client_notify(c, buf);
-				}
-				else if (p2->pos.x == 0 && p2->pos.y == 0 && p2->pos.z == 0)
-				{
-					snprintf(buf, sizeof buf, "Portal target %s has no position", p->target);
-					client_notify(c, buf);
-				}
-				else
-				{
-					snprintf(buf, sizeof buf, "Teleporting to %s", p->target);
-					client_notify(c, buf);
-					c->player->pos = p2->pos;
-					client_add_packet(c, packet_send_teleport_player(0xFF, &c->player->pos));
-				}
+				portal_teleport(c, p->target, arg);
 			}
 			else
 			{
 				/* Switch level */
+				struct level_t *l2;
+				if (level_get_by_name(p->target_level, &l2))
+				{
+					if (player_change_level(c->player, l2))
+					{
+						c->player->hook_data = p->target;
+						level_send(c);
+					}
+				}
 			}
 			return;
 		}
@@ -126,9 +161,16 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 
 	if (HasBit(c->player->flags, 7))
 	{
-		client_notify(c, "Moved out of portal");
+//		client_notify(c, "Moved out of portal");
 		c->player->flags ^= 1 << 7;
 	}
+}
+
+static void portal_handle_spawn(struct level_t *l, struct client_t *c, char *data, struct portal_data_t *arg)
+{
+	SetBit(c->player->flags, 7);
+	if (data == NULL) return;
+	portal_teleport(c, data, arg);
 }
 
 static void portal_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
@@ -137,6 +179,7 @@ static void portal_level_hook(int event, struct level_t *l, struct client_t *c, 
 	{
 		case EVENT_CHAT: portal_handle_chat(l, c, data, arg->data); break;
 		case EVENT_MOVE: portal_handle_move(l, c, *(int *)data, arg->data); break;
+		case EVENT_SPAWN: portal_handle_spawn(l, c, data, arg->data); break;
 //		case EVENT_LOAD: portal->edit = NULL; break;
 		case EVENT_INIT:
 		{

@@ -98,7 +98,7 @@ int level_get_new_id(struct level_t *level, struct client_t *c)
 	return -1;
 }
 
-static bool level_user_can_visit(const struct level_t *l, const struct player_t *p)
+bool level_user_can_visit(const struct level_t *l, const struct player_t *p)
 {
 	if (p->rank >= l->rankvisit) return true;
 
@@ -111,7 +111,7 @@ static bool level_user_can_visit(const struct level_t *l, const struct player_t 
 	return false;
 }
 
-static bool level_user_can_build(const struct level_t *l, const struct player_t *p)
+bool level_user_can_build(const struct level_t *l, const struct player_t *p)
 {
 	if (p->rank >= l->rankbuild) return true;
 

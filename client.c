@@ -212,7 +212,8 @@ void client_send_spawn(struct client_t *c, bool hiding)
 		}
 	}
 
-	call_level_hook(EVENT_SPAWN, level, c, NULL);
+	call_level_hook(EVENT_SPAWN, level, c, c->player->hook_data);
+	c->player->hook_data = NULL;
 }
 
 void client_send_despawn(struct client_t *c, bool hiding)

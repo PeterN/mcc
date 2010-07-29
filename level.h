@@ -10,6 +10,7 @@
 
 #define MAX_CLIENTS_PER_LEVEL 64
 
+struct player_t;
 struct client_t;
 struct undodb_t;
 
@@ -127,5 +128,8 @@ void deregister_level_hook_func(const char *name);
 void level_hook_attach(struct level_t *l, const char *name);
 
 void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data);
+
+bool level_user_can_visit(const struct level_t *l, const struct player_t *p);
+bool level_user_can_build(const struct level_t *l, const struct player_t *p);
 
 #endif /* LEVEL_H */

@@ -68,6 +68,8 @@ struct player_t
 	enum blocktype_t replace_type;
 
 	enum blocktype_t bindings[BLOCK_END];
+
+	const char *hook_data;
 };
 
 bool player_t_compare(struct player_t **a, struct player_t **b);
