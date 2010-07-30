@@ -45,24 +45,39 @@ void client_notify(struct client_t *c, const char *message)
 	char buf[64];
 	const char *bufp = message;
 	const char *bufe = message + strlen(message);
+	char last_colour[3] = { 0, 0, 0};
 
 	while (bufp < bufe)
 	{
 		const char *last_space = NULL;
 		const char *bufpp = bufp;
-		while (bufpp - bufp < sizeof buf)
+		while (bufpp - bufp < sizeof buf - (last_colour[0] == 0 ? 0 : 2))
 		{
 			if (*bufpp == '\0' || *bufpp == '\n')
 			{
 				last_space = bufpp;
+				last_colour[1] = last_colour[2];
 				break;
 			}
-			else if (*bufpp == ' ') last_space = bufpp;
+			else if (*bufpp == ' ') {
+				last_space = bufpp;
+				last_colour[1] = last_colour[2];
+			}
+			else if (*bufpp == '&')
+			{
+				last_colour[2] = *(bufpp + 1);
+			}
 			bufpp++;
 		}
 
 		memset(buf, 0, sizeof buf);
-		memcpy(buf, bufp, last_space - bufp);
+		if (last_colour[0] != 0)
+		{
+			buf[0] = '&';
+			buf[1] = last_colour[0];
+		}
+		memcpy(buf + (last_colour[0] == 0 ? 0 : 2), bufp, last_space - bufp);
+		last_colour[0] = last_colour[1];
 
 		client_add_packet(c, packet_send_message(0, buf));
 
