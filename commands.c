@@ -765,7 +765,7 @@ CMD(levels)
 			bool loaded = level_is_loaded(namelist[i]->d_name);
 
 			char buf2[64];
-			snprintf(buf2, sizeof buf2, "%s%s%s%s", loaded ? TAG_GREEN : "", namelist[i]->d_name, loaded ? TAG_WHITE : "", (i < n - 1) ? ", " : "");
+			snprintf(buf2, sizeof buf2, "%s%s%s%s", loaded ? TAG_GREEN : "", namelist[i]->d_name, (loaded && i < n - 1) ? TAG_WHITE : "", (i < n - 1) ? ", " : "");
 
 			size_t len = strlen(buf2);
 			if (len >= sizeof buf - (bufp - buf))
