@@ -1685,8 +1685,8 @@ void level_hook_attach(struct level_t *l, const char *name)
 		}
 	}
 
-	*l->level_hook_name = '\0';
-	l->level_hook_func = NULL;
+//	*l->level_hook_name = '\0';
+//	l->level_hook_func = NULL;
 }
 
 void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data)
