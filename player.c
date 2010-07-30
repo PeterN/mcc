@@ -351,7 +351,7 @@ enum colour_t rank_get_colour(enum rank_t rank)
 
 void player_list(struct client_t *c, const struct level_t *l)
 {
-	char buf[64];
+	char buf[4096];
 	unsigned i;
 	for (i = 0; i < 3; i++)
 	{
