@@ -199,6 +199,7 @@ bool level_send(struct client_t *c)
 		{
 			char buf[64];
 			snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
+			call_hook(HOOK_CHAT, buf);
 			net_notify_all(buf);
 
 			/* Despawn this user for all users */
@@ -1141,15 +1142,15 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		distance += abs(client->player->pos.y / 32 - y);
 		distance += abs(client->player->pos.z / 32 - z);
 
-		if (distance > 10)
+		if (distance > 12)
 		{
 			char buf[64];
-			snprintf(buf, sizeof buf, TAG_RED "Kicked %s for building too far", client->player->username);
+			snprintf(buf, sizeof buf, TAG_RED "Kicked %s for building too far away", client->player->username);
 			net_notify_all(buf);
-			net_close(client, "distance");
+			net_close(client, "Anti-grief: built too far away");
 			return;
 		}
-		if (distance > 9)
+		if (distance > 10)
 		{
 			client_notify(client, "You cannot build that far away");
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
