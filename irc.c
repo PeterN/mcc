@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "colour.h"
+#include "commands.h"
 #include "hook.h"
 #include "mcc.h"
 #include "network.h"
@@ -38,6 +39,34 @@ static void irc_queue(struct irc_t *s, const char *message)
 	strncpy((*s->queue_end)->message, message, sizeof (*s->queue_end)->message);
 
 	s->queue_end = &(*s->queue_end)->next;
+}
+
+void irc_command(char *src, char *command)
+{
+/*	char *bufp = command;
+	char *param[10];
+	int params = 0;
+
+	memset(param, 0, sizeof param);
+
+	for (;;)
+	{
+		size_t l = strcspn(bufp, " ,");
+		bool end = false;
+
+		if (bufp[l] == '\0') end = true;
+		bufp[l] = '\0';
+		param[params++] = bufp;
+		bufp += l + 1;
+
+		if (end) break;
+	}
+
+	if (!command_process(NULL, params, (const char **)param))
+	{
+		//client_notify(c, "Unknown command");
+		return;
+	}*/
 }
 
 void irc_process(struct irc_t *s, char *message)
@@ -79,10 +108,26 @@ void irc_process(struct irc_t *s, char *message)
 	{
 		char *notify = strchr(arg, ':');
 		if (notify == NULL) return;
+
 		notify++;
 
-		snprintf(buf, sizeof buf, TAG_NAVY "%s:" TAG_WHITE " %s", src, notify);
-		net_notify_all(buf);
+		if (arg[0] != '#')
+		{
+			/* Not a channel message, must be a private message */
+			irc_command(src, notify);
+		}
+		else
+		{
+			if (strncmp(notify, "\001ACTION", 7) == 0)
+			{
+				snprintf(buf, sizeof buf, TAG_NAVY "* %s%s", src, notify + 7);
+			}
+			else
+			{
+				snprintf(buf, sizeof buf, TAG_NAVY "%s:" TAG_WHITE " %s", src, notify);
+			}
+			net_notify_all(buf);
+		}
 	}
 }
 
@@ -115,7 +160,7 @@ void irc_message(int hook, void *data, void *arg)
 	struct irc_t *s = arg;
 
 	char buf[512];
-	snprintf(buf, sizeof buf, "PRIVMSG %s :%s\r\n", "#mc" /*g_server.irc.channel*/, (char *)data);
+	snprintf(buf, sizeof buf, "PRIVMSG %s :%s\r\n", g_server.irc.channel, (char *)data);
 
 	unsigned i;
 	size_t len = strlen(buf);
@@ -147,18 +192,7 @@ void irc_message(int hook, void *data, void *arg)
 		}
 	}
 
-/*
-	for (i = 0; i < strlen(buf); i++)
-	{
-		if (buf[i] < 32) {
-			printf("[%02x]", buf[i]);
-		} else {
-			printf("%c", buf[i]);
-		}
-	}
-	printf("\n");
-*/
-//	irc_queue(s, buf);
+	irc_queue(s, buf);
 }
 
 void irc_run(int fd, bool can_write, bool can_read, void *arg)
@@ -186,7 +220,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 			break;
 
 		case 2:
-			snprintf(buf, sizeof buf, "JOIN %s\r\n", "#mc"); //g_server.irc.channel);
+			snprintf(buf, sizeof buf, "JOIN %s\r\n", g_server.irc.channel);
 			irc_queue(s, buf);
 
 			s->irc_stage = 3;
