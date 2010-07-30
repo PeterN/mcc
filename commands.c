@@ -605,6 +605,9 @@ CMD(hookattach)
 	if (params != 2) return true;
 
 	level_hook_attach(c->player->level, param[1]);
+	client_notify(c, "Hook attached");
+
+	return false;
 }
 
 static const char help_identify[] =
