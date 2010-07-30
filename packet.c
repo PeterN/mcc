@@ -188,6 +188,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
+	call_hook(HOOK_CHAT, buf);
 	net_notify_all(buf);
 	if (identified == 2)
 	{
