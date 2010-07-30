@@ -107,6 +107,7 @@ int main(int argc, char **argv)
 	net_init(g_server.port);
 
 	module_load("heartbeat.so");
+	module_load("portal.so");
 	//module_load("irc.so");
 	//irc_start();
 
