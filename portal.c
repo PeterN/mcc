@@ -7,8 +7,7 @@
 #include "level.h"
 #include "player.h"
 #include "position.h"
-
-#define MAX_PORTALS 8
+#include "mcc.h"
 
 struct portal_t
 {
@@ -21,36 +20,49 @@ struct portal_t
 struct portal_data_t
 {
 	int16_t portals;
-	struct portal_t portal[MAX_PORTALS];
 	struct portal_t *edit;
+	struct portal_t portal[];
 };
 
-static struct portal_t *portal_get_by_name(const char *name, struct portal_data_t *arg, bool create)
+static struct portal_t *portal_get_by_name(const char *name, struct portal_data_t *arg, struct level_hook_data_t *ld, bool create)
 {
 	int i;
+
+	/* Find existing portal */
 	for (i = 0; i < arg->portals; i++)
 	{
 		if (strcasecmp(arg->portal[i].name, name) == 0) return &arg->portal[i];
 	}
 
-	if (create && i < MAX_PORTALS)
+	if (!create) return NULL;
+
+	/* Find empty slot for new portal */
+	for (i = 0; i < arg->portals; i++)
 	{
-		strncpy(arg->portal[i].name, name, sizeof arg->portal[i].name);
-		arg->portals++;
-		return &arg->portal[i];
+		if (*arg->portal[i].name == '\0') return &arg->portal[i];
 	}
 
-	return NULL;
+	/* Create new slot */
+	ld->size = sizeof (struct portal_data_t) + sizeof (struct portal_t) * (arg->portals + 1);
+	ld->data = realloc(ld->data, ld->size);
+
+	arg = ld->data;
+
+	memset(&arg->portal[i], 0, sizeof arg->portal[i]);
+	strncpy(arg->portal[i].name, name, sizeof arg->portal[i].name);
+	arg->portals++;
+	return &arg->portal[i];
 }
 
-static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data, struct portal_data_t *arg)
+static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data, struct portal_data_t *arg, struct level_hook_data_t *ld)
 {
 	if (!level_user_can_build(l, c->player)) return;
 
 	if (strncasecmp(data, "portal edit ", 12) == 0)
 	{
-		struct portal_t *p = portal_get_by_name(data + 12, arg, true);
+		struct portal_t *p = portal_get_by_name(data + 12, arg, ld, true);
 		if (p == NULL) return;
+		arg = ld->data;
 		arg->edit = p;
 		char buf[128];
 		snprintf(buf, sizeof buf, TAG_YELLOW "Editing portal %s", data + 12);
@@ -99,7 +111,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 static void portal_teleport(struct client_t *c, const char *target, struct portal_data_t *arg)
 {
 	char buf[128];
-	struct portal_t *p = portal_get_by_name(target, arg, false);
+	struct portal_t *p = portal_get_by_name(target, arg, NULL, false);
 
 	if (p == NULL)
 	{
@@ -177,17 +189,31 @@ static void portal_level_hook(int event, struct level_t *l, struct client_t *c, 
 {
 	switch (event)
 	{
-		case EVENT_CHAT: portal_handle_chat(l, c, data, arg->data); break;
+		case EVENT_CHAT: portal_handle_chat(l, c, data, arg->data, arg); break;
 		case EVENT_MOVE: portal_handle_move(l, c, *(int *)data, arg->data); break;
 		case EVENT_SPAWN: portal_handle_spawn(l, c, data, arg->data); break;
 //		case EVENT_LOAD: portal->edit = NULL; break;
 		case EVENT_INIT:
 		{
-			if (arg->size != sizeof (struct portal_data_t))
+			if (arg->size == 0)
 			{
-				arg->size = sizeof (struct portal_data_t);
-				arg->data = calloc(1, arg->size);
+				LOG("Allocating new portal data on %s\n", l->name);
 			}
+			else
+			{
+				struct portal_data_t *pd = arg->data;
+				if (arg->size == sizeof (struct portal_data_t) + sizeof (struct portal_t) * pd->portals)
+				{
+					LOG("Found data for %d portals on %s\n", pd->portals, l->name);
+					break;
+				}
+
+				LOG("Found invalid portal data on %s, erasing\n", l->name);
+				free(arg->data);
+			}
+
+			arg->size = sizeof (struct portal_data_t);
+			arg->data = calloc(1, arg->size);
 			break;
 		}
 	}
