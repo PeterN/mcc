@@ -1558,6 +1558,7 @@ void level_addupdate_override(struct level_t *level, unsigned index, enum blockt
 
 	struct block_update_t bu;
 	bu.index = index;
+	bu.oldtype = level->blocks[index].type;
 	bu.newtype = newtype;
 	bu.newdata = newdata;
 	block_update_list_add(&level->updates, bu);
@@ -1671,7 +1672,7 @@ void deregister_level_hook_func(const char *name)
 	LOG("Deregistered level hook %s\n", name);
 }
 
-void level_hook_attach(struct level_t *l, const char *name)
+bool level_hook_attach(struct level_t *l, const char *name)
 {
 	unsigned i;
 	for (i = 0; i < s_level_hooks.used; i++)
@@ -1682,12 +1683,27 @@ void level_hook_attach(struct level_t *l, const char *name)
 			l->level_hook_func = s_level_hooks.items[i].level_hook_func;
 			LOG("Attached level hook %s to %s\n", name, l->name);
 			call_level_hook(EVENT_INIT, l, NULL, NULL);
-			return;
+			return true;
 		}
 	}
 
-//	*l->level_hook_name = '\0';
-//	l->level_hook_func = NULL;
+	return false;
+}
+
+bool level_hook_detach(struct level_t *l, const char *name)
+{
+	unsigned i;
+	for (i = 0; i < 1; i++)
+	{
+		if (strcasecmp(l->level_hook_name, name) == 0)
+		{
+			LOG("Detached level hook %s from %s\n", name, l->name);
+			l->level_hook_func = NULL;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data)

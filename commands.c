@@ -604,8 +604,33 @@ CMD(hookattach)
 {
 	if (params != 2) return true;
 
-	level_hook_attach(c->player->level, param[1]);
-	client_notify(c, "Hook attached");
+	if (level_hook_attach(c->player->level, param[1]))
+	{
+		client_notify(c, "Hook attached");
+	}
+	else
+	{
+		client_notify(c, "Hook not found");
+	}
+
+	return false;
+}
+
+static const char help_hookdetach[] =
+"/hookdetach <hook>";
+
+CMD(hookdetach)
+{
+	if (params != 2) return true;
+
+	if (level_hook_detach(c->player->level, param[1]))
+	{
+		client_notify(c, "Hook detached");
+	}
+	else
+	{
+		client_notify(c, "Hook not attached");
+	}
 
 	return false;
 }
@@ -1862,7 +1887,8 @@ struct command_t s_commands[] = {
 	{ "help", RANK_GUEST, &cmd_help, help_help },
 	{ "hide", RANK_OP, &cmd_hide, help_hide },
 	{ "home", RANK_GUEST, &cmd_home, help_home },
-	{ "hookattach", RANK_ADMIN, &cmd_hookattach, help_hookattach },
+	{ "hookattach", RANK_OP, &cmd_hookattach, help_hookattach },
+	{ "hookdetach", RANK_OP, &cmd_hookdetach, help_hookdetach },
 	{ "identify", RANK_GUEST, &cmd_identify, help_identify },
 	{ "info", RANK_BUILDER, &cmd_info, help_info },
 	{ "instant", RANK_OP, &cmd_instant, help_instant },
