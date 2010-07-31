@@ -99,7 +99,7 @@ CMD(afk)
 }
 
 static const char help_ban[] =
-"/ban <user>\n"
+"/ban <user> [<message>]\n"
 "Ban user";
 
 CMD(ban)
@@ -108,7 +108,7 @@ CMD(ban)
 	struct player_t *p;
 	int oldrank;
 
-	if (params != 2) return true;
+	if (params < 2) return true;
 
 	oldrank = playerdb_get_rank(param[1]);
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
@@ -125,7 +125,20 @@ CMD(ban)
 		sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), p->username);
 	}
 
-	snprintf(buf, sizeof buf, "%s banned", param[1]);
+	if (params == 2)
+	{
+		snprintf(buf, sizeof buf, "%s banned by %s", param[1], c->player->username);
+	}
+	else
+	{
+		unsigned i;
+		snprintf(buf, sizeof buf, "%s banned (", param[1]);
+		for (i = 2; i < params; i++)
+		{
+			strcat(buf, param[i]);
+			strcat(buf, i < params - 1 ? " " : ")");
+		}
+	}
 	net_notify_all(buf);
 	return false;
 }
@@ -715,14 +728,14 @@ CMD(instant)
 }
 
 static const char help_kick[] =
-"/kick <user>\n"
+"/kick <user> [<message>]\n"
 "Kicks the specified <user> from the server.";
 
 CMD(kick)
 {
-	if (params != 2) return true;
+	if (params < 2) return true;
 
-	char buf[64];
+	char buf[128];
 
 	struct player_t *p = player_get_by_name(param[1]);
 	if (p == NULL)
@@ -732,7 +745,66 @@ CMD(kick)
 		return false;
 	}
 
-	snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
+	if (params == 2)
+	{
+		snprintf(buf, sizeof buf, "kicked by %s", c->player->username);
+	}
+	else
+	{
+		unsigned i;
+		snprintf(buf, sizeof buf, "kicked (");
+		for (i = 2; i < params; i++)
+		{
+			strcat(buf, param[i]);
+			strcat(buf, i < params - 1 ? " " : ")");
+		}
+	}
+	net_close(p->client, buf);
+
+	return false;
+}
+
+static const char help_kickban[] =
+"/kickban <user> [<message>]\n"
+"Kicks the specified <user> from the server.";
+
+CMD(kickban)
+{
+	if (params < 2) return true;
+
+	char buf[128];
+	struct player_t *p;
+
+	enum rank_t oldrank = playerdb_get_rank(param[1]);
+	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
+	{
+		client_notify(c, "Cannot ban op or admin");
+		return false;
+	}
+
+	playerdb_set_rank(param[1], RANK_BANNED);
+	p = player_get_by_name(param[1]);
+	if (p == NULL)
+	{
+		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
+
+	if (params == 2)
+	{
+		snprintf(buf, sizeof buf, "kickbanned by %s", c->player->username);
+	}
+	else
+	{
+		unsigned i;
+		snprintf(buf, sizeof buf, "kickbanned (");
+		for (i = 2; i < params; i++)
+		{
+			strcat(buf, param[i]);
+			strcat(buf, i < params - 1 ? " " : ")");
+		}
+	}
 	net_close(p->client, buf);
 
 	return false;
@@ -1893,6 +1965,7 @@ struct command_t s_commands[] = {
 	{ "info", RANK_BUILDER, &cmd_info, help_info },
 	{ "instant", RANK_OP, &cmd_instant, help_instant },
 	{ "kick", RANK_OP, &cmd_kick, help_kick },
+	{ "kickban", RANK_OP, &cmd_kickban, help_kickban },
 	{ "lava", RANK_BUILDER, &cmd_lava, help_lava },
 	{ "levels", RANK_GUEST, &cmd_levels, help_levels },
 	{ "lvlowner", RANK_OP, &cmd_lvlowner, help_lvlowner },
