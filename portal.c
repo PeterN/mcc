@@ -84,11 +84,19 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		client_notify(c, "Portal target set");
 		l->changed = true;
 	}
+	else if (strcmp(data, "portal no target-level ") == 0)
+	{
+		struct portal_t *p = arg->edit;
+		if (p == NULL) return;
+		memset(p->target_level, 0, sizeof p->target_level);
+		client_notify(c, "Portal target-level cleared");
+		l->changed = true;
+	}
 	else if (strncasecmp(data, "portal target-level ", 20) == 0)
 	{
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
-		strncpy(p->target_level, data + 20, sizeof p->target);
+		strncpy(p->target_level, data + 20, sizeof p->target_level);
 		client_notify(c, "Portal target-level set");
 		l->changed = true;
 	}
