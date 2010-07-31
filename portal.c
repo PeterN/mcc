@@ -76,6 +76,14 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		client_notify(c, "Portal position set");
 		l->changed = true;
 	}
+	else if (strcasecmp(data, "portal no target") == 0)
+	{
+		struct portal_t *p = arg->edit;
+		if (p == NULL) return;
+		memset(p->target, 0, sizeof p->target);
+		client_notify(c, "Portal target cleared");
+		l->changed = true;
+	}
 	else if (strncasecmp(data, "portal target ", 14) == 0)
 	{
 		struct portal_t *p = arg->edit;
@@ -157,9 +165,9 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 			SetBit(c->player->flags, 7);
 
 			/* Portal is exit only */
-			if (*p->target == '\0') return;
 			if (*p->target_level == '\0')
 			{
+				if (*p->target == '\0') return;
 				portal_teleport(c, p->target, arg);
 			}
 			else
@@ -170,7 +178,7 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 				{
 					if (player_change_level(c->player, l2))
 					{
-						c->player->hook_data = p->target;
+						if (*p->target != '\0') c->player->hook_data = p->target;
 						level_send(c);
 					}
 				}
