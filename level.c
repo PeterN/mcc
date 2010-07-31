@@ -435,6 +435,7 @@ void *level_gen_thread(void *arg)
 		free(cmh);*/
 
 		perlin_deinit(pp);
+		filter_deinit(ft);
 //		faultgen_deinit(fg);
 
 		LOG("levelgen: flooding sealevel\n");
