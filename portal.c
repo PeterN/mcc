@@ -84,7 +84,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		client_notify(c, "Portal target set");
 		l->changed = true;
 	}
-	else if (strcmp(data, "portal no target-level ") == 0)
+	else if (strcasecmp(data, "portal no target-level") == 0)
 	{
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
