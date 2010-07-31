@@ -48,7 +48,11 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 	level->z = z;
 
 	level->blocks = calloc(x * y * z, sizeof *level->blocks);
-	if (level->blocks == NULL) return false;
+	if (level->blocks == NULL)
+	{
+		LOG("level_init: allocation of %llu bytes failed", x * y * z * sizeof *level->blocks);
+		return false;
+	}
 
 	physics_list_init(&level->physics);
 
