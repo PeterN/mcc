@@ -109,6 +109,12 @@ void net_init(int port)
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serv_addr.sin_port = htons(port);
 
+	int on = 1;
+	if (setsockopt(s_listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == -1)
+	{
+		LOG("Could not set SO_REUSEADDR: %s", strerror(errno));
+	}
+
 	if (bind(s_listenfd, (struct sockaddr *)&serv_addr, sizeof serv_addr) < 0)
 	{
 		perror("bind");
