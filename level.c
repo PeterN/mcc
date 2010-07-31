@@ -599,7 +599,10 @@ void level_unload(struct level_t *level)
 {
 	LOG("Level '%s' unloaded\n", level->name);
 
+	user_list_free(&level->userbuild);
+	user_list_free(&level->uservisit);
 	physics_list_free(&level->physics);
+	physics_list_free(&level->physics2);
 	block_update_list_free(&level->updates);
 
 	undodb_close(level->undo);
