@@ -110,14 +110,11 @@ struct perlin_t *perlin_init(int x, int y, float persistence, int octaves)
 	pp->persistence = persistence;
 	pp->octaves = octaves;
 
-//	pp->map = malloc(sizeof *pp->map * x * y);
-
 	return pp;
 }
 
 void perlin_deinit(struct perlin_t *pp)
 {
-//	free(pp->map);
 	free(pp);
 }
 
