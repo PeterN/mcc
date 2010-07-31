@@ -618,6 +618,7 @@ void level_unload(struct level_t *level)
 		LOG("Level '%s' deleted\n", level->name);
 	}
 
+	free(level->level_hook_data.data);
 	free(level->blocks);
 	free(level);
 }
