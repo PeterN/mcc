@@ -200,7 +200,7 @@ void irc_message(int hook, void *data, void *arg)
 
 void irc_end(struct irc_t *s)
 {
-	LOG("Closed IRC connection\n");
+	LOG("[irc] Closed connection\n");
 
 	close(s->fd);
 
@@ -257,7 +257,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 		{
 			if (errno != EWOULDBLOCK && errno != EAGAIN)
 			{
-				LOG("recv: %s\n", strerror(errno));
+				LOG("[irc] recv: %s\n", strerror(errno));
 				irc_end(s);
 			}
 			return;
@@ -304,7 +304,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 			{
 				//if (errno != EWOULDBLOCK)
 				//{
-					LOG("send: %s\n", strerror(errno));
+					LOG("[irc] send: %s\n", strerror(errno));
 				//}
 				return;
 			}
@@ -329,7 +329,7 @@ void irc_start(void *arg)
 	{
 		if (!resolve(g_server.irc.hostname, g_server.irc.port, &s->irc_addr))
 		{
-			LOG("Unable to resolve IRC server\n");
+			LOG("[irc] Unable to resolve IRC server\n");
 			return;
 		}
 		s->irc_resolved = true;
@@ -338,7 +338,7 @@ void irc_start(void *arg)
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0)
 	{
-		LOG("socket: %s\n", strerror(errno));
+		LOG("[irc] socket: %s\n", strerror(errno));
 		return;
 	}
 
@@ -347,7 +347,7 @@ void irc_start(void *arg)
 	if (connect(fd, (struct sockaddr *)&s->irc_addr, sizeof s->irc_addr) < 0)
 	{
 		if (errno != EINPROGRESS) {
-			LOG("connect: %s\n", strerror(errno));
+			LOG("[irc] connect: %s\n", strerror(errno));
 			return;
 		}
 	}
