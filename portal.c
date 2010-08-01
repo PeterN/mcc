@@ -44,9 +44,9 @@ static struct portal_t *portal_get_by_name(const char *name, struct portal_data_
 
 	/* Create new slot */
 	ld->size = sizeof (struct portal_data_t) + sizeof (struct portal_t) * (arg->portals + 1);
-	ld->data = realloc(ld->data, ld->size);
-
-	arg = ld->data;
+	arg = realloc(ld->data, ld->size);
+	if (arg == NULL) return NULL;
+	ld->data = arg;
 
 	memset(&arg->portal[i], 0, sizeof arg->portal[i]);
 	strncpy(arg->portal[i].name, name, sizeof arg->portal[i].name);
