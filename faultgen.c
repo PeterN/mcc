@@ -14,6 +14,12 @@ struct faultgen_t
 struct faultgen_t *faultgen_init(int x, int y)
 {
 	struct faultgen_t *f = malloc(sizeof *f + sizeof *f->map * x * y);
+	if (f == NULL)
+	{
+		LOG("[faultgen] faultgen_init(): couldn't allocate %lu bytes\n", sizeof *f + sizeof *f->map * x * y);
+		return NULL;
+	}
+
 	f->x = x;
 	f->y = y;
 	f->disp_max = 0.05f;
