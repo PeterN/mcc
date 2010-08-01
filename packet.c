@@ -13,6 +13,11 @@
 struct packet_t *packet_init(size_t len)
 {
 	struct packet_t *p = malloc(sizeof *p + len);
+	if (p == NULL)
+	{
+		LOG("[packet] packet_init(): couldn't allocate %lu bytes\n", sizeof *p + len);
+		return NULL;
+	}
 
 	memset(p->buffer, 0, len);
 	p->loc = p->buffer;
@@ -39,7 +44,7 @@ static int16_t packet_recv_short(struct packet_t *p)
 static char *packet_recv_string(struct packet_t *p)
 {
 	/* Strings are spaced padded, so we need to count down to get the length */
-	int len;
+	unsigned len;
 
 	for (len = sizeof (string_t); len > 0; len--)
 	{
@@ -47,6 +52,11 @@ static char *packet_recv_string(struct packet_t *p)
 	}
 
 	char *v = malloc(len + 1);
+	if (v == NULL)
+	{
+		LOG("[packet] packet_recv_string(): couldn't allocate %u bytes\n", len + 1);
+		return NULL;
+	}
 	memcpy(v, p->loc, len);
 	v[len] = '\0';
 
@@ -309,6 +319,8 @@ void packet_recv(struct client_t *c, struct packet_t *p)
 struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name, const char *server_motd, uint8_t user_type)
 {
 	struct packet_t *p = packet_init(131);
+	if (p == NULL) return NULL;
+
 	packet_send_byte(p, 0x00);
 	packet_send_byte(p, protocol);
 	packet_send_string(p, server_name);
@@ -321,6 +333,8 @@ struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name
 struct packet_t *packet_send_ping()
 {
 	struct packet_t *p = packet_init(1);
+	if (p == NULL) return NULL;
+
 	packet_send_byte(p, 0x01);
 
 	return p;
@@ -329,6 +343,8 @@ struct packet_t *packet_send_ping()
 struct packet_t *packet_send_level_initialize()
 {
 	struct packet_t *p = packet_init(1);
+	if (p == NULL) return NULL;
+
 	packet_send_byte(p, 0x02);
 
 	return p;
@@ -337,6 +353,8 @@ struct packet_t *packet_send_level_initialize()
 struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *data, uint8_t percent)
 {
 	struct packet_t *p = packet_init(1028);
+	if (p == NULL) return NULL;
+
 	packet_send_byte(p, 0x03);
 	packet_send_short(p, chunk_length);
 	packet_send_byte_array(p, data, chunk_length);
@@ -348,6 +366,8 @@ struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *dat
 struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z)
 {
 	struct packet_t *p = packet_init(7);
+	if (p == NULL) return NULL;
+
 	packet_send_byte(p, 0x04);
 	packet_send_short(p, x);
 	packet_send_short(p, y);
@@ -359,6 +379,8 @@ struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z)
 struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t type)
 {
 	struct packet_t *p = packet_init(8);
+	if (p == NULL) return NULL;
+
 	packet_send_byte(p, 0x06);
 	packet_send_short(p, x);
 	packet_send_short(p, y);
@@ -371,6 +393,7 @@ struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t 
 struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_name, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(74);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x07);
 	packet_send_byte(p, player_id);
@@ -387,6 +410,7 @@ struct packet_t *packet_send_spawn_player(uint8_t player_id, const char *player_
 struct packet_t *packet_send_teleport_player(uint8_t player_id, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(10);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x08);
 	packet_send_byte(p, player_id);
@@ -402,6 +426,7 @@ struct packet_t *packet_send_teleport_player(uint8_t player_id, const struct pos
 struct packet_t *packet_send_full_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(7);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x09);
 	packet_send_byte(p, player_id);
@@ -417,6 +442,7 @@ struct packet_t *packet_send_full_position_update(uint8_t player_id, int8_t dx, 
 struct packet_t *packet_send_position_update(uint8_t player_id, int8_t dx, int8_t dy, int8_t dz)
 {
 	struct packet_t *p = packet_init(5);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x0A);
 	packet_send_byte(p, player_id);
@@ -430,6 +456,7 @@ struct packet_t *packet_send_position_update(uint8_t player_id, int8_t dx, int8_
 struct packet_t *packet_send_orientation_update(uint8_t player_id, const struct position_t *pos)
 {
 	struct packet_t *p = packet_init(4);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x0B);
 	packet_send_byte(p, player_id);
@@ -442,6 +469,8 @@ struct packet_t *packet_send_orientation_update(uint8_t player_id, const struct 
 struct packet_t *packet_send_despawn_player(uint8_t player_id)
 {
 	struct packet_t *p = packet_init(2);
+	if (p == NULL) return NULL;
+
 	packet_send_byte(p, 0x0C);
 	packet_send_byte(p, player_id);
 
@@ -451,6 +480,7 @@ struct packet_t *packet_send_despawn_player(uint8_t player_id)
 struct packet_t *packet_send_message(uint8_t player_id, const char *message)
 {
 	struct packet_t *p = packet_init(66);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x0D);
 	packet_send_byte(p, player_id);
@@ -462,6 +492,7 @@ struct packet_t *packet_send_message(uint8_t player_id, const char *message)
 struct packet_t *packet_send_disconnect_player(const char *reason)
 {
 	struct packet_t *p = packet_init(65);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x0E);
 	packet_send_string(p, reason);
@@ -472,6 +503,7 @@ struct packet_t *packet_send_disconnect_player(const char *reason)
 struct packet_t *packet_send_update_user_type(uint8_t player_id, uint8_t user_type)
 {
 	struct packet_t *p = packet_init(3);
+	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x0F);
 	packet_send_byte(p, player_id);

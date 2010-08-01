@@ -31,6 +31,12 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
+	if (p == NULL)
+	{
+		LOG("[client] client_add_packet(): Tried to queue NULL packet\n");
+		return;
+	}
+
 	struct packet_t **ip = &c->packet_send;
 	while (*ip != NULL)
 	{
