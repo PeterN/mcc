@@ -57,7 +57,7 @@ bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 
 	if (e != 0)
 	{
-		perror("getaddrinfo");
+		LOG("getaddrinfo: %s\n", strerror(errno));
 		return false;
 	}
 
@@ -81,7 +81,7 @@ bool getip(const struct sockaddr *addr, size_t addr_len, char *ip, size_t ip_len
 	int res = getnameinfo(addr, addr_len, ip, ip_len, NULL, 0, NI_NUMERICHOST | NI_NUMERICSERV);
 	if (res != 0)
 	{
-		perror("getnameinfo");
+		LOG("getnameinfo: %s\n", strerror(errno));
 	}
 	return res == 0;
 }
@@ -101,7 +101,7 @@ void net_init(int port)
 	s_listenfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (s_listenfd < 0)
 	{
-		perror("socket");
+		LOG("socket: %s\n", strerror(errno));
 		return;
 	}
 
@@ -117,14 +117,14 @@ void net_init(int port)
 
 	if (bind(s_listenfd, (struct sockaddr *)&serv_addr, sizeof serv_addr) < 0)
 	{
-		perror("bind");
+		LOG("bind: %s\n", strerror(errno));
 		return;
 	}
 
 	if (listen(s_listenfd, 1) != 0)
 	{
 		close(s_listenfd);
-		perror("listen");
+		LOG("listen: %s\n", strerror(errno));
 		return;
 	}
 
@@ -222,7 +222,7 @@ static void net_packetsend(struct client_t *c)
 		{
 			//if (errno != EWOULDBLOCK)
 			//{
-				perror("send");
+				LOG("send: %s\n", strerror(errno));
 			//}
 			break;
 		}
@@ -254,9 +254,17 @@ static void net_packetrecv(struct client_t *c)
 		res = recv(c->sock, p->buffer + p->pos, p->size - p->pos, 0);
 		if (res == -1)
 		{
-			if (errno != EWOULDBLOCK)
+			if (errno == ECONNRESET)
 			{
-				perror("recv");
+				/* Connection reset by peer... normal disconnect */
+				net_close(c, NULL);
+			}
+			else if (errno != EWOULDBLOCK && errno != EAGAIN)
+			{
+				/* Abnormal error */
+				char buf[128];
+				snprintf(buf, sizeof buf, "recv: %s", strerror(errno));
+				net_close(c, buf);
 			}
 			return;
 		}
@@ -334,7 +342,7 @@ void net_run()
 	n = select(FD_SETSIZE, &read_fd, &write_fd, NULL, &tv);
 	if (n == -1)
 	{
-		perror("select");
+		LOG("select: %s\n", strerror(errno));
 		return;
 	}
 

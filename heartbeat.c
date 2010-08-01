@@ -53,7 +53,7 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 			int res = write(fd, request, strlen(request));
 			if (res < 0)
 			{
-				perror("write");
+				LOG("[heartbeat] write: %s\n", strerror(errno));
 				break;
 			}
 
@@ -70,7 +70,7 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 			int res = read(fd, buf, sizeof buf);
 			if (res < 0)
 			{
-				perror("read");
+				LOG("[heartbeat] read: %s\n", strerror(errno));
 				break;
 			}
 
@@ -122,7 +122,7 @@ void heartbeat_start(void *arg)
 	h->fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (h->fd < 0)
 	{
-		perror("socket");
+		LOG("[heartbeat] socket: %s\n", strerror(errno));
 		return;
 	}
 
@@ -131,7 +131,7 @@ void heartbeat_start(void *arg)
 	if (connect(h->fd, (struct sockaddr *)&h->heartbeat_addr, sizeof h->heartbeat_addr) < 0)
 	{
 		if (errno != EINPROGRESS) {
-			perror("connect");
+			LOG("[heartbeat] connect: %s\n", strerror(errno));
 			h->fd = -1;
 			return;
 		}

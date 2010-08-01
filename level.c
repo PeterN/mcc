@@ -175,9 +175,20 @@ bool level_send(struct client_t *c)
 	}
 
 	memset(&z, 0, sizeof z);
-	if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) return false;
+	if (deflateInit2(&z, 5, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+	{
+		LOG("level_send: deflateInit2() failed\n");
+		return false;
+	}
 
 	uint8_t *buffer = malloc(4 + length);
+	if (buffer == NULL)
+	{
+		LOG("level_send: Unable to allocate %u bytes\n", 4 + length);
+		deflateEnd(&z);
+		return false;
+	}
+
 	uint8_t *bufp = buffer;
 	*bufp++ = (length >> 24) & 0xFF;
 	*bufp++ = (length >> 16) & 0xFF;

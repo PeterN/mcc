@@ -13,6 +13,7 @@
 #include "hook.h"
 #include "mcc.h"
 #include "network.h"
+#include "timer.h"
 
 struct irc_packet_t
 {
@@ -23,6 +24,8 @@ struct irc_packet_t
 struct irc_t
 {
 	int fd;
+	struct timer_t *timer;
+
 	struct sockaddr_in irc_addr;
 	int irc_stage;
 	bool irc_resolved;
@@ -195,6 +198,26 @@ void irc_message(int hook, void *data, void *arg)
 	irc_queue(s, buf);
 }
 
+void irc_end(struct irc_t *s)
+{
+	LOG("[irc] Closed connection\n");
+
+	close(s->fd);
+
+	deregister_hook(&irc_message, s);
+	deregister_socket(s->fd);
+
+	/* Free remaining packets */
+	while (s->queue != NULL)
+	{
+		struct irc_packet_t *ircp = s->queue;
+		s->queue = s->queue->next;
+		free(ircp);
+	}
+
+	s->fd = -1;
+}
+
 void irc_run(int fd, bool can_write, bool can_read, void *arg)
 {
 	struct irc_t *s = arg;
@@ -232,17 +255,16 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 		int res = recv(fd, s->read_pos, sizeof s->read_buf - (s->read_pos - s->read_buf) - 1, 0);
 		if (res == -1)
 		{
-			if (errno != EWOULDBLOCK)
+			if (errno != EWOULDBLOCK && errno != EAGAIN)
 			{
-				perror("recv");
+				LOG("[irc] recv: %s\n", strerror(errno));
+				irc_end(s);
 			}
 			return;
 		}
 		else if (res == 0)
 		{
-			LOG("Closed IRC connection\n");
-			close(fd);
-			deregister_socket(fd);
+			irc_end(s);
 			return;
 		}
 		s->read_pos[res] = '\0';
@@ -282,7 +304,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 			{
 				//if (errno != EWOULDBLOCK)
 				//{
-					perror("send");
+					LOG("[irc] send: %s\n", strerror(errno));
 				//}
 				return;
 			}
@@ -300,11 +322,14 @@ void irc_start(void *arg)
 {
 	struct irc_t *s = arg;
 
+	/* Already connected? */
+	if (s->fd != -1) return;
+
 	if (!s->irc_resolved)
 	{
 		if (!resolve(g_server.irc.hostname, g_server.irc.port, &s->irc_addr))
 		{
-			LOG("Unable to resolve IRC server\n");
+			LOG("[irc] Unable to resolve IRC server\n");
 			return;
 		}
 		s->irc_resolved = true;
@@ -313,7 +338,7 @@ void irc_start(void *arg)
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0)
 	{
-		perror("socket");
+		LOG("[irc] socket: %s\n", strerror(errno));
 		return;
 	}
 
@@ -322,7 +347,7 @@ void irc_start(void *arg)
 	if (connect(fd, (struct sockaddr *)&s->irc_addr, sizeof s->irc_addr) < 0)
 	{
 		if (errno != EINPROGRESS) {
-			perror("connect");
+			LOG("[irc] connect: %s\n", strerror(errno));
 			return;
 		}
 	}
@@ -334,25 +359,26 @@ void irc_start(void *arg)
 	s->queue = NULL;
 	s->queue_end = &s->queue;
 	s->read_pos = s->read_buf;
+
+	register_hook(HOOK_CHAT, &irc_message, s);
 }
 
 void module_init(void **arg)
 {
 	struct irc_t *s = malloc(sizeof *s);
 	memset(s, 0, sizeof *s);
-
 	*arg = s;
 
-	irc_start(s);
-	register_hook(HOOK_CHAT, &irc_message, s);
+	s->fd = -1;
+	s->timer = register_timer("irc", 60000, &irc_start, s);
 }
 
 void module_deinit(void *arg)
 {
 	struct irc_t *s = arg;
 
-	close(s->fd);
+	irc_end(s);
+	deregister_timer(s->timer);
 
-	deregister_hook(&irc_message, s);
-	deregister_socket(s->fd);
+	free(s);
 }
