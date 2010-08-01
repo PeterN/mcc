@@ -23,7 +23,7 @@ static const char s_off[] = TAG_GREEN "off";
 
 void notify_file(struct client_t *c, const char *filename)
 {
-	char buf[128];
+	char buf[1024];
 	FILE *f = fopen(filename, "r");
 	if (f == NULL)
 	{
