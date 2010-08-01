@@ -12,6 +12,12 @@ struct filter_t
 struct filter_t *filter_init(int x, int y)
 {
 	struct filter_t *f = malloc(sizeof *f + sizeof *f->map * x * y);
+	if (f == NULL)
+	{
+		LOG("[filter] filter_init(): couldn't allocate %lu bytes\n", sizeof *f + sizeof *f->map * x * y);
+		return NULL;
+	}
+
 	f->x = x;
 	f->y = y;
 	return f;

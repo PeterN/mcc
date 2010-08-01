@@ -104,6 +104,12 @@ void perlin_noise(struct perlin_t *pp)
 struct perlin_t *perlin_init(int x, int y, float persistence, int octaves)
 {
 	struct perlin_t *pp = malloc(sizeof *pp + sizeof *pp->map * x * y);
+	if (pp == NULL)
+	{
+		LOG("[perlin] perlin_init(): couldn't allocate %lu bytes\n", sizeof *pp + sizeof *pp->map * x * y);
+		return NULL;
+	}
+
 	pp->x = x;
 	pp->y = y;
 	pp->seed = rand();

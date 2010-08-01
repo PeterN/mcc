@@ -50,7 +50,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 	level->blocks = calloc(x * y * z, sizeof *level->blocks);
 	if (level->blocks == NULL)
 	{
-		LOG("level_init: allocation of %llu bytes failed", x * y * z * sizeof *level->blocks);
+		LOG("level_init: allocation of %lu bytes failed", x * y * z * sizeof *level->blocks);
 		return false;
 	}
 
@@ -306,6 +306,7 @@ void *level_gen_thread(void *arg)
 	int mx = level->x;
 	int my = level->y;
 	int mz = level->z;
+	char buf[64];
 
 	memset(&block, 0, sizeof block);
 
@@ -331,7 +332,16 @@ void *level_gen_thread(void *arg)
 	else
 	{
 		struct faultgen_t *fg = faultgen_init(mx, mz);
+		if (fg == NULL)
+		{
+			goto level_error;
+		}
 		struct filter_t *ft = filter_init(mx, mz);
+		if (ft == NULL)
+		{
+			faultgen_deinit(fg);
+			goto level_error;
+		}
 //		const float *hm1 = faultgen_map(fg);
 		faultgen_create(fg);
 		filter_process(ft, faultgen_map(fg));
@@ -340,6 +350,11 @@ void *level_gen_thread(void *arg)
 
 
 		struct perlin_t *pp = perlin_init(mx, mz, 0.250 * level->type, 6);
+		if (pp == NULL)
+		{
+			filter_deinit(ft);
+			goto level_error;
+		}
 		const float *hm2 = perlin_map(pp);
 
 		perlin_noise(pp);
@@ -581,11 +596,19 @@ void *level_gen_thread(void *arg)
 
 	pthread_mutex_unlock(&level->mutex);
 
-	char buf[64];
 	snprintf(buf, sizeof buf, "Created level '%s'", level->name);
 	net_notify_all(buf);
 
 	//LOG(buf);
+
+	return NULL;
+
+level_error:
+	level->changed = true;
+	pthread_mutex_unlock(&level->mutex);
+
+	snprintf(buf, sizeof buf, TAG_YELLOW "Level generation for %s failed", level->name);
+	net_notify_all(buf);
 
 	return NULL;
 }
