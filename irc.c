@@ -257,7 +257,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 		{
 			if (errno != EWOULDBLOCK && errno != EAGAIN)
 			{
-				perror("recv");
+				LOG("recv: %s\n", strerror(errno));
 				irc_end(s);
 			}
 			return;
@@ -304,7 +304,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 			{
 				//if (errno != EWOULDBLOCK)
 				//{
-					perror("send");
+					LOG("send: %s\n", strerror(errno));
 				//}
 				return;
 			}
@@ -338,7 +338,7 @@ void irc_start(void *arg)
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0)
 	{
-		perror("socket");
+		LOG("socket: %s\n", strerror(errno));
 		return;
 	}
 
@@ -347,7 +347,7 @@ void irc_start(void *arg)
 	if (connect(fd, (struct sockaddr *)&s->irc_addr, sizeof s->irc_addr) < 0)
 	{
 		if (errno != EINPROGRESS) {
-			perror("connect");
+			LOG("connect: %s\n", strerror(errno));
 			return;
 		}
 	}
