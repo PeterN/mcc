@@ -359,21 +359,30 @@ void net_run()
 			if (fd == -1) break;
 
 			c = calloc(1, sizeof *c);
-			c->sock = fd;
-			c->sin = sin;
-//			c->sin_len = sin_len;
-
-			getip((struct sockaddr *)&sin, sin_len, c->ip, sizeof c->ip);
-			LOG("network: accepted connection from %s\n", c->ip);
-
-			if (playerdb_check_ban(c->ip))
+			if (c == NULL)
 			{
-				net_close(c, "Banned");
-				free(c);
+				LOG("[network] net_run(): couldn't allocate %lu bytes\n", sizeof *c);
+				close(fd);
 			}
 			else
 			{
-				client_list_add(&s_clients, c);
+				c->sock = fd;
+				c->sin = sin;
+//				c->sin_len = sin_len;
+
+				getip((struct sockaddr *)&sin, sin_len, c->ip, sizeof c->ip);
+				LOG("[network] accepted connection from %s\n", c->ip);
+
+				if (playerdb_check_ban(c->ip))
+				{
+					LOG("[network] client connected from banned IP address %s\n", c->ip);
+					net_close(c, "Banned");
+					free(c);
+				}
+				else
+				{
+					client_list_add(&s_clients, c);
+				}
 			}
 		}
 	}
