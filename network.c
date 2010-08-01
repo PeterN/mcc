@@ -254,8 +254,14 @@ static void net_packetrecv(struct client_t *c)
 		res = recv(c->sock, p->buffer + p->pos, p->size - p->pos, 0);
 		if (res == -1)
 		{
-			if (errno != EWOULDBLOCK && errno != EAGAIN)
+			if (errno == ECONNRESET)
 			{
+				/* Connection reset by peer... normal disconnect */
+				net_close(c, NULL);
+			}
+			else if (errno != EWOULDBLOCK && errno != EAGAIN)
+			{
+				/* Abnormal error */
 				char buf[128];
 				snprintf(buf, sizeof buf, "recv: %s", strerror(errno));
 				net_close(c, buf);
