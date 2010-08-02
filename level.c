@@ -132,6 +132,14 @@ bool level_send(struct client_t *c)
 {
 	struct level_t *oldlevel = c->player->level;
 	struct level_t *newlevel = c->player->new_level;
+
+	if (newlevel == NULL)
+	{
+		LOG("Tried moving to NULL level for %s\n", c->player->username);
+		c->waiting_for_level = false;
+		return false;
+	}
+
 	unsigned length = newlevel->x * newlevel->y * newlevel->z;
 	unsigned x;
 	int i;
