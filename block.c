@@ -639,6 +639,11 @@ bool blocktype_has_physics(enum blocktype_t type)
 	return s_blocks.items[type].physics_func != NULL;
 }
 
+enum rank_t blocktype_min_rank(enum blocktype_t type)
+{
+	return s_blocks.items[type].min_rank;
+}
+
 void blocktype_list(struct client_t *c)
 {
 	char buf[64];

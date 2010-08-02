@@ -132,6 +132,7 @@ const char *blocktype_get_name(enum blocktype_t type);
 enum blocktype_t blocktype_get_by_name(const char *name);
 struct block_t block_convert_from_mcs(uint8_t type);
 bool blocktype_has_physics(enum blocktype_t type);
+enum rank_t blocktype_min_rank(enum blocktype_t type);
 
 int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_rank, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear);
 void deregister_blocktype(enum blocktype_t type);
