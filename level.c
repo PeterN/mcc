@@ -1306,10 +1306,17 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	{
 		/* Not level owner, so check block permissions */
 
-		if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
+		if (client->player->rank < RANK_OP && (bt == ADMINIUM || b->fixed))
 			// || (b->owner != 0 && b->owner != client->player->globalid)))
 		{
 			client_notify(client, "Block cannot be changed");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+			return;
+		}
+
+		if (client->player->rank < blocktype_min_rank(nt))
+		{
+			LOG("[level] %s tried to place %s (%d)\n", client->player->username, blocktype_get_name(nt), nt);
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
 		}
