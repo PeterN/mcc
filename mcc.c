@@ -82,11 +82,11 @@ int main(int argc, char **argv)
 		level_list_add(&s_levels, l);
 	}
 
-	g_server.name = "TEST TEST TEST";
-	g_server.motd = "Test server for Just Another Minecraft Server +noclip";
-	g_server.max_players = 200;
+	g_server.name = "Just another Minecraft Server";
+	g_server.motd = "Welcome to my Minecraft Server!";
+	g_server.max_players = 30;
 	g_server.players = 0;
-	g_server.port = 25566;
+	g_server.port = 25565;
 	g_server.public = true;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	g_server.irc.hostname = "irc.lspace.org";
 	g_server.irc.port = 6667;
 	g_server.irc.name = "mccbot";
-	g_server.irc.channel = "#mc2";
+	g_server.irc.channel = "#mc";
 	g_server.irc.pass = NULL;
 
 	signal(SIGINT, &sighandler);
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 
 	module_load("heartbeat.so");
 	module_load("portal.so");
-	//module_load("irc.so");
+	module_load("irc.so");
 	//irc_start();
 
 	register_timer("save levels", 120000, &level_save_all, NULL);
