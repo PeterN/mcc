@@ -93,7 +93,11 @@ static int s_listenfd;
 void net_set_nonblock(int fd)
 {
 	int flags = fcntl(fd, F_GETFL, 0);
-	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	int res = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	if (res != 0)
+	{
+		LOG("[network] net_set_nonblocK(): Could not set nonblocking IO: %s\n", strerror(errno));
+	}
 }
 
 void net_init(int port)
@@ -112,7 +116,7 @@ void net_init(int port)
 	int on = 1;
 	if (setsockopt(s_listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == -1)
 	{
-		LOG("Could not set SO_REUSEADDR: %s", strerror(errno));
+		LOG("[network] net_init(): Could not set SO_REUSEADDR: %s", strerror(errno));
 	}
 
 	if (bind(s_listenfd, (struct sockaddr *)&serv_addr, sizeof serv_addr) < 0)
