@@ -219,6 +219,8 @@ void net_close(struct client_t *c, const char *reason)
 
 		LOG("Closing connection from %s - %s (%d): %s\n", c->ip, c->player->username, c->player->globalid, reason);
 		player_del(c->player);
+
+		c->player = NULL;
 	}
 }
 
@@ -419,6 +421,7 @@ void net_run()
 	for (i = 0; i < clients; i++)
 	{
 		struct client_t *c = s_clients.items[i];
+		if (c->close) continue;
 		if (FD_ISSET(c->sock, &write_fd))
 		{
 			net_packetsend(c);
