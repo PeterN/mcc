@@ -36,12 +36,22 @@ void mcc_exit()
 			l->thread_valid = false;
 
 			level_unload(l);
+			s_levels.items[i] = NULL;
 		}
 	}
+
+	modules_deinit();
+	level_list_free(&s_levels);
+	level_hooks_deinit();
+	timers_deinit();
+	blocktype_deinit();
+	socket_deinit();
 
 	playerdb_close();
 
 	LOG("Server exiting...\n");
+
+	fclose(g_server.logfile);
 }
 
 static void sighandler(int sig)

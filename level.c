@@ -132,6 +132,14 @@ bool level_send(struct client_t *c)
 {
 	struct level_t *oldlevel = c->player->level;
 	struct level_t *newlevel = c->player->new_level;
+
+	if (newlevel == NULL)
+	{
+		LOG("Tried moving to NULL level for %s\n", c->player->username);
+		c->waiting_for_level = false;
+		return false;
+	}
+
 	unsigned length = newlevel->x * newlevel->y * newlevel->z;
 	unsigned x;
 	int i;
@@ -1298,10 +1306,17 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	{
 		/* Not level owner, so check block permissions */
 
-		if (client->player->rank < RANK_OP && (bt == ADMINIUM || nt == ADMINIUM || b->fixed))
+		if (client->player->rank < RANK_OP && (bt == ADMINIUM || b->fixed))
 			// || (b->owner != 0 && b->owner != client->player->globalid)))
 		{
 			client_notify(client, "Block cannot be changed");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+			return;
+		}
+
+		if (client->player->rank < blocktype_min_rank(nt))
+		{
+			LOG("[level] %s tried to place %s (%d)\n", client->player->username, blocktype_get_name(nt), nt);
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
 		}
@@ -1713,6 +1728,17 @@ void deregister_level_hook_func(const char *name)
 
 	level_hook_list_del_item(&s_level_hooks, lh);
 	LOG("Deregistered level hook %s\n", name);
+}
+
+void level_hooks_deinit()
+{
+	while (s_level_hooks.used > 0)
+	{
+		LOG("Level hook %s not deregistered\n", s_level_hooks.items[0].name);
+		level_hook_list_del_index(&s_level_hooks, 0);
+	}
+
+	level_hook_list_free(&s_level_hooks);
 }
 
 bool level_hook_attach(struct level_t *l, const char *name)
