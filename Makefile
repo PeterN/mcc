@@ -62,17 +62,21 @@ PORTALSRC := portal.c
 PORTALOBJ := $(PORTALSRC:.c=.o)
 PORTALO := portal.so
 
+DOORSSRC := doors.c
+DOORSOBJ := $(DOORSSRC:.c=.o)
+DOORSO := doors.so
+
 BANIPSRC := banip.c
 BANIPOBJ := $(BANIPSRC:.c=.o)
 BANIPO := banip
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO)
+all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO)
 
 clean:
-	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO)
+	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO)
 
 depend:
-	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC)
+	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
@@ -100,6 +104,9 @@ $(ALO): $(ALOBJ) $(LIBO)
 
 $(PORTALO): $(PORTALOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(PORTALO) $(PORTALOBJ) -o $@
+
+$(DOORSO): $(DOORSOBJ) $(LIBO)
+	$(CC) -shared -fPIC -Wl,-soname,$(DOORSO) $(DOORSOBJ) -o $@
 
 $(MCCO): $(MCCOBJ) $(LIBO)
 	$(CC) $(LDFLAGS) $(MCCOBJ) -L. -lmcc -o $@
@@ -685,3 +692,18 @@ portal.o: /usr/include/bits/in.h /usr/include/bits/byteswap.h hook.h packet.h
 portal.o: position.h level.h /usr/include/pthread.h /usr/include/sched.h
 portal.o: /usr/include/bits/sched.h /usr/include/signal.h
 portal.o: /usr/include/bits/setjmp.h physics.h player.h
+doors.o: block.h /usr/include/stdint.h /usr/include/features.h
+doors.o: /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h
+doors.o: /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h
+doors.o: /usr/include/bits/wchar.h /usr/include/limits.h
+doors.o: /usr/include/bits/posix1_lim.h /usr/include/bits/local_lim.h
+doors.o: /usr/include/linux/limits.h /usr/include/bits/posix2_lim.h
+doors.o: bitstuff.h list.h /usr/include/stdlib.h /usr/include/sys/types.h
+doors.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+doors.o: /usr/include/time.h /usr/include/bits/time.h /usr/include/endian.h
+doors.o: /usr/include/bits/endian.h /usr/include/sys/select.h
+doors.o: /usr/include/bits/select.h /usr/include/bits/sigset.h
+doors.o: /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h
+doors.o: /usr/include/alloca.h mcc.h /usr/include/stdio.h
+doors.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+doors.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h rank.h
