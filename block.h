@@ -6,6 +6,7 @@
 #include <limits.h>
 #include "bitstuff.h"
 #include "list.h"
+#include "rank.h"
 
 /* Client block types */
 enum blocktype_t
@@ -110,6 +111,7 @@ struct blocktype_desc_t
 	char *name;
 	bool loaded;
 	bool clear;
+	enum rank_t minrank;
 	convert_func_t convert_func;
 	trigger_func_t trigger_func;
 	delete_func_t delete_func;

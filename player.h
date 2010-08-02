@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
+#include "rank.h"
 #include "block.h"
 #include "colour.h"
 #include "list.h"
@@ -11,16 +12,6 @@
 
 struct client_t;
 struct level_t;
-
-enum rank_t
-{
-	RANK_BANNED,
-	RANK_GUEST,
-	RANK_BUILDER,
-	RANK_ADV_BUILDER,
-	RANK_OP,
-	RANK_ADMIN,
-};
 
 enum
 {
