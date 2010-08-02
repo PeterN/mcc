@@ -57,5 +57,19 @@ void module_init(struct module_t *m)
 
 void module_deinit(struct module_t *m)
 {
-	m->deinit_func(m->data);
+	if (m->deinit_func != NULL)
+	{
+		m->deinit_func(m->data);
+	}
+}
+
+void modules_deinit()
+{
+
+	while (s_modules.used > 0)
+	{
+		module_unload(s_modules.items[0]);
+	}
+
+	module_list_free(&s_modules);
 }

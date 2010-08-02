@@ -41,6 +41,16 @@ void deregister_socket(int fd)
 	socket_list_del_item(&s_sockets, s);
 }
 
+void socket_deinit()
+{
+	if (s_sockets.used > 0)
+	{
+		LOG("[network] socket_deinit(): %lu sockets remaining in list\n", s_sockets.used);
+	}
+
+	socket_list_free(&s_sockets);
+}
+
 bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
 	struct addrinfo *ai;
@@ -169,6 +179,8 @@ void net_close(struct client_t *c, const char *reason)
 	/* Mark client for deletion */
 	c->close = true;
 
+	free(c->packet_recv);
+
 	if (c->player == NULL)
 	{
 		LOG("Closing connection from %s: %s\n", c->ip, reason == NULL ? "closed" : reason);
@@ -294,7 +306,7 @@ static void net_packetrecv(struct client_t *c)
 		p->pos += res;
 	}
 
-	c->packet_recv = NULL;
+	//c->packet_recv = NULL;
 
 	packet_recv(c, p);
 }
@@ -424,6 +436,7 @@ void net_notify_all(const char *message)
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
+		if (c->close) continue;
 		client_notify(c, message);
 	}
 

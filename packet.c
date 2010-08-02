@@ -311,7 +311,10 @@ void packet_recv(struct client_t *c, struct packet_t *p)
 		default: break;
 	}
 
-	free(p);
+	/* Reset packet without causing free/malloc */
+	p->size = 0;
+	p->pos = 0;
+	p->loc = p->buffer;
 }
 
 /* Sending packets */

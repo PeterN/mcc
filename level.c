@@ -1715,6 +1715,17 @@ void deregister_level_hook_func(const char *name)
 	LOG("Deregistered level hook %s\n", name);
 }
 
+void level_hooks_deinit()
+{
+	while (s_level_hooks.used > 0)
+	{
+		LOG("Level hook %s not deregistered\n", s_level_hooks.items[0].name);
+		level_hook_list_del_index(&s_level_hooks, 0);
+	}
+
+	level_hook_list_free(&s_level_hooks);
+}
+
 bool level_hook_attach(struct level_t *l, const char *name)
 {
 	unsigned i;

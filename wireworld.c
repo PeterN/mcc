@@ -128,3 +128,9 @@ void module_init(void **data)
 	s.wire = register_blocktype(BLOCK_INVALID, "wire", RANK_BUILDER, &convert_wire, &trigger_wire, NULL, &physics_wire, false);
 	s.wire3d = register_blocktype(BLOCK_INVALID, "wire3d", RANK_BUILDER, &convert_wire, &trigger_wire, NULL, &physics_wire3d, false);
 }
+
+void module_deinit(void *data)
+{
+	deregister_blocktype(s.wire);
+	deregister_blocktype(s.wire3d);
+}

@@ -580,6 +580,17 @@ void blocktype_init()
 
 }
 
+void blocktype_deinit()
+{
+	unsigned i;
+	for (i = 0; i < s_blocks.used; i++)
+	{
+		free(s_blocks.items[i].name);
+	}
+
+	blocktype_desc_list_free(&s_blocks);
+}
+
 const char *blocktype_get_name(enum blocktype_t type)
 {
 	return s_blocks.items[type].name;
