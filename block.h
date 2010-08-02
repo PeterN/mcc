@@ -6,6 +6,7 @@
 #include <limits.h>
 #include "bitstuff.h"
 #include "list.h"
+#include "rank.h"
 
 /* Client block types */
 enum blocktype_t
@@ -110,6 +111,7 @@ struct blocktype_desc_t
 	char *name;
 	bool loaded;
 	bool clear;
+	enum rank_t min_rank;
 	convert_func_t convert_func;
 	trigger_func_t trigger_func;
 	delete_func_t delete_func;
@@ -131,7 +133,7 @@ enum blocktype_t blocktype_get_by_name(const char *name);
 struct block_t block_convert_from_mcs(uint8_t type);
 bool blocktype_has_physics(enum blocktype_t type);
 
-int register_blocktype(enum blocktype_t type, const char *name, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear);
+int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_rank, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear);
 void deregister_blocktype(enum blocktype_t type);
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block);
 int trigger(struct level_t *level, unsigned index, const struct block_t *block);

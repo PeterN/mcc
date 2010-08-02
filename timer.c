@@ -59,6 +59,16 @@ void deregister_timer(struct timer_t *t)
 	free(t);
 }
 
+void timers_deinit()
+{
+	while (s_timers.used > 0)
+	{
+		deregister_timer(s_timers.items[0]);
+	}
+
+	timer_list_free(&s_timers);
+}
+
 void process_timers(unsigned tick)
 {
 	unsigned i;

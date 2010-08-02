@@ -41,6 +41,16 @@ void deregister_socket(int fd)
 	socket_list_del_item(&s_sockets, s);
 }
 
+void socket_deinit()
+{
+	if (s_sockets.used > 0)
+	{
+		LOG("[network] socket_deinit(): %lu sockets remaining in list\n", s_sockets.used);
+	}
+
+	socket_list_free(&s_sockets);
+}
+
 bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 {
 	struct addrinfo *ai;
@@ -93,7 +103,11 @@ static int s_listenfd;
 void net_set_nonblock(int fd)
 {
 	int flags = fcntl(fd, F_GETFL, 0);
-	fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	int res = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+	if (res != 0)
+	{
+		LOG("[network] net_set_nonblocK(): Could not set nonblocking IO: %s\n", strerror(errno));
+	}
 }
 
 void net_init(int port)
@@ -112,7 +126,7 @@ void net_init(int port)
 	int on = 1;
 	if (setsockopt(s_listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == -1)
 	{
-		LOG("Could not set SO_REUSEADDR: %s", strerror(errno));
+		LOG("[network] net_init(): Could not set SO_REUSEADDR: %s", strerror(errno));
 	}
 
 	if (bind(s_listenfd, (struct sockaddr *)&serv_addr, sizeof serv_addr) < 0)
@@ -164,6 +178,8 @@ void net_close(struct client_t *c, const char *reason)
 
 	/* Mark client for deletion */
 	c->close = true;
+
+	free(c->packet_recv);
 
 	if (c->player == NULL)
 	{
@@ -290,7 +306,7 @@ static void net_packetrecv(struct client_t *c)
 		p->pos += res;
 	}
 
-	c->packet_recv = NULL;
+	//c->packet_recv = NULL;
 
 	packet_recv(c, p);
 }
@@ -420,6 +436,7 @@ void net_notify_all(const char *message)
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
+		if (c->close) continue;
 		client_notify(c, message);
 	}
 
