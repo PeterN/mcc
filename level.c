@@ -645,6 +645,11 @@ void level_unload(struct level_t *level)
 {
 	LOG("Level '%s' unloaded\n", level->name);
 
+	if (level->thread_valid)
+	{
+		pthread_join(level->thread, NULL);
+	}
+
 	user_list_free(&level->userbuild);
 	user_list_free(&level->uservisit);
 	physics_list_free(&level->physics);
