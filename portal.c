@@ -179,7 +179,6 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 					if (player_change_level(c->player, l2))
 					{
 						if (*p->target != '\0') c->player->hook_data = p->target;
-						level_send(c);
 					}
 				}
 			}

@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 			cuboid_process();
 			player_send_positions();
 
-			//if ((tick % MS_TO_TICKS(1000)) == 0)
+			if ((tick % MS_TO_TICKS(240)) == 0)
 			{
 				for (i = 0; i < s_clients.used; i++)
 				{
