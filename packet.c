@@ -237,20 +237,23 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
-	if (c->player->speed > 500)
+	if (c->player->rank < RANK_ADV_BUILDER)
 	{
-		net_close(c, "Anti-grief: average speed too high to place blocks");
-		return;
-	}
-	else if (c->player->speed > 300)
-	{
-		c->player->warnings++;
-		client_notify(c, "Warning! Your average speed is high.");
-	}
+		if (c->player->speed > 500)
+		{
+			net_close(c, "Anti-grief: average speed too high to place blocks");
+			return;
+		}
+		else if (c->player->speed > 300)
+		{
+			c->player->warnings++;
+			client_notify(c, "Warning! Your average speed is high.");
+		}
 
-	if (player_check_spam(c->player))
-	{
-		return;
+		if (player_check_spam(c->player))
+		{
+			return;
+		}
 	}
 
 	level_change_block(c->player->level, c, x, y, z, m, t, true);
