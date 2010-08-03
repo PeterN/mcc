@@ -209,7 +209,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 		client_notify(c, TAG_YELLOW "You must identify to use privileged commands.");
 	}
 
-	if (player_change_level(c->player, l)) level_send(c);
+	player_change_level(c->player, l);
 
 	if (newuser)
 	{

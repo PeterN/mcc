@@ -513,7 +513,7 @@ CMD(goto)
 	struct level_t *l;
 	if (level_get_by_name(param[1], &l))
 	{
-		if (player_change_level(c->player, l)) level_send(c);
+		player_change_level(c->player, l);
 	}
 	else
 	{
@@ -605,7 +605,7 @@ CMD(home)
 	}
 
 	/* Don't resend the level if player is already on it */
-	if (player_change_level(c->player, l)) level_send(c);
+	player_change_level(c->player, l);
 
 	return false;
 }
