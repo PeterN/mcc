@@ -304,7 +304,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 		while (s->queue != NULL)
 		{
 			struct irc_packet_t *ircp = s->queue;
-			int res = write(fd, s->queue->message, strlen(s->queue->message));
+			int res = send(fd, s->queue->message, strlen(s->queue->message), MSG_NOSIGNAL);
 			if (res == -1)
 			{
 				//if (errno != EWOULDBLOCK)
