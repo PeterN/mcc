@@ -179,8 +179,6 @@ void net_close(struct client_t *c, const char *reason)
 	/* Mark client for deletion */
 	c->close = true;
 
-	free(c->packet_recv);
-
 	if (c->player == NULL)
 	{
 		LOG("Closing connection from %s: %s\n", c->ip, reason == NULL ? "closed" : reason);
@@ -325,6 +323,7 @@ void net_run()
 	{
 		if (s_clients.items[i]->close)
 		{
+			free(s_clients.items[i]->packet_recv);
 			free(s_clients.items[i]);
 			client_list_del_index(&s_clients, i);
 			/* Restart :/ */
