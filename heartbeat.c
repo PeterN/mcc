@@ -50,10 +50,10 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 						"%s",
 						url, host, (long long unsigned)strlen(postdata), postdata);
 
-			int res = write(fd, request, strlen(request));
-			if (res < 0)
+			int res = send(fd, request, strlen(request), MSG_NOSIGNAL);
+			if (res == -1)
 			{
-				LOG("[heartbeat] write: %s\n", strerror(errno));
+				LOG("[heartbeat] send: %s\n", strerror(errno));
 				break;
 			}
 
@@ -67,10 +67,21 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 
 			char buf[2048];
 
-			int res = read(fd, buf, sizeof buf);
-			if (res < 0)
+			int res = recv(fd, buf, sizeof buf, 0);
+			if (res == -1)
 			{
-				LOG("[heartbeat] read: %s\n", strerror(errno));
+				if (errno != EWOULDBLOCK && errno != EAGAIN)
+				{
+					LOG("[heartbeat] recv: %s\n", strerror(errno));
+					/* Error, break to close */
+					break;
+				}
+				/* Not an error, return to continue (!) */
+				return;
+			}
+			else if (res == 0)
+			{
+				/* Read nothing, break to close */
 				break;
 			}
 
