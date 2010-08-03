@@ -40,6 +40,7 @@ struct player_t
 	enum rank_t rank;
 	enum mode_t mode;
 	uint8_t flags;
+	uint8_t	teleport;
 
 	struct position_t pos;
 	struct position_t oldpos;
@@ -72,6 +73,7 @@ struct player_t *player_get_by_name(const char *username);
 
 bool player_change_level(struct player_t *player, struct level_t *level);
 void player_move(struct player_t *player, struct position_t *pos);
+void player_teleport(struct player_t *player, const struct position_t *pos, bool instant);
 
 void player_info();
 

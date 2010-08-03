@@ -238,6 +238,8 @@ bool level_send(struct client_t *c)
 				client_add_packet(c, packet_send_despawn_player(i));
 			}
 		}
+
+		call_level_hook(EVENT_DESPAWN, oldlevel, c, NULL);
 	}
 
 	c->player->level = newlevel;
@@ -281,7 +283,10 @@ bool level_send(struct client_t *c)
 	if (oldlevel != newlevel)
 	{
 		c->player->pos = newlevel->spawn;
+		call_level_hook(EVENT_SPAWN, newlevel, c, c->player->hook_data);
+	        c->player->hook_data = NULL;
 	}
+
 	client_add_packet(c, packet_send_spawn_player(0xFF, c->player->colourusername, &c->player->pos));
 
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -602,21 +607,22 @@ void *level_gen_thread(void *arg)
 
 	level->changed = true;
 
-	pthread_mutex_unlock(&level->mutex);
-
 	snprintf(buf, sizeof buf, "Created level '%s'", level->name);
 	net_notify_all(buf);
 
 	//LOG(buf);
 
+	pthread_mutex_unlock(&level->mutex);
+
 	return NULL;
 
 level_error:
 	level->changed = true;
-	pthread_mutex_unlock(&level->mutex);
 
 	snprintf(buf, sizeof buf, TAG_YELLOW "Level generation for %s failed", level->name);
 	net_notify_all(buf);
+
+	pthread_mutex_unlock(&level->mutex);
 
 	return NULL;
 }
@@ -632,6 +638,8 @@ void level_gen(struct level_t *level, int type, int height_range, int sea_height
 	{
 		pthread_join(level->thread, NULL);
 	}
+
+	LOG("Creating thread for generating %s (%p)\n", level->name, level);
 	int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
 	level->thread_valid = (r == 0);
 	if (r != 0)
@@ -911,6 +919,8 @@ bool level_load(const char *name, struct level_t **levelp)
 	{
 		pthread_join(level->thread, NULL);
 	}
+
+	LOG("Creating thread for loading %s (%p)\n", level->name, level);
 	int r = pthread_create(&level->thread, NULL, &level_load_thread, level);
 	level->thread_valid = (r == 0);
 	if (r != 0)
@@ -991,8 +1001,6 @@ void *level_save_thread(void *arg)
 	snprintf(backup, sizeof backup, "levels/backups/%s-%lld.mcl", l->name, (long long int)time(NULL));
 	lcase(backup);
 
-	pthread_mutex_unlock(&l->mutex);
-
 	/* Copy the file to back up */
 	int src = open(filename, O_RDONLY);
 	int dst = open(backup, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
@@ -1008,6 +1016,8 @@ void *level_save_thread(void *arg)
 
 	LOG("Backed up %s to %s\n", filename, backup);
 
+	pthread_mutex_unlock(&l->mutex);
+
 	return NULL;
 }
 
@@ -1018,6 +1028,8 @@ void level_save(struct level_t *l)
 	{
 		pthread_join(l->thread, NULL);
 	}
+
+	LOG("Creating thread for saving %s (%p)\n", l->name, l);
 	int r = pthread_create(&l->thread, NULL, &level_save_thread, l);
 	l->thread_valid = (r == 0);
 	if (r != 0)

@@ -97,6 +97,13 @@ bool player_change_level(struct player_t *player, struct level_t *level)
 
 void player_move(struct player_t *player, struct position_t *pos)
 {
+	/* If we've just teleported, don't allow a position change too far */
+	if (player->teleport == true)
+	{
+		if (!position_match(&player->pos, pos, 64)) return;
+		player->teleport = false;
+	}
+
 	int dx = abs(player->pos.x - pos->x);
 	int dy = abs(player->pos.y - pos->y);
 	int dz = abs(player->pos.z - pos->z);
@@ -114,6 +121,17 @@ void player_move(struct player_t *player, struct position_t *pos)
 	player->speed += player->speeds[i];
 
 	player->pos = *pos;
+}
+
+void player_teleport(struct player_t *player, const struct position_t *pos, bool instant)
+{
+	player->pos = *pos;
+	player->teleport = true;
+
+	if (instant)
+	{
+		client_add_packet(player->client, packet_send_teleport_player(0xFF, &player->pos));
+	}
 }
 
 static unsigned gettime()
@@ -161,8 +179,6 @@ bool player_check_spam(struct player_t *player)
 
 void player_send_position(struct player_t *player)
 {
-	if (player->client->hidden) return;
-
 	int changed = 0;
 	int dx = 0, dy = 0, dz = 0;
 	if (player->pos.x != player->oldpos.x || player->pos.y != player->oldpos.y || player->pos.z != player->oldpos.z)
@@ -186,25 +202,13 @@ void player_send_position(struct player_t *player)
 
 	if (player->level != NULL)
 	{
-		int16_t x = player->pos.x / 32;
-		int16_t y = player->pos.y / 32;
-		int16_t z = player->pos.z / 32;
-		if (x >= 0 && y >= 0 && z >= 0 && x < player->level->x && y < player->level->y && z < player->level->z)
-		{
-			unsigned index = level_get_index(player->level, player->pos.x / 32, player->pos.y / 32, player->pos.z / 32);
-//			if (player->level->blocks[index].teleporter == 1)
-//			{
-//				level_process_teleporter(player);
-//			}
-
-			call_level_hook(EVENT_MOVE, player->level, player->client, &index);
-		}
+		call_level_hook(EVENT_MOVE, player->level, player->client, &index);
 	}
 
-	//printf("%s changed: %dx%dx%d (%d %d)\n", player->username, player->pos.x, player->pos.y, player->pos.z, player->pos.h, player->pos.p);
+	player->oldpos = player->pos;
 
-	//changed = 4;
-
+	if (player->client->hidden) return;
+	
 	unsigned i;
 	for (i = 0; i < s_clients.used; i++)
 	{
@@ -231,8 +235,6 @@ void player_send_position(struct player_t *player)
 			}
 		}
 	}
-
-	player->oldpos = player->pos;
 }
 
 void player_send_positions()

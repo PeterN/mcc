@@ -577,7 +577,7 @@ void blocktype_init()
 
 	module_load("tnt.so");
 	module_load("spleef.so");
-
+	module_load("doors.so");
 }
 
 void blocktype_deinit()

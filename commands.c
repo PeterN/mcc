@@ -1602,8 +1602,7 @@ static const char help_spawn[] =
 
 CMD(spawn)
 {
-	c->player->pos = c->player->level->spawn;
-	client_add_packet(c, packet_send_teleport_player(0xFF, &c->player->pos));
+	player_teleport(c->player, &c->player->level->spawn, true);
 
 	return false;
 }
@@ -1647,8 +1646,7 @@ CMD(summon)
 		return false;
 	}
 
-	p->pos = c->player->pos;
-	client_add_packet(p->client, packet_send_teleport_player(0xFF, &p->pos));
+	player_teleport(p, &c->player->pos, true);
 
 	snprintf(buf, sizeof buf, "You were summoned by %s", c->player->username);
 	client_notify(p->client, buf);
@@ -1701,7 +1699,7 @@ CMD(tp)
 		return false;
 	}
 
-	client_add_packet(c, packet_send_teleport_player(0xFF, &p->pos));
+	player_teleport(c->player, &p->pos, true);
 
 	return false;
 }

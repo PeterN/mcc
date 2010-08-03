@@ -31,7 +31,7 @@ static struct portal_t *portal_get_by_name(const char *name, struct portal_data_
 	/* Find existing portal */
 	for (i = 0; i < arg->portals; i++)
 	{
-		if (strcasecmp(arg->portal[i].name, name) == 0) return &arg->portal[i];
+		if (strncasecmp(arg->portal[i].name, name, sizeof arg->portal[i].name - 1) == 0) return &arg->portal[i];
 	}
 
 	if (!create) return NULL;
@@ -39,7 +39,12 @@ static struct portal_t *portal_get_by_name(const char *name, struct portal_data_
 	/* Find empty slot for new portal */
 	for (i = 0; i < arg->portals; i++)
 	{
-		if (*arg->portal[i].name == '\0') return &arg->portal[i];
+		if (*arg->portal[i].name == '\0')
+		{
+			memset(&arg->portal[i], 0, sizeof arg->portal[i]);
+			snprintf(arg->portal[i].name, sizeof arg->portal[i].name, "%s", name);
+			return &arg->portal[i];
+		}
 	}
 
 	/* Create new slot */
@@ -49,7 +54,7 @@ static struct portal_t *portal_get_by_name(const char *name, struct portal_data_
 	ld->data = arg;
 
 	memset(&arg->portal[i], 0, sizeof arg->portal[i]);
-	strncpy(arg->portal[i].name, name, sizeof arg->portal[i].name);
+	snprintf(arg->portal[i].name, sizeof arg->portal[i].name, "%s", name);
 	arg->portals++;
 	return &arg->portal[i];
 }
@@ -68,12 +73,29 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		snprintf(buf, sizeof buf, TAG_YELLOW "Editing portal %s", data + 12);
 		client_notify(c, buf);
 	}
+	else if (strncasecmp(data, "portal delete ", 14) == 0)
+	{
+		struct portal_t *p = portal_get_by_name(data + 14, arg, ld, false);
+		if (p == NULL) return;
+		memset(p, 0, sizeof *p);
+		client_notify(c, TAG_YELLOW "Portal deleted");
+		if (arg->edit == p) arg->edit = NULL;
+		l->changed = true;
+	}
+	else if (strncasecmp(data, "portal rename ", 14) == 0)
+	{
+		struct portal_t *p = arg->edit;
+		if (p == NULL) return;
+		snprintf(p->name, sizeof p->name, data + 14);
+		client_notify(c, TAG_YELLOW "Portal renamed");
+		l->changed = true;
+	}
 	else if (strncasecmp(data, "portal place", 12) == 0)
 	{
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
 		p->pos = c->player->pos;
-		client_notify(c, "Portal position set");
+		client_notify(c, TAG_YELLOW "Portal position set");
 		l->changed = true;
 	}
 	else if (strcasecmp(data, "portal no target") == 0)
@@ -81,15 +103,15 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
 		memset(p->target, 0, sizeof p->target);
-		client_notify(c, "Portal target cleared");
+		client_notify(c, TAG_YELLOW "Portal target cleared");
 		l->changed = true;
 	}
 	else if (strncasecmp(data, "portal target ", 14) == 0)
 	{
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
-		strncpy(p->target, data + 14, sizeof p->target);
-		client_notify(c, "Portal target set");
+		snprintf(p->target, sizeof p->target, "%s", data + 14);
+		client_notify(c, TAG_YELLOW "Portal target set");
 		l->changed = true;
 	}
 	else if (strcasecmp(data, "portal no target-level") == 0)
@@ -97,15 +119,15 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
 		memset(p->target_level, 0, sizeof p->target_level);
-		client_notify(c, "Portal target-level cleared");
+		client_notify(c, TAG_YELLOW "Portal target-level cleared");
 		l->changed = true;
 	}
 	else if (strncasecmp(data, "portal target-level ", 20) == 0)
 	{
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
-		strncpy(p->target_level, data + 20, sizeof p->target_level);
-		client_notify(c, "Portal target-level set");
+		snprintf(p->target_level, sizeof p->target_level, "%s", data + 20);
+		client_notify(c, TAG_YELLOW "Portal target-level set");
 		l->changed = true;
 	}
 	else if (strcasecmp(data, "portal list") == 0)
@@ -124,7 +146,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	}
 }
 
-static void portal_teleport(struct client_t *c, const char *target, struct portal_data_t *arg)
+static void portal_teleport(struct client_t *c, const char *target, struct portal_data_t *arg, bool instant)
 {
 	char buf[128];
 	struct portal_t *p = portal_get_by_name(target, arg, NULL, false);
@@ -143,13 +165,19 @@ static void portal_teleport(struct client_t *c, const char *target, struct porta
 	{
 //		snprintf(buf, sizeof buf, TAG_YELLOW "Teleporting to %s", target);
 //		client_notify(c, buf);
-		c->player->pos = p->pos;
-		client_add_packet(c, packet_send_teleport_player(0xFF, &c->player->pos));
+		player_teleport(c->player, &p->pos, instant);
 	}
 }
 
 static void portal_handle_move(struct level_t *l, struct client_t *c, int index, struct portal_data_t *arg)
 {
+	/* Changing levels, don't handle teleports */
+	if (c->player->level != c->player->new_level) return;
+
+//	char buf[64];
+//	snprintf(buf, sizeof buf, "position on %s: %d %d %d\n", c->player->level->name, c->player->pos.x, c->player->pos.y, c->player->pos.z);
+//	client_notify(c, buf);
+
 	int i;
 	for (i = 0; i < arg->portals; i++)
 	{
@@ -168,7 +196,7 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 			if (*p->target_level == '\0')
 			{
 				if (*p->target == '\0') return;
-				portal_teleport(c, p->target, arg);
+				portal_teleport(c, p->target, arg, true);
 			}
 			else
 			{
@@ -198,7 +226,7 @@ static void portal_handle_spawn(struct level_t *l, struct client_t *c, char *dat
 {
 	SetBit(c->player->flags, 7);
 	if (data == NULL) return;
-	portal_teleport(c, data, arg);
+	portal_teleport(c, data, arg, false);
 }
 
 static void portal_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
@@ -221,6 +249,14 @@ static void portal_level_hook(int event, struct level_t *l, struct client_t *c, 
 				if (arg->size == sizeof (struct portal_data_t) + sizeof (struct portal_t) * pd->portals)
 				{
 					LOG("Found data for %d portals on %s\n", pd->portals, l->name);
+					unsigned i;
+					for (i = 0; i < pd->portals; i++)
+					{
+						struct portal_t *p = &pd->portal[i];
+						if (*p->name != '\0') continue;
+						if (p->pos.x == 0 && p->pos.y == 0 && p->pos.z == 0) continue;
+						snprintf(p->name, sizeof p->name, "unamed");
+					}
 					break;
 				}
 

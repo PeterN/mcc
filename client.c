@@ -232,9 +232,6 @@ void client_send_spawn(struct client_t *c, bool hiding)
 			//printf("Told %s (%d) about %s joining %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
 		}
 	}
-
-	call_level_hook(EVENT_SPAWN, level, c, c->player->hook_data);
-	c->player->hook_data = NULL;
 }
 
 void client_send_despawn(struct client_t *c, bool hiding)
@@ -251,8 +248,6 @@ void client_send_despawn(struct client_t *c, bool hiding)
 			//printf("Told %s (%d) about %s leaving %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
 		}
 	}
-
-	call_level_hook(EVENT_DESPAWN, level, c, NULL);
 }
 
 void client_info()
