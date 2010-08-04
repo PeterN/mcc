@@ -27,8 +27,7 @@ void notify_file(struct client_t *c, const char *filename)
 	FILE *f = fopen(filename, "r");
 	if (f == NULL)
 	{
-		snprintf(buf, sizeof buf, "No %s found", filename);
-		client_notify(c, buf);
+		LOG("No %s found\n", filename);
 		return;
 	}
 
