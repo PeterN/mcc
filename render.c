@@ -238,7 +238,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 		}
 	}
 
-	for (i = 0; i < size; i++)
+	for (i = 0; i < size / sizeof (uint32_t); i++)
 	{
 		struct col_t c;
 		c.argb = map[i];
