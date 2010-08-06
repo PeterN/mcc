@@ -1,6 +1,9 @@
 CFLAGS := -Wall -g -DINFINITY=HUGE_VAL -D_GNU_SOURCE
 LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 
+PNGCFLAGS := `pkg-config libpng12 --cflags`
+PNGLDFLAGS := `pkg-config libpng12 --libs`
+
 LIBSRC := block.c
 LIBSRC += client.c
 LIBSRC += colour.c
@@ -70,13 +73,17 @@ BANIPSRC := banip.c
 BANIPOBJ := $(BANIPSRC:.c=.o)
 BANIPO := banip
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO)
+RENDERSRC := render.c
+RENDEROBJ := $(RENDERSRC:.c=.o)
+RENDERO := render
+
+all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO) $(RENDERO)
 
 clean:
-	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO)
+	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO) $(RENDEROBJ) $(RENDERO)
 
 depend:
-	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC)
+	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC) $(RENDERSRC)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
@@ -117,6 +124,8 @@ $(SETRANKO): $(SETRANKOBJ) $(LIBO)
 $(BANIPO): $(BANIPOBJ) $(LIBO)
 	$(CC) $(LDFLAGS) $(BANIPOBJ) -L. -lmcc -o $@
 
+$(RENDERO): $(RENDEROBJ) $(LIBO)
+	$(CC) $(LDFLAGS) $(RENDEROBJ) -L. -lmcc $(PNGLDFLAGS) -o $@
 
 .c.o:
 	$(CC) -c -fPIC $(CFLAGS) $< -o $@
@@ -707,3 +716,22 @@ doors.o: /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h
 doors.o: /usr/include/alloca.h mcc.h /usr/include/stdio.h
 doors.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
 doors.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h rank.h
+render.o: block.h /usr/include/stdint.h /usr/include/features.h
+render.o: /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h
+render.o: /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h
+render.o: /usr/include/bits/wchar.h /usr/include/limits.h
+render.o: /usr/include/bits/posix1_lim.h /usr/include/bits/local_lim.h
+render.o: /usr/include/linux/limits.h /usr/include/bits/posix2_lim.h
+render.o: bitstuff.h list.h /usr/include/stdlib.h /usr/include/sys/types.h
+render.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+render.o: /usr/include/time.h /usr/include/bits/time.h /usr/include/endian.h
+render.o: /usr/include/bits/endian.h /usr/include/sys/select.h
+render.o: /usr/include/bits/select.h /usr/include/bits/sigset.h
+render.o: /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h
+render.o: /usr/include/alloca.h mcc.h /usr/include/stdio.h
+render.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+render.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+render.o: rank.h level.h /usr/include/pthread.h /usr/include/sched.h
+render.o: /usr/include/bits/sched.h /usr/include/signal.h
+render.o: /usr/include/bits/setjmp.h /usr/include/string.h physics.h
+render.o: position.h util.h
