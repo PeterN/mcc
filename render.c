@@ -123,6 +123,15 @@ void setpixel(uint32_t *map, int w, int x, int y, struct col_t c)
 	}
 }
 
+enum blocktype_t level_get_blocktype(const struct level_t *level, int16_t x, int16_t y, int16_t z)
+{
+	if (x < 0 || y < 0 || z < 0 || x >= level->x || y >= level->y || z >= level->z) return AIR;
+	unsigned index = level_get_index(level, x, y, z);
+	const struct block_t *b = &level->blocks[index];
+	if (b->type == WATERSTILL) return WATER;
+	return b->type;
+}
+
 uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 {
 	int row, col, off;
@@ -169,58 +178,101 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 
 	memset(map, 0, size);
 
-	int mx, my, mz, i;
+	int16_t *shadowmap = malloc(level->x * level->z * sizeof *shadowmap);
+
 	int x, y, z;
-	int ox = -level->x * 2;
+	for (z = 0; z < level->z; z++)
+	{
+		for (x = 0; x < level->x; x++)
+		{
+			for (y = level->y - 1; y >= 0; y--)
+			{
+				if (level_get_blocktype(level, x, y, z) != AIR)
+				{
+					shadowmap[x + z * level->x] = y;
+					break;
+				}
+			}
+		}
+	}
+
+
+	int mx, my, mz, i;
+	int ox = -level->z * 2;
 	int oy = level->y * 2;
 
 	for (z = 0; z < level->z; z++)
 	{
 		for (x = 0; x < level->x; x++)
 		{
+			int cy = shadowmap[x + z * level->x];
+			int cy1 = (z < level->z - 1) ? shadowmap[x + (z + 1) * level->x] : 0;
+			int cy2 = (x < level->x - 1) ? shadowmap[x + 1 + z * level->x] : 0;
+
 			for (y = 0; y < level->y; y++)
 			{
-				unsigned index = level_get_index(level, x, y, z);
-				const struct block_t *b = &level->blocks[index];
+				enum blocktype_t b = level_get_blocktype(level, x, y, z);
+				struct col_t c = blocktype_get_colour(b);
 
-				struct col_t c = blocktype_get_colour(b->type);
-				if (b->type == AIR) continue;
+				if (b == AIR) continue;
 
-				if ((b->type == WATER || b->type == WATERSTILL) && y < level->y - 1)
-				{
-					index = level_get_index(level, x, y + 1, z);
-					b = &level->blocks[index];
+				bool trans = false;
+				if (b == WATER || b == GLASS) trans = true;
 
-					if (b->type == WATER || b->type == WATERSTILL)
-					{
-						continue;
-					}
-				}
-				
-				mx = (z - x) * 2 - ox;
+				mx = (x - z) * 2 - ox;
 				my = (z + x) * 1 - y * 2 + oy;
 
-				setpixel(map, *w, mx + 0, my, c);
-				setpixel(map, *w, mx + 1, my, c);
-				setpixel(map, *w, mx + 2, my, c);
-				setpixel(map, *w, mx + 3, my, c);
+				if (!trans || level_get_blocktype(level, x, y + 1, z) != b)
+				{
+					if (y < cy)
+					{
+						c = darken(c);
+						c = darken(c);
+					}
+					setpixel(map, *w, mx + 0, my, c);
+					setpixel(map, *w, mx + 1, my, c);
+					setpixel(map, *w, mx + 2, my, c);
+					setpixel(map, *w, mx + 3, my, c);
+					if (y < cy)
+					{
+						c = blocktype_get_colour(b);
+					}
+				}
 
-				if (b->type == GRASS) c = blocktype_get_colour(DIRT);
+				if (b == GRASS) c = blocktype_get_colour(DIRT);
 				struct col_t c1 = darken(c);
 				struct col_t c2 = darken(c1);
 
-				setpixel(map, *w, mx + 0, my + 1, c1);
-				setpixel(map, *w, mx + 1, my + 1, c1);
-				setpixel(map, *w, mx + 2, my + 1, c2);
-				setpixel(map, *w, mx + 3, my + 1, c2);
-				setpixel(map, *w, mx + 0, my + 2, c1);
-				setpixel(map, *w, mx + 1, my + 2, c1);
-				setpixel(map, *w, mx + 2, my + 2, c2);
-				setpixel(map, *w, mx + 3, my + 2, c2);
-			//	setpixel(map, *w, mx + 0, my + 3, c1);
-				setpixel(map, *w, mx + 1, my + 3, c1);
-				setpixel(map, *w, mx + 2, my + 3, c2);
-			//	setpixel(map, *w, mx + 3, my + 3, c2);
+				if (y < cy1)
+				{
+					c1 = darken(c1);
+					c1 = darken(c1);
+				}
+				if (y < cy2)
+				{
+					c2 = darken(c2);
+					c2 = darken(c2);
+				}
+				
+				if (!trans || level_get_blocktype(level, x, y, z + 1) != b)
+				{
+					setpixel(map, *w, mx + 0, my + 1, c1);
+					setpixel(map, *w, mx + 1, my + 1, c1);
+					setpixel(map, *w, mx + 0, my + 2, c1);
+					setpixel(map, *w, mx + 1, my + 2, c1);
+				//	setpixel(map, *w, mx + 0, my + 3, c1);
+					if (!trans) setpixel(map, *w, mx + 1, my + 3, c1);
+				}
+
+				if (!trans || level_get_blocktype(level, x + 1, y, z) != b)
+				{
+					setpixel(map, *w, mx + 2, my + 1, c2);
+					setpixel(map, *w, mx + 3, my + 1, c2);
+					setpixel(map, *w, mx + 2, my + 2, c2);
+					setpixel(map, *w, mx + 3, my + 2, c2);
+					if (!trans) setpixel(map, *w, mx + 2, my + 3, c2);
+				//	setpixel(map, *w, mx + 3, my + 3, c2);
+				}
 
 //			struct col_t c = blocktype_get_colour(block);
 //			struct col_t w = blocktype_get_colour(WATER);
@@ -426,14 +478,14 @@ int main(int argc, char **argv)
 	else if (!strcmp(argv[2], "270")) rot = ROT_270;
 	else {
 		LOG("Invalid rotation");
-		return 0;
+		return -1;
 	}
 
 	struct level_t *l;
 	if (!level_load(argv[1], &l))
 	{
 		fprintf(stderr, "Could not load level\n");
-		return 0;
+		return -1;
 	}
 
 	/* Wait on the thread */
