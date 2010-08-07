@@ -97,7 +97,7 @@ LIST(level, struct level_t *, level_t_compare)
 extern struct level_list_t s_levels;
 
 bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int16_t *y, int16_t *z);
-static inline unsigned level_get_index(struct level_t *level, unsigned x, unsigned y, unsigned z)
+static inline unsigned level_get_index(const struct level_t *level, unsigned x, unsigned y, unsigned z)
 {
 	//return x + (z * level->y + y) * level->x;
 	return x + (z + y * level->z) * level->x;
