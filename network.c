@@ -145,7 +145,7 @@ void net_init(int port)
 	net_set_nonblock(s_listenfd);
 }
 
-void net_close(struct client_t *c, const char *reason)
+static void net_close_real(struct client_t *c)
 {
 	char buf[128];
 	struct packet_t *p;
@@ -163,8 +163,10 @@ void net_close(struct client_t *c, const char *reason)
 
 	if (packets > 0)
 	{
-		LOG("Remove %u packets from queue\n", packets);
+		LOG("[network] removed %u packets from queue\n", packets);
 	}
+
+	char *reason = c->close_reason;
 
 	/* Send client disconnect message straight away */
 	if (reason != NULL)
@@ -175,9 +177,6 @@ void net_close(struct client_t *c, const char *reason)
 	}
 
 	close(c->sock);
-
-	/* Mark client for deletion */
-	c->close = true;
 
 	if (c->player == NULL)
 	{
@@ -219,7 +218,18 @@ void net_close(struct client_t *c, const char *reason)
 		player_del(c->player);
 
 		c->player = NULL;
+
+		free(c->close_reason);
 	}
+
+	free(c->packet_recv);
+	free(c);
+}
+
+void net_close(struct client_t *c, const char *reason)
+{
+	c->close = true;
+	c->close_reason = (reason == NULL) ? NULL : strdup(reason);
 }
 
 static void net_packetsend(struct client_t *c)
@@ -323,8 +333,7 @@ void net_run()
 	{
 		if (s_clients.items[i]->close)
 		{
-			free(s_clients.items[i]->packet_recv);
-			free(s_clients.items[i]);
+			net_close_real(s_clients.items[i]);
 			client_list_del_index(&s_clients, i);
 			/* Restart :/ */
 			i = -1;

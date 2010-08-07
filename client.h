@@ -20,6 +20,7 @@ struct client_t
 
 	struct sockaddr_storage sin;
 	char ip[16];
+	char *close_reason;
 
 	struct packet_t *packet_recv;
 	struct packet_t *packet_send;
