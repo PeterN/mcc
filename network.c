@@ -334,7 +334,7 @@ void net_run()
 	for (i = 0; i < clients; i++)
 	{
 		struct client_t *c = s_clients.items[i];
-		if (!c->close && c->packet_send_queue > 6000)
+		if (!c->close && c->packet_send_count > 6000)
 		{
 			net_close(c, "Excessive send queue");
 		}
