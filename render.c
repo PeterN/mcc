@@ -108,6 +108,7 @@ uint32_t col_to_uint32(struct col_t c)
 void setpixel(uint32_t *map, int w, int x, int y, struct col_t c)
 {
 	uint32_t *p = &map[x + y * w];
+	if (c.a == 0x00) return;
 	if (c.a == 0xFF)
 	{
 		*p = c.argb;
