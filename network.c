@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -107,6 +108,13 @@ void net_set_nonblock(int fd)
 	if (res != 0)
 	{
 		LOG("[network] net_set_nonblocK(): Could not set nonblocking IO: %s\n", strerror(errno));
+	}
+
+	int b = 1;
+	res = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &b, sizeof b);
+	if (res != 0)
+	{
+		LOG("[network] net_set_nonblock(): Could not set TCP_NODELAY: %s\n", strerror(errno));
 	}
 }
 
@@ -391,6 +399,8 @@ void net_run()
 			/* This better be nonblocking! */
 			int fd = accept(s_listenfd, (struct sockaddr *)&sin, &sin_len);
 			if (fd == -1) break;
+
+			net_set_nonblock(fd);
 
 			c = calloc(1, sizeof *c);
 			if (c == NULL)
