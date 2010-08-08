@@ -44,6 +44,7 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 	}
 
 	*ip = p;
+	c->packet_send_count++;
 }
 
 void client_notify(struct client_t *c, const char *message)

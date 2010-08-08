@@ -256,6 +256,8 @@ static void net_packetsend(struct client_t *c)
 		c->packet_send = p->next;
 		free(p);
 
+		c->packet_send_count--;
+
 		if (c->packet_send == NULL) break;
 	}
 }
@@ -331,9 +333,14 @@ void net_run()
 
 	for (i = 0; i < clients; i++)
 	{
-		if (s_clients.items[i]->close)
+		struct client_t *c = s_clients.items[i];
+		if (!c->close && c->packet_send_queue > 6000)
 		{
-			net_close_real(s_clients.items[i]);
+			net_close(c, "Excessive send queue");
+		}
+		if (c->close)
+		{
+			net_close_real(c);
 			client_list_del_index(&s_clients, i);
 			/* Restart :/ */
 			i = -1;

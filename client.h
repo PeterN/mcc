@@ -25,6 +25,8 @@ struct client_t
 	struct packet_t *packet_recv;
 	struct packet_t *packet_send;
 	struct player_t *player;
+
+	int packet_send_count;
 };
 
 static inline bool client_t_compare(struct client_t **a, struct client_t **b)
