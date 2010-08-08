@@ -378,6 +378,7 @@ void net_run()
 		LOG("select: %s\n", strerror(errno));
 		return;
 	}
+	if (n == 0) return;
 
 	if (FD_ISSET(s_listenfd, &read_fd))
 	{
