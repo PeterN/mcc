@@ -6,6 +6,7 @@
 struct perlin_t
 {
 	int x, y;
+	int offset_x, offset_y;
 	int seed;
 	float persistence;
 	int octaves;
@@ -37,10 +38,10 @@ static float perlin_interpolate(float a, float b, float x)
 
 static float perlin_interpolated_noise(const struct perlin_t *pp, float x, float y)
 {
-	int ix = x;
+	int ix = floor(x);
 	float fx = x - ix;
 
-	int iy = y;
+	int iy = floor(y);
 	float fy = y - iy;
 
 	float v1 = perlin_smoothed_noise(pp, ix    , iy);
@@ -77,13 +78,13 @@ void perlin_noise(struct perlin_t *pp)
 	float max = -INFINITY;
 	int x, y;
 
-	LOG("perlin: generating %d by %d map\n", pp->x, pp->y);
+//	LOG("perlin: generating %d by %d map\n", pp->x, pp->y);
 
 	for (x = 0; x < pp->x; x++)
 	{
 		for (y = 0; y < pp->y; y++)
 		{
-			float f = perlin_noise_2d(pp, x, y);
+			float f = perlin_noise_2d(pp, x + pp->offset_x, y + pp->offset_y);
 			pp->map[x + y * pp->x] = f;
 
 			if (f < min) min = f;
@@ -91,17 +92,19 @@ void perlin_noise(struct perlin_t *pp)
 		}
 	}
 
-	LOG("perlin: normalizing\n");
+//	LOG("perlin: range %f to %f\n", min, max);
 
-	for (x = 0; x < pp->x * pp->y; x++)
-	{
-		pp->map[x] = (pp->map[x] - min) / (max - min);
-	}
+//	LOG("perlin: normalizing\n");
 
-	LOG("perlin: complete\n");
+//	for (x = 0; x < pp->x * pp->y; x++)
+//	{
+//		pp->map[x] = (pp->map[x] - min) / (max - min);
+//	}
+
+//	LOG("perlin: complete\n");
 }
 
-struct perlin_t *perlin_init(int x, int y, float persistence, int octaves)
+struct perlin_t *perlin_init(int x, int y, int seed, float persistence, int octaves)
 {
 	struct perlin_t *pp = malloc(sizeof *pp + sizeof *pp->map * x * y);
 	if (pp == NULL)
@@ -112,11 +115,19 @@ struct perlin_t *perlin_init(int x, int y, float persistence, int octaves)
 
 	pp->x = x;
 	pp->y = y;
-	pp->seed = rand();
+	pp->offset_x = 0;
+	pp->offset_y = 0;
+	pp->seed = seed;
 	pp->persistence = persistence;
 	pp->octaves = octaves;
 
 	return pp;
+}
+
+void perlin_set_offset(struct perlin_t *pp, int x, int y)
+{
+	pp->offset_x = x;
+	pp->offset_y = y;
 }
 
 void perlin_deinit(struct perlin_t *pp)

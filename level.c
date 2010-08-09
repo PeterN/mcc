@@ -362,7 +362,7 @@ void *level_gen_thread(void *arg)
 		const float *hm1 = filter_map(ft);
 
 
-		struct perlin_t *pp = perlin_init(mx, mz, 0.250 * level->type, 6);
+		struct perlin_t *pp = perlin_init(mx, mz, rand(), 0.250 * level->type, 6);
 		if (pp == NULL)
 		{
 			filter_deinit(ft);

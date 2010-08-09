@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 	g_server.max_players = 30;
 	g_server.players = 0;
 	g_server.port = 25565;
-	g_server.public = true;
+	g_server.public = false;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 	g_server.irc.hostname = "irc.lspace.org";
 	g_server.irc.port = 6667;
 	g_server.irc.name = "mccbot";
-	g_server.irc.channel = "#mc";
+	g_server.irc.channel = "#mctest";
 	g_server.irc.pass = NULL;
 
 	signal(SIGINT, &sighandler);
