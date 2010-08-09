@@ -46,7 +46,7 @@ void socket_deinit()
 {
 	if (s_sockets.used > 0)
 	{
-		LOG("[network] socket_deinit(): %lu sockets remaining in list\n", s_sockets.used);
+		LOG("[network] socket_deinit(): %zu sockets remaining in list\n", s_sockets.used);
 	}
 
 	socket_list_free(&s_sockets);
@@ -405,7 +405,7 @@ void net_run()
 			c = calloc(1, sizeof *c);
 			if (c == NULL)
 			{
-				LOG("[network] net_run(): couldn't allocate %lu bytes\n", sizeof *c);
+				LOG("[network] net_run(): couldn't allocate %zu bytes\n", sizeof *c);
 				close(fd);
 			}
 			else

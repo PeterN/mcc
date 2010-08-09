@@ -40,7 +40,7 @@ static void irc_queue(struct irc_t *s, const char *message)
 {
 	*s->queue_end = calloc(1, sizeof **s->queue_end);
 	if (*s->queue_end == NULL) {
-		LOG("[irc] couldn't allocate %lu bytes\n", sizeof **s->queue_end);
+		LOG("[irc] couldn't allocate %zu bytes\n", sizeof **s->queue_end);
 		return;
 	}
 
@@ -373,7 +373,7 @@ void module_init(void **arg)
 	struct irc_t *s = malloc(sizeof *s);
 	if (s == NULL)
 	{
-		LOG("[irc] couldn't allocate %lu bytes\n", sizeof *s);
+		LOG("[irc] couldn't allocate %zu bytes\n", sizeof *s);
 		return;
 	}
 
