@@ -109,7 +109,7 @@ struct perlin_t *perlin_init(int x, int y, int seed, float persistence, int octa
 	struct perlin_t *pp = malloc(sizeof *pp + sizeof *pp->map * x * y);
 	if (pp == NULL)
 	{
-		LOG("[perlin] perlin_init(): couldn't allocate %lu bytes\n", sizeof *pp + sizeof *pp->map * x * y);
+		LOG("[perlin] perlin_init(): couldn't allocate %zu bytes\n", sizeof *pp + sizeof *pp->map * x * y);
 		return NULL;
 	}
 

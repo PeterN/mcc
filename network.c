@@ -46,7 +46,7 @@ void socket_deinit()
 {
 	if (s_sockets.used > 0)
 	{
-		LOG("[network] socket_deinit(): %lu sockets remaining in list\n", s_sockets.used);
+		LOG("[network] socket_deinit(): %zu sockets remaining in list\n", s_sockets.used);
 	}
 
 	socket_list_free(&s_sockets);
@@ -266,7 +266,17 @@ static void net_packetsend(struct client_t *c)
 
 		c->packet_send_count--;
 
-		if (c->packet_send == NULL) break;
+		if (c->packet_send == NULL)
+		{
+			/* Send queue is empty, reset packet_send_end */
+			if (c->packet_send_count != 0)
+			{
+				LOG("[network] Reached end of send queue by packet send count is %d\n", c->packet_send_count);
+			}
+
+			c->packet_send_end = &c->packet_send;
+			break;
+		}
 	}
 }
 
@@ -405,7 +415,7 @@ void net_run()
 			c = calloc(1, sizeof *c);
 			if (c == NULL)
 			{
-				LOG("[network] net_run(): couldn't allocate %lu bytes\n", sizeof *c);
+				LOG("[network] net_run(): couldn't allocate %zu bytes\n", sizeof *c);
 				close(fd);
 			}
 			else
@@ -416,6 +426,8 @@ void net_run()
 
 				getip((struct sockaddr *)&sin, sin_len, c->ip, sizeof c->ip);
 				LOG("[network] accepted connection from %s\n", c->ip);
+
+				c->packet_send_end = &c->packet_send;
 
 				if (playerdb_check_ban(c->ip))
 				{

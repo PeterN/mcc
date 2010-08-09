@@ -50,7 +50,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 	level->blocks = calloc(x * y * z, sizeof *level->blocks);
 	if (level->blocks == NULL)
 	{
-		LOG("level_init: allocation of %lu bytes failed", x * y * z * sizeof *level->blocks);
+		LOG("level_init: allocation of %zu bytes failed", x * y * z * sizeof *level->blocks);
 		return false;
 	}
 
@@ -1489,7 +1489,7 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 	/* Log if physics took too long */
 	if (level->physics_runtime > 40)
 	{
-		LOG("Physics ran in %dms (%lu blocks)\n", level->physics_runtime, level->physics2.used);
+		LOG("Physics ran in %dms (%zu blocks)\n", level->physics_runtime, level->physics2.used);
 	}
 
 	level->physics_runtime_last = level->physics_runtime;
@@ -1583,7 +1583,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 
 	if (level->updates_runtime > 50)
 	{
-		LOG("Updates ran in %dms (%lu blocks)\n", level->updates_runtime, level->updates.used);
+		LOG("Updates ran in %dms (%zu blocks)\n", level->updates_runtime, level->updates.used);
 	}
 
 	level->updates_runtime_last = level->updates_runtime;

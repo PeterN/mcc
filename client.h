@@ -24,6 +24,7 @@ struct client_t
 
 	struct packet_t *packet_recv;
 	struct packet_t *packet_send;
+	struct packet_t **packet_send_end;
 	struct player_t *player;
 
 	int packet_send_count;

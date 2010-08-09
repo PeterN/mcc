@@ -40,7 +40,7 @@ static void irc_queue(struct irc_t *s, const char *message)
 {
 	*s->queue_end = calloc(1, sizeof **s->queue_end);
 	if (*s->queue_end == NULL) {
-		LOG("[irc] couldn't allocate %lu bytes\n", sizeof **s->queue_end);
+		LOG("[irc] couldn't allocate %zu bytes\n", sizeof **s->queue_end);
 		return;
 	}
 
@@ -134,6 +134,14 @@ void irc_process(struct irc_t *s, char *message)
 			{
 				snprintf(buf, sizeof buf, TAG_NAVY "%s:" TAG_WHITE " %s", src, notify);
 			}
+
+			/* Strip non-ascii characters */
+			int i;
+			for (i = 0; i < strlen(buf); i++)
+			{
+				if (buf[i] < 32 || buf[i] > 127) buf[i] = '?';
+			}
+
 			net_notify_all(buf);
 		}
 	}
@@ -182,7 +190,7 @@ void irc_message(int hook, void *data, void *arg)
 				buf[i] = 3;
 				buf[i + 1] = ' ';
 			}
-			if (col >= 10)
+			else if (col >= 10)
 			{
 				memmove(&buf[i + 2], &buf[i + 1], len - i);
 				buf[i] = 3;
@@ -373,7 +381,7 @@ void module_init(void **arg)
 	struct irc_t *s = malloc(sizeof *s);
 	if (s == NULL)
 	{
-		LOG("[irc] couldn't allocate %lu bytes\n", sizeof *s);
+		LOG("[irc] couldn't allocate %zu bytes\n", sizeof *s);
 		return;
 	}
 

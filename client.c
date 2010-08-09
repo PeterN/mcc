@@ -37,13 +37,9 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
-	struct packet_t **ip = &c->packet_send;
-	while (*ip != NULL)
-	{
-		ip = &(*ip)->next;
-	}
+	*c->packet_send_end = p;
+	c->packet_send_end = &p->next;
 
-	*ip = p;
 	c->packet_send_count++;
 }
 

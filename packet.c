@@ -15,7 +15,7 @@ struct packet_t *packet_init(size_t len)
 	struct packet_t *p = malloc(sizeof *p + len);
 	if (p == NULL)
 	{
-		LOG("[packet] packet_init(): couldn't allocate %lu bytes\n", sizeof *p + len);
+		LOG("[packet] packet_init(): couldn't allocate %zu bytes\n", sizeof *p + len);
 		return NULL;
 	}
 
