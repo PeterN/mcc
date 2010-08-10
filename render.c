@@ -198,7 +198,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 	}
 
 
-	int mx, my, mz, i;
+	int mx, my;
 	int ox = -level->z * 2;
 	int oy = level->y * 2;
 
@@ -261,7 +261,6 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 					setpixel(map, *w, mx + 1, my + 1, c1);
 					setpixel(map, *w, mx + 0, my + 2, c1);
 					setpixel(map, *w, mx + 1, my + 2, c1);
-				//	setpixel(map, *w, mx + 0, my + 3, c1);
 					if (!trans) setpixel(map, *w, mx + 1, my + 3, c1);
 				}
 
@@ -272,25 +271,13 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 					setpixel(map, *w, mx + 2, my + 2, c2);
 					setpixel(map, *w, mx + 3, my + 2, c2);
 					if (!trans) setpixel(map, *w, mx + 2, my + 3, c2);
-				//	setpixel(map, *w, mx + 3, my + 3, c2);
 				}
-
-//			struct col_t c = blocktype_get_colour(block);
-//			struct col_t w = blocktype_get_colour(WATER);
-//			for (y = 0; y < water; y++)
-//			{
-				//printf("y %d, %x %x %x - %x %x %x %x\n", y, c.r, c.g, c.b, w.r, w.g, w.b, w.a);
-//				c.r = (w.r * w.a + c.r * (0xFF - w.a)) / 0xFF;
-//				c.g = (w.g * w.a + c.g * (0xFF - w.a)) / 0xFF;
-//				c.b = (w.b * w.a + c.b * (0xFF - w.a)) / 0xFF;
-//			}
-
-//			map[i] = col_to_uint32(c);
-//			i += col;
 			}
 		}
 	}
 
+	/* Convert from ARGB to format required for PNG */
+	int i;
 	for (i = 0; i < size / sizeof (uint32_t); i++)
 	{
 		struct col_t c;

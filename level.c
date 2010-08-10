@@ -362,7 +362,7 @@ void *level_gen_thread(void *arg)
 		const float *hm1 = filter_map(ft);
 
 
-		struct perlin_t *pp = perlin_init(mx, mz, 0.250 * level->type, 6);
+		struct perlin_t *pp = perlin_init(mx, mz, rand(), 0.250 * level->type, 6);
 		if (pp == NULL)
 		{
 			filter_deinit(ft);
@@ -1292,10 +1292,10 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	if (click && !HasBit(client->player->flags, FLAG_PAINT))
 	{
 		if (m == 0) {
-			int r = trigger(level, index, b);
-			if (r > 0)
+			int r = trigger(level, index, b, client);
+			if (r != TRIG_NONE)
 			{
-				if (r == 2) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+				if (r == TRIG_FILL) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
 				//LOG("Triggered!");
 				return;

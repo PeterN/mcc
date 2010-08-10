@@ -88,7 +88,15 @@ enum blocktype_t
 	BLOCK_INVALID = UINT_MAX
 };
 
+enum
+{
+	TRIG_NONE,  /* Not triggered */
+	TRIG_EMPTY, /* Triggered, leave the block empty */
+	TRIG_FILL,  /* Triggered, put original block back */
+};
+
 struct level_t;
+struct client_t;
 
 struct block_t
 {
@@ -102,7 +110,7 @@ struct block_t
 };
 
 typedef enum blocktype_t(*convert_func_t)(struct level_t *level, unsigned index, const struct block_t *block);
-typedef bool(*trigger_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
+typedef int(*trigger_func_t)(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c);
 typedef void(*delete_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 typedef void(*physics_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 
@@ -137,7 +145,7 @@ enum rank_t blocktype_min_rank(enum blocktype_t type);
 int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_rank, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear);
 void deregister_blocktype(enum blocktype_t type);
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block);
-int trigger(struct level_t *level, unsigned index, const struct block_t *block);
+int trigger(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c);
 void delete(struct level_t *level, unsigned index, const struct block_t *block);
 void physics(struct level_t *level, unsigned index, const struct block_t *block);
 
@@ -145,7 +153,7 @@ struct client_t;
 
 void blocktype_list(struct client_t *c);
 
-bool trigger_door(struct level_t *l, unsigned index, const struct block_t *block);
+int trigger_door(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c);
 void physics_door(struct level_t *l, unsigned index, const struct block_t *block);
 
 #endif /* BLOCK_H */

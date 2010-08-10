@@ -6,6 +6,7 @@
 #include "level.h"
 #include "client.h"
 #include "colour.h"
+#include "player.h"
 
 static struct blocktype_desc_list_t s_blocks;
 
@@ -90,14 +91,14 @@ enum blocktype_t convert(struct level_t *level, unsigned index, const struct blo
 	return block->type;
 }
 
-int trigger(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->trigger_func != NULL)
 	{
-		return btd->trigger_func(l, index, block) ? 2 : 1;
+		return btd->trigger_func(l, index, block, c);
 	}
-	return 0;
+	return TRIG_NONE;
 }
 
 void delete(struct level_t *l, unsigned index, const struct block_t *block)
@@ -412,11 +413,14 @@ enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, con
 	return STAIRCASESTEP;
 }
 
-bool trigger_stair(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_stair(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
+	/* Only the block owner can remove a double step */
+	if (c->player->globalid != block->owner) return TRIG_NONE;
+
 	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
 
-	return false;
+	return TRIG_EMPTY;
 }
 
 void physics_stair(struct level_t *l, unsigned index, const struct block_t *block)
@@ -471,14 +475,14 @@ void trigger_door_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum b
 	}
 }
 
-bool trigger_door(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_door(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	if (block->data == 0)
 	{
 		level_addupdate(l, index, -1, 20);
 	}
 
-	return false;
+	return TRIG_EMPTY;
 }
 
 void physics_door(struct level_t *l, unsigned index, const struct block_t *block)
