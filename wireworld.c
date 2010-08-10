@@ -17,7 +17,7 @@ enum blocktype_t convert_wire(struct level_t *level, unsigned index, const struc
 	}
 }
 
-int trigger_wire(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_wire(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	if (block->data == 0)
 	{

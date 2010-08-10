@@ -1292,7 +1292,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	if (click && !HasBit(client->player->flags, FLAG_PAINT))
 	{
 		if (m == 0) {
-			int r = trigger(level, index, b);
+			int r = trigger(level, index, b, client);
 			if (r != TRIG_NONE)
 			{
 				if (r == TRIG_FILL) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));

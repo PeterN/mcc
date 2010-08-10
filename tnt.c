@@ -15,7 +15,7 @@ enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const
 	return TNT;
 }
 
-int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	level_addupdate(l, index, s.explosion, 0x305);
 
@@ -101,7 +101,7 @@ enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const struc
 	}
 }
 
-int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	level_addupdate(l, index, -1, 5);
 
