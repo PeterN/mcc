@@ -6,6 +6,7 @@
 #include "level.h"
 #include "client.h"
 #include "colour.h"
+#include "player.h"
 
 static struct blocktype_desc_list_t s_blocks;
 
@@ -414,6 +415,9 @@ enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, con
 
 int trigger_stair(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
+	/* Only the block owner can remove a double step */
+	if (c->player->globalid != block->owner) return TRIG_NONE;
+
 	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
 
 	return TRIG_EMPTY;
