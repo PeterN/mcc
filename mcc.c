@@ -101,6 +101,7 @@ int main(int argc, char **argv)
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
+	g_server.pos_interval = 40;
 
 	g_server.irc.hostname = "fuzzle.org";
 	g_server.irc.port = 6667;
@@ -160,7 +161,7 @@ int main(int argc, char **argv)
 			//(tick % MS_TO_TICKS(240)) == 0);
 
 			cuboid_process();
-			player_send_positions();
+			if ((tick % MS_TO_TICKS(g_server.pos_interval)) == 0) player_send_positions();
 
 			if ((tick % MS_TO_TICKS(240)) == 0)
 			{

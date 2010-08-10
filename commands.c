@@ -1524,6 +1524,29 @@ CMD(setpassword)
 	return false;
 }
 
+static const char help_setposinterval[] =
+"/setposinterval <interval>\n"
+"Set player position update interval in ms. Minimum is 40ms.";
+
+CMD(setposinterval)
+{
+	if (params != 2) return true;
+
+	int interval = atoi(param[1]);
+	interval /= 40;
+	interval *= 40;
+	if (interval < 40) interval = 40;
+
+	g_server.pos_interval = interval;
+
+	char buf[64];
+	snprintf(buf, sizeof buf, "Player position update interval set to %d ms", g_server.pos_interval);
+	client_notify(c, buf);
+	LOG("%s\n", buf);
+
+	return false;
+}
+
 static const char help_setrank[] =
 "/setrank <name> <rank>\n"
 "Sets a user's rank.";
@@ -1984,6 +2007,7 @@ struct command_t s_commands[] = {
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
 	{ "setpassword", RANK_BUILDER, &cmd_setpassword, help_setpassword },
+	{ "setposinterval", RANK_OP, &cmd_setposinterval, help_setposinterval },
 	{ "setrank", RANK_OP, &cmd_setrank, help_setrank },
 	{ "setspawn", RANK_GUEST, &cmd_setspawn, help_setspawn },
 	{ "spawn", RANK_GUEST, &cmd_spawn, help_spawn },

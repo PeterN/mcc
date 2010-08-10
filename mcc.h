@@ -17,6 +17,7 @@ struct server_t
 	time_t start_time;
 	clock_t cpu_start;
 	double cpu_time;
+	int pos_interval;
 
 	FILE *logfile;
 
