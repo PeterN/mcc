@@ -102,10 +102,10 @@ int main(int argc, char **argv)
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
 
-	g_server.irc.hostname = "irc.lspace.org";
+	g_server.irc.hostname = "fuzzle.org";
 	g_server.irc.port = 6667;
-	g_server.irc.name = "mccbot";
-	g_server.irc.channel = "#mctest";
+	g_server.irc.name = "jams";
+	g_server.irc.channel = "#jams";
 	g_server.irc.pass = NULL;
 
 	signal(SIGINT, &sighandler);
