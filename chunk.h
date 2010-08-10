@@ -3,7 +3,15 @@
 
 #include "block.h"
 
-#define CHUNK_SIZE 16
+#define CHUNK_BITS_X 4
+#define CHUNK_BITS_Y 7
+#define CHUNK_BITS_Z 4
+#define CHUNK_SIZE_X (1 << CHUNK_BITS_X)
+#define CHUNK_SIZE_Y (1 << CHUNK_BITS_Y)
+#define CHUNK_SIZE_Z (1 << CHUNK_BITS_Z)
+#define CHUNK_MASK_X (CHUNK_SIZE_X - 1)
+#define CHUNK_MASK_Y (CHUNK_SIZE_Y - 1)
+#define CHUNK_MASK_Z (CHUNK_SIZE_Z - 1)
 
 struct landscape_t;
 
@@ -13,9 +21,12 @@ struct chunk_t
     int32_t y;
     int32_t z;
 
-    struct block_t blocks[CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE];
+    struct block_t blocks[CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z];
 
     bool dirty;
+    bool ready;
+    bool inuse;
+    bool purge;
 
     struct chunk_t *hash_next;
 };

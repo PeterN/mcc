@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <pthread.h>
 #include "queue.h"
 #include "mcc.h"
 
@@ -10,6 +11,8 @@ struct queue_object_t
 
 struct queue_t
 {
+    pthread_mutex_t produce_mutex;
+    pthread_mutex_t consume_mutex;
     struct queue_object_t *head;
     struct queue_object_t *tail;
     struct queue_object_t *divider;
@@ -26,8 +29,6 @@ struct queue_t *queue_new()
     queue->tail = qo;
     queue->divider = qo;
 
-    LOG("[queue_new] %p %p %p\n", queue->head, queue->tail, queue->divider);
-
     return queue;
 }
 
@@ -39,12 +40,10 @@ void queue_delete(struct queue_t *queue)
         struct queue_object_t *qo = queue->head;
         queue->head = qo->next;
 
-        free(qo->data);
+        //free(qo->data);
         free(qo);
         n++;
     }
-
-    LOG("[queue_delete] Removed %d items from queue\n", n);
 }
 
 int queue_produce(struct queue_t *queue, void *data)
@@ -56,12 +55,10 @@ int queue_produce(struct queue_t *queue, void *data)
     qo->data = data;
 
     /* Lock needed? */
+    pthread_mutex_lock(&queue->produce_mutex);
     queue->tail->next = qo;
     queue->tail = qo;
     /* */
-
-    LOG("[queue_produce] Added to queue\n");
-    LOG("[queue_produce] %p %p %p\n", queue->head, queue->tail, queue->divider);
 
     int n = 0;
     while (queue->head != queue->divider)
@@ -69,26 +66,26 @@ int queue_produce(struct queue_t *queue, void *data)
         struct queue_object_t *qo = queue->head;
         queue->head = qo->next;
 
-        free(qo->data);
+        //free(qo->data);
         free(qo);
-
         n++;
     }
-
-    if (n > 0) LOG("[queue_produce] Removed %d items from queue\n", n);
+    pthread_mutex_unlock(&queue->produce_mutex);
 
     return true;
 }
 
 int queue_consume(struct queue_t *queue, void **data)
 {
-    LOG("[queue_consume] %p %p %p\n", queue->head, queue->tail, queue->divider);
+    pthread_mutex_lock(&queue->consume_mutex);
     if (queue->divider != queue->tail)
     {
         *data = queue->divider->next->data;
         queue->divider = queue->divider->next;
+        pthread_mutex_unlock(&queue->consume_mutex);
         return true;
     }
 
+    pthread_mutex_unlock(&queue->consume_mutex);
     return false;
 }

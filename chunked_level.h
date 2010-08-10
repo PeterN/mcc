@@ -20,10 +20,15 @@ struct chunked_level_t
     int32_t min_z, max_z, size_z;
 
     struct queue_t *load_queue;
-    pthread_t load_thread;
+    pthread_t load_thread[4];
+
+    struct queue_t *save_queue;
+    pthread_t save_thread;
+
+    struct queue_t *purge_queue;
 };
 
 bool chunked_level_init(struct chunked_level_t *cl, const char *name);
-struct chunk_t *chunked_level_get_chunk(struct chunked_level_t *cl, int32_t x, int32_t y, int32_t z);
+struct chunk_t *chunked_level_get_chunk(struct chunked_level_t *cl, int32_t x, int32_t y, int32_t z, bool load);
 
 #endif /* CHUNKED_LEVEL_H */

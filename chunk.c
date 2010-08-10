@@ -15,7 +15,7 @@ static bool chunk_format_name(char *buf, size_t buf_len, const char *name, int32
 
 void chunk_generate(struct chunk_t *chunk, struct landscape_t *landscape)
 {
-    landscape_generate(landscape, chunk->blocks, CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE, chunk->x * CHUNK_SIZE, chunk->y * CHUNK_SIZE, chunk->z * CHUNK_SIZE);
+    landscape_generate(landscape, chunk->blocks, CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z, chunk->x * CHUNK_SIZE_X, chunk->y * CHUNK_SIZE_Y, chunk->z * CHUNK_SIZE_Z);
     chunk->dirty = true;
 }
 

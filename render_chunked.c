@@ -106,8 +106,14 @@ uint32_t col_to_uint32(struct col_t c)
     return (c.b << 24) | (c.g << 16) | (c.r << 8) | c.a;
 }
 
-void setpixel(uint32_t *map, int w, int x, int y, struct col_t c)
+void setpixel(uint32_t *map, int w, int h, int x, int y, struct col_t c)
 {
+    if (x < 0 || y < 0 || x >= w || y >= h)
+    {
+        printf("Pixel at %d x %d out of map (%d x %d)\n", x, y, w, h);
+        return;
+    }
+
     uint32_t *p = &map[x + y * w];
     if (c.a == 0x00) return;
     if (c.a == 0xFF)
@@ -128,11 +134,44 @@ void setpixel(uint32_t *map, int w, int x, int y, struct col_t c)
 enum blocktype_t level_get_blocktype(struct chunked_level_t *level, int16_t x, int16_t y, int16_t z)
 {
     if (x < 0 || y < 0 || z < 0 || x >= level->size_x || y >= level->size_y || z >= level->size_z) return AIR;
-    struct chunk_t *chunk = chunked_level_get_chunk(level, (x >> 4) + level->min_x, (y >> 4) + level->min_y, (z >> 4) + level->min_z);
-    const struct block_t *b = &chunk->blocks[((x & 15) << 8) | ((y & 15) << 4) | (z & 15)];
+    struct chunk_t *chunk = chunked_level_get_chunk(level, (x >> CHUNK_BITS_X) + level->min_x, (y >> CHUNK_BITS_Y) + level->min_y, (z >> CHUNK_BITS_Z) + level->min_z, true);
+
+    if (!chunk->ready)
+    {
+        LOG("Waiting for chunk at %d x %d x %d\n", x >> CHUNK_BITS_X, y >> CHUNK_BITS_Y, z >> CHUNK_BITS_Z);
+        while (!chunk->ready) usleep(100);
+    }
+
+    x &= CHUNK_MASK_X;
+    y &= CHUNK_MASK_Y;
+    z &= CHUNK_MASK_Z;
+
+    const struct block_t *b = &chunk->blocks[x | ((y | z << CHUNK_BITS_Y) << CHUNK_BITS_X)];
     if (b->type == WATERSTILL) return WATER;
     return b->type;
 }
+
+static int16_t getshadowmap(struct chunked_level_t *level, int x, int z, int16_t *shadowmap)
+{
+    int16_t *smp = &shadowmap[x + z * level->size_x];
+    if (*smp == INT16_MIN)
+    {
+        int y;
+        for (y = level->size_y - 1; y >= 0; y--)
+        {
+            if (level_get_blocktype(level, x, y, z) != AIR)
+            {
+                *smp = y;
+                break;
+            }
+        }
+    }
+
+    return *smp;
+}
+
+#define SCALEU 2
+#define SCALED 1
 
 uint32_t *level_render_iso(struct chunked_level_t *level, int rot, int *w, int *h)
 {
@@ -140,8 +179,8 @@ uint32_t *level_render_iso(struct chunked_level_t *level, int rot, int *w, int *
     int size_y = level->size_y;
     int size_z = level->size_z;
 
-    *w = (size_x + size_y) * 2 + 2;
-    *h = (size_x + size_y) * 1 + size_y * 2 + 2;
+    *w = (size_x + size_z) * SCALEU / SCALED + 4;
+    *h = (size_x + size_z) * SCALEU / SCALED / 2 + size_y * SCALEU / SCALED + 4;
 
     int size = *w * *h * sizeof (uint32_t);
     uint32_t *map = malloc(size);
@@ -151,33 +190,50 @@ uint32_t *level_render_iso(struct chunked_level_t *level, int rot, int *w, int *
     int16_t *shadowmap = malloc(size_x * size_z * sizeof *shadowmap);
 
     int x, y, z;
+
+    /* Initialize shadow map */
     for (z = 0; z < size_z; z++)
     {
         for (x = 0; x < size_x; x++)
         {
-            for (y = size_y - 1; y >= 0; y--)
-            {
-                if (level_get_blocktype(level, x, y, z) != AIR)
-                {
-                    shadowmap[x + z * size_x] = y;
-                    break;
-                }
-            }
+            shadowmap[x + z * size_x] = INT16_MIN;
         }
     }
 
 
     int mx, my;
-    int ox = -size_z * 2;
-    int oy = size_y * 2;
+    int ox = -size_z * SCALEU / SCALED;
+    int oy = size_y * SCALEU / SCALED;
 
     for (z = 0; z < size_z; z++)
     {
         for (x = 0; x < size_x; x++)
         {
-            int cy = shadowmap[x + z * size_x];
-            int cy1 = (z < size_z - 1) ? shadowmap[x + (z + 1) * size_x] : 0;
-            int cy2 = (x < size_x - 1) ? shadowmap[x + 1 + z * size_x] : 0;
+            if ((x & CHUNK_MASK_X) == 0 && (z & CHUNK_MASK_Z) == 0)
+            {
+                /* Preload chunks */
+//                LOG("Preloading %d %d %d\n", (x >> CHUNK_BITS_X) + level->min_x, level->min_y, (z >> CHUNK_BITS_Z) + level->min_z);
+                chunked_level_get_chunk(level, (x >> CHUNK_BITS_X) + level->min_x, level->min_y, (z >> CHUNK_BITS_Z) + level->min_z, true);
+    //            LOG("Preloading %d %d %d\n", (x >> CHUNK_BITS_X) + level->min_x + 1, level->min_y, (z >> CHUNK_BITS_Z) + level->min_z);
+//
+                chunked_level_get_chunk(level, (x >> CHUNK_BITS_X) + level->min_x + 1, level->min_y, (z >> CHUNK_BITS_Z) + level->min_z, true);
+                chunked_level_get_chunk(level, (x >> CHUNK_BITS_X) + level->min_x + 2, level->min_y, (z >> CHUNK_BITS_Z) + level->min_z, true);
+
+    //            LOG("Preloading %d %d %d\n", (x >> CHUNK_BITS_X) + level->min_x, level->min_y, (z >> CHUNK_BITS_Z) + level->min_z + 1);
+
+                chunked_level_get_chunk(level, (x >> CHUNK_BITS_X) + level->min_x, level->min_y, (z >> CHUNK_BITS_Z) + level->min_z + 1, true);
+
+
+                if (x > 0)
+                {
+                    struct chunk_t *chunk = chunked_level_get_chunk(level, (x >> CHUNK_BITS_X) + level->min_x - 1, (y >> CHUNK_BITS_Y) + level->min_y, (z >> CHUNK_BITS_Z) + level->min_z, false);
+                    if (chunk != NULL) chunk->inuse = false;
+                }
+            }
+
+            int cy = getshadowmap(level, x, z, shadowmap);
+            int cy1 = (z < size_z - 1) ? getshadowmap(level, x, z + 1, shadowmap) : 0;
+            int cy2 = (x < size_x - 1) ? getshadowmap(level, x + 1, z, shadowmap) : 0;
 
             for (y = 0; y < size_y; y++)
             {
@@ -189,8 +245,8 @@ uint32_t *level_render_iso(struct chunked_level_t *level, int rot, int *w, int *
                 bool trans = false;
                 if (b == WATER || b == GLASS) trans = true;
 
-                mx = (x - z) * 2 - ox;
-                my = (z + x) * 1 - y * 2 + oy;
+                mx = (x - z) * SCALEU / SCALED - ox;
+                my = (z + x) * SCALEU / SCALED / 2 - y * SCALEU / SCALED + oy;
 
                 if (!trans || level_get_blocktype(level, x, y + 1, z) != b)
                 {
@@ -199,10 +255,17 @@ uint32_t *level_render_iso(struct chunked_level_t *level, int rot, int *w, int *
                         c = darken(c);
                         c = darken(c);
                     }
-                    setpixel(map, *w, mx + 0, my, c);
-                    setpixel(map, *w, mx + 1, my, c);
-                    setpixel(map, *w, mx + 2, my, c);
-                    setpixel(map, *w, mx + 3, my, c);
+
+                    int sy, sx;
+                    for (sy = -SCALEU; sy < SCALEU; sy += 2)
+                    for (sx = -SCALEU + abs(sy); sx < SCALEU - abs(sy); sx++)
+                    {
+                        setpixel(map, *w, *h, mx + sx, my + sy / 2, c);
+                    }
+                    /*setpixel(map, *w, *h, mx + 0, my, c);
+                    setpixel(map, *w, *h, mx + 1, my, c);
+                    setpixel(map, *w, *h, mx + 2, my, c);
+                    setpixel(map, *w, *h, mx + 3, my, c);*/
                     if (y < cy)
                     {
                         c = blocktype_get_colour(b);
@@ -226,20 +289,30 @@ uint32_t *level_render_iso(struct chunked_level_t *level, int rot, int *w, int *
 
                 if (!trans || level_get_blocktype(level, x, y, z + 1) != b)
                 {
-                    setpixel(map, *w, mx + 0, my + 1, c1);
-                    setpixel(map, *w, mx + 1, my + 1, c1);
-                    setpixel(map, *w, mx + 0, my + 2, c1);
-                    setpixel(map, *w, mx + 1, my + 2, c1);
-                    if (!trans) setpixel(map, *w, mx + 1, my + 3, c1);
+                    int sx, sy;
+                    for (sy = 0; sy < SCALEU; sy++)
+                    for (sx = 0; sx < SCALEU; sx++)
+                    setpixel(map, *w, *h, mx - SCALEU + sx, my + sy + sx / 2 + 1, c1);
+                /*
+                    setpixel(map, *w, *h, mx + 0, my + 1, c1);
+                    setpixel(map, *w, *h, mx + 1, my + 1, c1);
+                    setpixel(map, *w, *h, mx + 0, my + 2, c1);
+                    setpixel(map, *w, *h, mx + 1, my + 2, c1);
+                    if (!trans) setpixel(map, *w, *h, mx + 1, my + 3, c1);*/
                 }
 
                 if (!trans || level_get_blocktype(level, x + 1, y, z) != b)
                 {
-                    setpixel(map, *w, mx + 2, my + 1, c2);
-                    setpixel(map, *w, mx + 3, my + 1, c2);
-                    setpixel(map, *w, mx + 2, my + 2, c2);
-                    setpixel(map, *w, mx + 3, my + 2, c2);
-                    if (!trans) setpixel(map, *w, mx + 2, my + 3, c2);
+                    int sx, sy;
+                    for (sy = 0; sy < SCALEU; sy++)
+                    for (sx = 0; sx < SCALEU; sx++)
+                    setpixel(map, *w, *h, mx + SCALEU - 1 - sx, my + sy + sx / 2 + 1, c2);
+/* 
+                    setpixel(map, *w, *h, mx + 2, my + 1, c2);
+                    setpixel(map, *w, *h, mx + 3, my + 1, c2);
+                    setpixel(map, *w, *h, mx + 2, my + 2, c2);
+                    setpixel(map, *w, *h, mx + 3, my + 2, c2);
+                    if (!trans) setpixel(map, *w, *h, mx + 2, my + 3, c2);*/
                 }
             }
         }
@@ -427,18 +500,22 @@ int main(int argc, char **argv)
 {
     g_server.logfile = stderr;
 
-    if (argc != 5) return 0;
+    if (argc != 7) return 0;
 
     int x = atoi(argv[1]);
     int y = atoi(argv[2]);
     int z = atoi(argv[3]);
-    int r = atoi(argv[4]);
+    int rx = atoi(argv[4]);
+    int ry = atoi(argv[5]);
+    int rz = atoi(argv[6]);
 
     rand();
 
     struct chunked_level_t *l = malloc(sizeof *l);
     chunked_level_init(l, "test");
-    chunked_level_set_area(l, x, y, z, r);
+    chunked_level_set_area(l, x, y, z, rx, ry, rz);
+
+    LOG("Map size is %d %d %d\n", l->size_x, l->size_y, l->size_z);
 
     level_render_png(l, ROT_0, false);
 
