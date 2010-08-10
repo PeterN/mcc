@@ -109,7 +109,7 @@ struct block_t
 };
 
 typedef enum blocktype_t(*convert_func_t)(struct level_t *level, unsigned index, const struct block_t *block);
-typedef bool(*trigger_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
+typedef int(*trigger_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 typedef void(*delete_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 typedef void(*physics_func_t)(struct level_t *l, unsigned index, const struct block_t *block);
 
@@ -152,7 +152,7 @@ struct client_t;
 
 void blocktype_list(struct client_t *c);
 
-bool trigger_door(struct level_t *l, unsigned index, const struct block_t *block);
+int trigger_door(struct level_t *l, unsigned index, const struct block_t *block);
 void physics_door(struct level_t *l, unsigned index, const struct block_t *block);
 
 #endif /* BLOCK_H */

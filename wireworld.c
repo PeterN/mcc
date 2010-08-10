@@ -17,14 +17,14 @@ enum blocktype_t convert_wire(struct level_t *level, unsigned index, const struc
 	}
 }
 
-bool trigger_wire(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_wire(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	if (block->data == 0)
 	{
 		level_addupdate(l, index, -1, 1);
 	}
 
-	return true;
+	return TRIG_FILL;
 }
 
 int physics_wire_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)

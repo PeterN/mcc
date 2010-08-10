@@ -95,7 +95,7 @@ int trigger(struct level_t *l, unsigned index, const struct block_t *block)
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->trigger_func != NULL)
 	{
-		return btd->trigger_func(l, index, block) ? TRIG_FILL : TRIG_EMPTY;
+		return btd->trigger_func(l, index, block);
 	}
 	return TRIG_NONE;
 }
@@ -412,11 +412,11 @@ enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, con
 	return STAIRCASESTEP;
 }
 
-bool trigger_stair(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_stair(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
 
-	return false;
+	return TRIG_EMPTY;
 }
 
 void physics_stair(struct level_t *l, unsigned index, const struct block_t *block)
@@ -471,14 +471,14 @@ void trigger_door_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum b
 	}
 }
 
-bool trigger_door(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_door(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	if (block->data == 0)
 	{
 		level_addupdate(l, index, -1, 20);
 	}
 
-	return false;
+	return TRIG_EMPTY;
 }
 
 void physics_door(struct level_t *l, unsigned index, const struct block_t *block)

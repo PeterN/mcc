@@ -15,11 +15,11 @@ enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const
 	return TNT;
 }
 
-bool trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	level_addupdate(l, index, s.explosion, 0x305);
 
-	return true;
+	return TRIG_FILL;
 }
 
 enum blocktype_t convert_explosion(struct level_t *level, unsigned index, const struct block_t *block)
@@ -101,11 +101,11 @@ enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const struc
 	}
 }
 
-bool trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block)
+int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	level_addupdate(l, index, -1, 5);
 
-	return true;
+	return TRIG_FILL;
 }
 
 void physics_fuse_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, enum blocktype_t tnt)
