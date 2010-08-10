@@ -180,14 +180,15 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	snprintf(buf, sizeof buf, TAG_GREEN "+ %s" TAG_YELLOW " %s", player->colourusername, type);
 
-	c->player = player;
-	player->client = c;
-
 	if (player->rank == RANK_BANNED)
 	{
+		player_del(player);
 		net_close(c, "Banned");
 		return;
 	}
+
+	c->player = player;
+	player->client = c;
 
 	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, (c->player->rank >= RANK_OP) ? 0x64 : 0));
 
