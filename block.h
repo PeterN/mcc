@@ -88,6 +88,13 @@ enum blocktype_t
 	BLOCK_INVALID = UINT_MAX
 };
 
+enum
+{
+	TRIG_NONE,  /* Not triggered */
+	TRIG_EMPTY, /* Triggered, leave the block empty */
+	TRIG_FILL,  /* Triggered, put original block back */
+};
+
 struct level_t;
 
 struct block_t

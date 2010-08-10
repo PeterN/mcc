@@ -1293,9 +1293,9 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	{
 		if (m == 0) {
 			int r = trigger(level, index, b);
-			if (r > 0)
+			if (r != TRIG_NONE)
 			{
-				if (r == 2) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+				if (r == TRIG_FILL) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 
 				//LOG("Triggered!");
 				return;

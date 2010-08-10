@@ -95,9 +95,9 @@ int trigger(struct level_t *l, unsigned index, const struct block_t *block)
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->trigger_func != NULL)
 	{
-		return btd->trigger_func(l, index, block) ? 2 : 1;
+		return btd->trigger_func(l, index, block) ? TRIG_FILL : TRIG_EMPTY;
 	}
-	return 0;
+	return TRIG_NONE;
 }
 
 void delete(struct level_t *l, unsigned index, const struct block_t *block)
