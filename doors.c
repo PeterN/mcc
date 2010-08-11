@@ -10,6 +10,9 @@
 #define DOOR2(n) \
 	register_blocktype(BLOCK_INVALID, "door_" #n, RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false)
 
+#define DOOR3(n, r) \
+	register_blocktype(BLOCK_INVALID, "door_" #n, r, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false)
+
 DOOR1(stone, ROCK)
 DOOR1(grass, GRASS)
 DOOR1(dirt, DIRT)
@@ -60,7 +63,7 @@ void module_init(void **data)
 	DOOR2(cobblestone);
 	DOOR2(wood);
 	DOOR2(plant);
-	DOOR2(adminium);
+	DOOR3(adminium, RANK_OP);
 	DOOR2(sand);
 	DOOR2(gravel);
 	DOOR2(gold_ore);
