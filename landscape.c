@@ -75,4 +75,5 @@ void landscape_generate(struct landscape_t *l, struct block_t *blocks, int16_t x
     perlin_deinit(pp);
     perlin_deinit(pp2);
     perlin_deinit(pp3);
+    perlin_deinit(pp4);
 }
