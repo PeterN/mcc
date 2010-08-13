@@ -359,6 +359,8 @@ CMD(dellvl)
 			}
 		}
 
+		cuboid_remove_for_level(l);
+
 		l->delete = true;
 	}
 
@@ -1483,6 +1485,8 @@ CMD(resetlvl)
 		if (c == NULL) continue;
 		c->waiting_for_level = true;
 	}
+
+	cuboid_remove_for_level(l);
 
 	level_gen(l, t, hr, sh);
 	return false;
