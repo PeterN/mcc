@@ -56,7 +56,7 @@ void client_notify(struct client_t *c, const char *message)
 		const char *bufpp = bufp;
 		while (bufpp - bufp < sizeof buf - (last_colour[0] == 0 ? 0 : 2))
 		{
-			if (*bufpp == '\0' || *bufpp == '\n')
+			if (*bufpp == '\0' || *bufpp == '\n' || bufpp - bufp >= sizeof buf - 1)
 			{
 				last_space = bufpp;
 				last_colour[1] = last_colour[2];
