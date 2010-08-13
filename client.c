@@ -112,15 +112,20 @@ bool client_botcheck(struct client_t *c, char *message)
 	if (strcasestr(message, "place one brown mushroom") != NULL) bot = true;
 	else if (strcasestr(message, "pasting file") != NULL) bot = true;
 	else if (strcasestr(message, "place 2 brown shrooms") != NULL) bot = true;
+	else if (strcasestr(message, "place 2 brown mushroom") != NULL) bot = true;
 	else if (strcasestr(message, "place 2 shrooms") != NULL) bot = true;
+	else if (strcasestr(message, ".reset to reset") != NULL) bot = true;
+	else if (strcasestr(message, "!reset to reset") != NULL) bot = true;
 	else if (strncasecmp(message, ".paste ", 7) == 0) botuser = true;
 	else if (strncasecmp(message, ".say ", 5) == 0) botuser = true;
 	else if (strncasecmp(message, ".copy ", 6) == 0) botuser = true;
 	else if (strncasecmp(message, ".drawline ", 10) == 0) botuser = true;
+	else if (strncasecmp(message, ".cuboid", 7) == 0) botuser = true;
 	else if (strncasecmp(message, "!paste ", 7) == 0) botuser = true;
 	else if (strncasecmp(message, "!say ", 5) == 0) botuser = true;
 	else if (strncasecmp(message, "!copy ", 6) == 0) botuser = true;
 	else if (strncasecmp(message, "!drawline ", 10) == 0) botuser = true;
+	else if (strncasecmp(message, "!cuboid", 7) == 0) botuser = true;
 
 	if (bot)
 	{
