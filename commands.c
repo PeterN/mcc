@@ -1606,6 +1606,17 @@ CMD(setrank)
 	{
 		p->rank = newrank;
 		sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), p->username);
+
+		if (oldrank >= RANK_OP)
+		{
+			/* Remove op status */
+			client_add_packet(p->client, packet_send_update_user_type(0xFF, 0x00));
+		}
+		if (newrank >= RANK_OP)
+		{
+			/* Give op status */
+			client_add_packet(p->client, packet_send_update_user_type(0xFF, 0x64));
+		}
 	}
 
 	char buf[64];
