@@ -664,11 +664,24 @@ CMD(identify)
 		return false;
 	}
 
+	int oldrank = c->player->rank;
+
 	c->player->rank = playerdb_get_rank(c->player->username);
 	client_notify(c, "Identified successfully.");
 	LOG("Identify %s: success\n", c->player->username);
 
 	playerdb_log_identify(c->player->globalid, 1);
+
+	if (oldrank >= RANK_OP)
+	{
+		/* Remove op status */
+		client_add_packet(c, packet_send_update_user_type(0xFF, 0x00));
+	}
+	if (c->player->rank >= RANK_OP)
+	{
+		/* Give op status */
+		client_add_packet(c, packet_send_update_user_type(0xFF, 0x64));
+	}
 
 	return false;
 }
