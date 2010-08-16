@@ -56,7 +56,7 @@ void client_notify(struct client_t *c, const char *message)
 		const char *bufpp = bufp;
 		while (bufpp - bufp < sizeof buf - (last_colour[0] == 0 ? 0 : 2))
 		{
-			if (*bufpp == '\0' || *bufpp == '\n')
+			if (*bufpp == '\0' || *bufpp == '\n' || bufpp - bufp >= sizeof buf - 1)
 			{
 				last_space = bufpp;
 				last_colour[1] = last_colour[2];
@@ -112,15 +112,20 @@ bool client_botcheck(struct client_t *c, char *message)
 	if (strcasestr(message, "place one brown mushroom") != NULL) bot = true;
 	else if (strcasestr(message, "pasting file") != NULL) bot = true;
 	else if (strcasestr(message, "place 2 brown shrooms") != NULL) bot = true;
+	else if (strcasestr(message, "place 2 brown mushroom") != NULL) bot = true;
 	else if (strcasestr(message, "place 2 shrooms") != NULL) bot = true;
+	else if (strcasestr(message, ".reset to reset") != NULL) bot = true;
+	else if (strcasestr(message, "!reset to reset") != NULL) bot = true;
 	else if (strncasecmp(message, ".paste ", 7) == 0) botuser = true;
 	else if (strncasecmp(message, ".say ", 5) == 0) botuser = true;
 	else if (strncasecmp(message, ".copy ", 6) == 0) botuser = true;
 	else if (strncasecmp(message, ".drawline ", 10) == 0) botuser = true;
+	else if (strncasecmp(message, ".cuboid", 7) == 0) botuser = true;
 	else if (strncasecmp(message, "!paste ", 7) == 0) botuser = true;
 	else if (strncasecmp(message, "!say ", 5) == 0) botuser = true;
 	else if (strncasecmp(message, "!copy ", 6) == 0) botuser = true;
 	else if (strncasecmp(message, "!drawline ", 10) == 0) botuser = true;
+	else if (strncasecmp(message, "!cuboid", 7) == 0) botuser = true;
 
 	if (bot)
 	{

@@ -30,4 +30,6 @@ LIST(cuboid, struct cuboid_t, cuboid_t_compare)
 
 extern struct cuboid_list_t s_cuboids;
 
+void cuboid_remove_for_level(struct level_t *l);
+
 #endif /* CUBOID_H */

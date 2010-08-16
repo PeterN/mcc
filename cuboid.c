@@ -87,3 +87,17 @@ void cuboid_process()
 		}
 	}
 }
+
+void cuboid_remove_for_level(struct level_t *l)
+{
+	unsigned i;
+	for (i = 0; i < s_cuboids.used; i++)
+	{
+		if (s_cuboids.items[i].level == l)
+		{
+			cuboid_list_del_index(&s_cuboids, i);
+			/* Need to restart list */
+			i = -1;
+		}
+	}
+}
