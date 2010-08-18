@@ -45,7 +45,8 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 
 void client_notify(struct client_t *c, const char *message)
 {
-	char buf[64];
+	/* One char extra to hold a NUL, which minecraft doesn't need */
+	char buf[65];
 	const char *bufp = message;
 	const char *bufe = message + strlen(message);
 	char last_colour[3] = { 0, 0, 0};
@@ -54,9 +55,9 @@ void client_notify(struct client_t *c, const char *message)
 	{
 		const char *last_space = NULL;
 		const char *bufpp = bufp;
-		while (bufpp - bufp < sizeof buf - (last_colour[0] == 0 ? 0 : 2))
+		while (bufpp - bufp < sizeof buf - (last_colour[0] == 0 ? 1 : 3))
 		{
-			if (*bufpp == '\0' || *bufpp == '\n' || bufpp - bufp >= sizeof buf - 1)
+			if (*bufpp == '\0' || *bufpp == '\n' || bufpp - bufp >= sizeof buf - (last_colour[0] == 0 ? 2 : 4))
 			{
 				last_space = bufpp;
 				last_colour[1] = last_colour[2];
@@ -74,6 +75,7 @@ void client_notify(struct client_t *c, const char *message)
 		}
 
 		memset(buf, 0, sizeof buf);
+		if (last_colour[0] == 'f') last_colour[0] = 0;
 		if (last_colour[0] != 0)
 		{
 			buf[0] = '&';
@@ -84,7 +86,18 @@ void client_notify(struct client_t *c, const char *message)
 
 		client_add_packet(c, packet_send_message(0, buf));
 
-		bufp = last_space + 1;
+		switch (*last_space)
+		{
+			case '\0':
+			case '\n':
+			case ' ':
+				bufp = last_space + 1;
+				break;
+
+			default:
+				bufp = last_space;
+				break;
+		}
 	}
 }
 
