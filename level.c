@@ -1794,7 +1794,7 @@ bool level_hook_detach(struct level_t *l, const char *name)
 
 void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data)
 {
-	if (l->level_hook_func == NULL) return;
+	if (l == NULL || l->level_hook_func == NULL) return;
 
 	l->level_hook_func(hook, l, c, data, &l->level_hook_data);
 }
