@@ -675,12 +675,12 @@ CMD(identify)
 	if (oldrank >= RANK_OP)
 	{
 		/* Remove op status */
-		client_add_packet(c, packet_send_update_user_type(0xFF, 0x00));
+		client_add_packet(c, packet_send_update_user_type(0x00));
 	}
 	if (c->player->rank >= RANK_OP)
 	{
 		/* Give op status */
-		client_add_packet(c, packet_send_update_user_type(0xFF, 0x64));
+		client_add_packet(c, packet_send_update_user_type(0x64));
 	}
 
 	return false;
@@ -1594,9 +1594,9 @@ CMD(setrank)
 		client_notify(c, "User already at rank");
 		return false;
 	}
-	if (c->player->rank != RANK_ADMIN && oldrank == RANK_ADMIN)
+	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
-		client_notify(c, "Cannot demote admin");
+		client_notify(c, "Cannot demote op or admin");
 		return false;
 	}
 
@@ -1610,12 +1610,12 @@ CMD(setrank)
 		if (oldrank >= RANK_OP)
 		{
 			/* Remove op status */
-			client_add_packet(p->client, packet_send_update_user_type(0xFF, 0x00));
+			client_add_packet(p->client, packet_send_update_user_type(0x00));
 		}
 		if (newrank >= RANK_OP)
 		{
 			/* Give op status */
-			client_add_packet(p->client, packet_send_update_user_type(0xFF, 0x64));
+			client_add_packet(p->client, packet_send_update_user_type(0x64));
 		}
 	}
 
