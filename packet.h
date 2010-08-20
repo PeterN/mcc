@@ -38,6 +38,6 @@ struct packet_t *packet_send_orientation_update(uint8_t player_id, const struct 
 struct packet_t *packet_send_despawn_player(uint8_t player_id);
 struct packet_t *packet_send_message(uint8_t player_id, const char *message);
 struct packet_t *packet_send_disconnect_player(const char *reason);
-struct packet_t *packet_send_update_user_type(uint8_t player_id, uint8_t user_type);
+struct packet_t *packet_send_update_user_type(uint8_t user_type);
 
 #endif /* PACKET_H */

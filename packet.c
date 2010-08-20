@@ -507,13 +507,12 @@ struct packet_t *packet_send_disconnect_player(const char *reason)
 	return p;
 }
 
-struct packet_t *packet_send_update_user_type(uint8_t player_id, uint8_t user_type)
+struct packet_t *packet_send_update_user_type(uint8_t user_type)
 {
-	struct packet_t *p = packet_init(3);
+	struct packet_t *p = packet_init(2);
 	if (p == NULL) return NULL;
 
 	packet_send_byte(p, 0x0F);
-	packet_send_byte(p, player_id);
 	packet_send_byte(p, user_type);
 
 	return p;
