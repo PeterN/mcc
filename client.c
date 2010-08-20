@@ -181,7 +181,7 @@ void client_process(struct client_t *c, char *message)
 			param[params++] = bufp;
 			bufp += l + 1;
 
-			if (end) break;
+			if (end || params == 10) break;
 		}
 
 		if (!command_process(c, params, (const char **)param))
