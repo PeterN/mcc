@@ -762,11 +762,13 @@ static void *level_load_thread(void *arg)
 			/* MCSharp uses a different set of permission values for levels for some reason */
 			if (l->rankvisit <= 3) l->rankvisit++;
 			if (l->rankbuild <= 3) l->rankbuild++;
+			l->rankown   = RANK_OP;
 		}
 		else
 		{
 			l->rankvisit = RANK_GUEST;
 			l->rankbuild = RANK_GUEST;
+			l->rankown   = RANK_OP;
 		}
 
 		int s = x * y * z;
@@ -828,12 +830,21 @@ static void *level_load_thread(void *arg)
 			l->owner = 0;
 			l->rankvisit = RANK_GUEST;
 			l->rankbuild = RANK_GUEST;
+			l->rankown   = RANK_OP;
 		}
 		else
 		{
 			if (gzread(gz, &l->owner, sizeof l->owner) != sizeof l->owner) return level_load_thread_abort(l, "owner");
 			if (gzread(gz, &l->rankvisit, sizeof l->rankvisit) != sizeof l->rankvisit) return level_load_thread_abort(l, "rankvisit");
 			if (gzread(gz, &l->rankbuild, sizeof l->rankbuild) != sizeof l->rankbuild) return level_load_thread_abort(l, "rankbuild");
+			if (version < 5)
+			{
+				l->rankown = RANK_OP;
+			}
+			else
+			{
+				if (gzread(gz, &l->rankown, sizeof l->rankown) != sizeof l->rankown) return level_load_thread_abort(l, "rankown");
+			}
 
 			unsigned n;
 			unsigned u;
@@ -852,9 +863,19 @@ static void *level_load_thread(void *arg)
 				if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userbuild");
 				user_list_add(&l->userbuild, u);
 			}
+
+			if (version >= 5)
+			{
+				if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "userown count");
+				for (i = 0; i < (int)n; i++)
+				{
+					if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "userown");
+					user_list_add(&l->userown, u);
+				}
+			}
 		}
 
-		if (version == 4)
+		if (version >= 4)
 		{
 			unsigned u;
 			if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "level_hooks");
@@ -950,7 +971,7 @@ void *level_save_thread(void *arg)
 	}
 
 	unsigned header  = 'MCLV';
-	unsigned version = 4;
+	unsigned version = 5;
 	gzwrite(gz, &header, sizeof header);
 	gzwrite(gz, &version, sizeof version);
 
@@ -963,6 +984,7 @@ void *level_save_thread(void *arg)
 	gzwrite(gz, &l->owner, sizeof l->owner);
 	gzwrite(gz, &l->rankvisit, sizeof l->rankvisit);
 	gzwrite(gz, &l->rankbuild, sizeof l->rankbuild);
+	gzwrite(gz, &l->rankown, sizeof l->rankown);
 
 	unsigned i;
 	i = l->uservisit.used;
@@ -977,6 +999,13 @@ void *level_save_thread(void *arg)
 	for (i = 0; i < l->userbuild.used; i++)
 	{
 		gzwrite(gz, &l->userbuild.items[i], sizeof l->userbuild.items[i]);
+	}
+
+	i = l->userown.used;
+	gzwrite(gz, &i, sizeof i);
+	for (i = 0; i < l->userown.used; i++)
+	{
+		gzwrite(gz, &l->userown.items[i], sizeof l->userown.items[i]);
 	}
 
 	if (*l->level_hook_name == '\0')

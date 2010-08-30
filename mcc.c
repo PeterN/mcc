@@ -88,6 +88,7 @@ int main(int argc, char **argv)
 
 		l->rankbuild = RANK_GUEST;
 		l->rankvisit = RANK_GUEST;
+		l->rankown   = RANK_OP;
 
 		level_list_add(&s_levels, l);
 	}

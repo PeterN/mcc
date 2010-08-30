@@ -598,8 +598,10 @@ CMD(home)
 		l->owner = c->player->globalid;
 		l->rankvisit = RANK_GUEST;
 		l->rankbuild = RANK_ADMIN;
+		l->rankown   = RANK_ADMIN;
 		user_list_add(&l->uservisit, l->owner);
 		user_list_add(&l->userbuild, l->owner);
+		user_list_add(&l->userown,   l->owner);
 
 		level_gen(l, 0, l->y / 2, l->y / 2);
 		level_list_add(&s_levels, l);
@@ -962,6 +964,9 @@ CMD(mapinfo)
 	
 	if (c->player->rank == RANK_ADMIN || c->player->globalid == c->player->level->owner)
 	{
+		snprintf(buf, sizeof buf, "Own permission: %s", rank_get_name(l->rankown));
+		client_notify(c, buf);
+	
 		unsigned i;
 		for (i = 0; i < c->player->level->uservisit.used; i++)
 		{
@@ -972,6 +977,12 @@ CMD(mapinfo)
 		for (i = 0; i < c->player->level->userbuild.used; i++)
 		{
 			snprintf(buf, sizeof buf, "Build permission: %s", playerdb_get_username(c->player->level->userbuild.items[i]));
+			client_notify(c, buf);
+		}
+
+		for (i = 0; i < c->player->level->userown.used; i++)
+		{
+			snprintf(buf, sizeof buf, "Own permission: %s", playerdb_get_username(c->player->level->userown.items[i]));
 			client_notify(c, buf);
 		}
 	}
@@ -1114,6 +1125,7 @@ CMD(newlvl)
 		l->owner = c->player->globalid;
 		l->rankvisit = c->player->rank;
 		l->rankbuild = c->player->rank;
+		l->rankown   = c->player->rank;
 
 		level_gen(l, t, hr, sh);
 		level_list_add(&s_levels, l);
@@ -1199,6 +1211,56 @@ CMD(perbuild)
 		c->player->level->rankbuild = rank;
 		c->player->level->changed = true;
 		client_notify(c, "Build permission set");
+	}
+
+	return false;
+}
+
+static const char help_perown[] =
+"/perown [<rank>|+/-<user>]\n";
+
+CMD(perown)
+{
+	if (params != 2) return true;
+
+	if (c->player->rank < RANK_OP && c->player->globalid != c->player->level->owner)
+	{
+		client_notify(c, "You do not have permission to change permissions here");
+		return false;
+	}
+	
+	if (param[1][0] == '-' || param[1][0] == '+')
+	{
+		int globalid = playerdb_get_globalid(param[1] + 1, false, NULL);
+		if (globalid == -1)
+		{
+			client_notify(c, "User does not exist");
+			return false;
+		}
+		
+		if (param[1][0] == '-')
+		{
+			user_list_del_item(&c->player->level->userown, globalid);
+		}
+		else
+		{
+			user_list_add(&c->player->level->userown, globalid);
+		}
+		c->player->level->changed = true;
+		client_notify(c, "Own permission set");
+	}
+	else
+	{
+		int rank = rank_get_by_name(param[1]);
+		if (rank == -1)
+		{
+			client_notify(c, "Invalid rank");
+			return false;
+		}
+
+		c->player->level->rankown = rank;
+		c->player->level->changed = true;
+		client_notify(c, "Own permission set");
 	}
 
 	return false;
@@ -2026,6 +2088,7 @@ struct command_t s_commands[] = {
 	{ "opglass", RANK_OP, &cmd_opglass, help_opglass },
 	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
 	{ "perbuild", RANK_GUEST, &cmd_perbuild, help_perbuild },
+	{ "perown", RANK_GUEST, &cmd_perown, help_perown },
 	{ "pervisit", RANK_GUEST, &cmd_pervisit, help_pervisit },
 	{ "physics", RANK_OP, &cmd_physics, help_physics },
 	{ "place", RANK_ADV_BUILDER, &cmd_place, help_place },

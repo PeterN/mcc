@@ -53,8 +53,10 @@ struct level_t
 	unsigned owner;
 	uint8_t rankvisit;
 	uint8_t rankbuild;
+	uint8_t rankown;
 	struct user_list_t uservisit;
 	struct user_list_t userbuild;
+	struct user_list_t userown;
 
 	struct block_t *blocks;
 	struct physics_list_t physics, physics2;
