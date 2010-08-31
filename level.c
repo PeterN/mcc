@@ -128,6 +128,19 @@ bool level_user_can_build(const struct level_t *l, const struct player_t *p)
 	return false;
 }
 
+bool level_user_can_own(const struct level_t *l, const struct player_t *p)
+{
+	if (p->rank >= l->rankown) return true;
+
+	unsigned i;
+	for (i = 0; i < l->userown.used; i++)
+	{
+		if (l->userown.items[i] == p->globalid) return true;
+	}
+
+	return false;
+}
+
 bool level_send(struct client_t *c)
 {
 	struct level_t *oldlevel = c->player->level;
