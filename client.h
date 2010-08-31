@@ -47,6 +47,6 @@ void client_send_despawn(struct client_t *c, bool hiding);
 
 void client_notify(struct client_t *c, const char *message);
 
-void client_info();
+void client_info(void);
 
 #endif /* CLIENT_H */

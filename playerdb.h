@@ -1,8 +1,8 @@
 #ifndef PLAYERDB_H
 #define PLAYERDB_H
 
-void playerdb_init();
-void playerdb_close();
+void playerdb_init(void);
+void playerdb_close(void);
 
 int playerdb_get_globalid(const char *username, bool add, bool *added);
 const char *playerdb_get_username(int globalid);

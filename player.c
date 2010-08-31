@@ -134,7 +134,7 @@ void player_teleport(struct player_t *player, const struct position_t *pos, bool
 	}
 }
 
-static unsigned gettime()
+static unsigned gettime(void)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -237,7 +237,7 @@ void player_send_position(struct player_t *player)
 	}
 }
 
-void player_send_positions()
+void player_send_positions(void)
 {
 	unsigned i;
 	for (i = 0; i < s_players.used; i++)
@@ -255,7 +255,7 @@ void player_send_positions()
 	}
 }
 
-void player_info()
+void player_info(void)
 {
 	unsigned i;
 	for (i = 0; i < s_players.used; i++)

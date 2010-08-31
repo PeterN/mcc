@@ -5,7 +5,7 @@
 #include "timer.h"
 #include "mcc.h"
 
-static unsigned gettime()
+static unsigned gettime(void)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -59,7 +59,7 @@ void deregister_timer(struct timer_t *t)
 	free(t);
 }
 
-void timers_deinit()
+void timers_deinit(void)
 {
 	while (s_timers.used > 0)
 	{

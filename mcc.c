@@ -13,7 +13,7 @@
 
 struct server_t g_server;
 
-static unsigned gettime()
+static unsigned gettime(void)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -21,7 +21,7 @@ static unsigned gettime()
 	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-void mcc_exit()
+void mcc_exit(void)
 {
 	level_save_all(NULL);
 

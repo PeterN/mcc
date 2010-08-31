@@ -337,7 +337,7 @@ struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name
 	return p;
 }
 
-struct packet_t *packet_send_ping()
+struct packet_t *packet_send_ping(void)
 {
 	struct packet_t *p = packet_init(1);
 	if (p == NULL) return NULL;
@@ -347,7 +347,7 @@ struct packet_t *packet_send_ping()
 	return p;
 }
 
-struct packet_t *packet_send_level_initialize()
+struct packet_t *packet_send_level_initialize(void)
 {
 	struct packet_t *p = packet_init(1);
 	if (p == NULL) return NULL;

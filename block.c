@@ -515,7 +515,7 @@ enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const st
 	return (x + y + z) % 2 ? TRUNK : WOOD;
 }
 
-void blocktype_init()
+void blocktype_init(void)
 {
 	register_blocktype(AIR, "air", RANK_GUEST, NULL, NULL, NULL, &physics_air, true);
 	register_blocktype(ROCK, "stone", RANK_GUEST, NULL, NULL, NULL, NULL, false);
@@ -584,7 +584,7 @@ void blocktype_init()
 	module_load("doors.so");
 }
 
-void blocktype_deinit()
+void blocktype_deinit(void)
 {
 	unsigned i;
 	for (i = 0; i < s_blocks.used; i++)

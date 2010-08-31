@@ -25,8 +25,8 @@ size_t packet_recv_size(uint8_t type);
 void packet_recv(struct client_t *c, struct packet_t *p);
 
 struct packet_t *packet_send_player_id(uint8_t protocol, const char *server_name, const char *server_motd, uint8_t user_type);
-struct packet_t *packet_send_ping();
-struct packet_t *packet_send_level_initialize();
+struct packet_t *packet_send_ping(void);
+struct packet_t *packet_send_level_initialize(void);
 struct packet_t *packet_send_level_data_chunk(int16_t chunk_length, uint8_t *data, uint8_t percent);
 struct packet_t *packet_send_level_finalize(int16_t x, int16_t y, int16_t z);
 struct packet_t *packet_send_set_block(int16_t x, int16_t y, int16_t z, uint8_t type);

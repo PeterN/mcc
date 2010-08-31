@@ -1476,7 +1476,7 @@ static void level_unmark_teleporter(struct level_t *level, struct position_t *po
 	level->blocks[index].teleporter = 0;
 }
 
-static int gettime()
+static int gettime(void)
 {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -1789,7 +1789,7 @@ void deregister_level_hook_func(const char *name)
 	LOG("Deregistered level hook %s\n", name);
 }
 
-void level_hooks_deinit()
+void level_hooks_deinit(void)
 {
 	while (s_level_hooks.used > 0)
 	{

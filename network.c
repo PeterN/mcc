@@ -42,7 +42,7 @@ void deregister_socket(int fd)
 	socket_list_del_item(&s_sockets, s);
 }
 
-void socket_deinit()
+void socket_deinit(void)
 {
 	if (s_sockets.used > 0)
 	{
@@ -341,7 +341,7 @@ static void net_packetrecv(struct client_t *c)
 	packet_recv(c, p);
 }
 
-void net_run()
+void net_run(void)
 {
 	size_t clients = s_clients.used;
 	unsigned i;

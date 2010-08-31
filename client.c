@@ -265,7 +265,7 @@ void client_send_despawn(struct client_t *c, bool hiding)
 	}
 }
 
-void client_info()
+void client_info(void)
 {
 	unsigned i;
 	for (i = 0; i < s_clients.used; i++)

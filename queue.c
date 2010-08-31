@@ -18,7 +18,7 @@ struct queue_t
     struct queue_object_t *divider;
 };
 
-struct queue_t *queue_new()
+struct queue_t *queue_new(void)
 {
     struct queue_t *queue = malloc(sizeof *queue);
     struct queue_object_t *qo = malloc(sizeof *qo);

@@ -6,7 +6,7 @@
 
 struct cuboid_list_t s_cuboids;
 
-void cuboid_process()
+void cuboid_process(void)
 {
 	unsigned i;
 	for (i = 0; i < s_cuboids.used; i++)

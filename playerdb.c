@@ -19,7 +19,7 @@ static sqlite3_stmt *s_check_ban_stmt;
 static sqlite3_stmt *s_banip_stmt;
 static sqlite3_stmt *s_unbanip_stmt;
 
-void playerdb_init()
+void playerdb_init(void)
 {
 	int res;
 
@@ -151,7 +151,7 @@ void playerdb_init()
 	}
 }
 
-void playerdb_close()
+void playerdb_close(void)
 {
 	sqlite3_finalize(s_rank_get_stmt);
 	sqlite3_finalize(s_rank_set_stmt);

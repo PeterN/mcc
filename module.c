@@ -63,7 +63,7 @@ void module_deinit(struct module_t *m)
 	}
 }
 
-void modules_deinit()
+void modules_deinit(void)
 {
 
 	while (s_modules.used > 0)

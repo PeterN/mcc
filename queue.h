@@ -3,7 +3,7 @@
 
 struct queue_t;
 
-struct queue_t *queue_new();
+struct queue_t *queue_new(void);
 void queue_delete(struct queue_t *queue);
 int queue_produce(struct queue_t *queue, void *data);
 int queue_consume(struct queue_t *queue, void **data);
