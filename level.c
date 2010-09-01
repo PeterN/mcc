@@ -1381,7 +1381,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 
 		/* Air with owner can be replaced */
-		if (client->player->rank < RANK_OP && (b->owner != 0 && b->owner != client->player->globalid && b->type != AIR))
+		if ((b->owner != 0 && b->owner != client->player->globalid && b->type != AIR) && !level_user_can_own(level, client->player))
 		{
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
