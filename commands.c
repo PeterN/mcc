@@ -1330,14 +1330,12 @@ CMD(physics)
 		if (strcasecmp(param[1], "pause") == 0)
 		{
 			l->physics_pause = true;
-			snprintf(buf, sizeof buf, "Physics paused on %s", l->name);
-			net_notify_all(buf);
+			level_notify_all(l, TAG_YELLOW "Physics paused");
 		}
 		else if (strcasecmp(param[1], "resume") == 0)
 		{
 			l->physics_pause = false;
-			snprintf(buf, sizeof buf, "Physics resumed on %s", l->name);
-			net_notify_all(buf);
+			level_notify_all(l, TAG_YELLOW "Physics resumed");
 		}
 		else if (strcasecmp(param[1], "reset") == 0)
 		{
@@ -1347,8 +1345,7 @@ CMD(physics)
 			l->physics_iter = 0;
 			l->updates_iter = 0;
 			l->physics_done = 0;
-			snprintf(buf, sizeof buf, "Physics reset on %s", l->name);
-			net_notify_all(buf);
+			level_notify_all(l, TAG_YELLOW "Physics reset");
 		}
 		return false;
 	}

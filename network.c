@@ -481,5 +481,5 @@ void net_notify_all(const char *message)
 		client_notify(c, message);
 	}
 
-	LOG("%s\n", message);
+	LOG("[ALL] %s\n", message);
 }

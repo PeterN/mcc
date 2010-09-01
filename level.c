@@ -59,6 +59,20 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 	return true;
 }
 
+void level_notify_all(struct level_t *level, const char *message)
+{
+	if (level == NULL) return;
+
+	int i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		if (level->clients[i] == NULL) continue;
+		client_notify(level->clients[i], message);
+	}
+
+	LOG("[%s] %s\n", level->name, message);
+}
+
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index)
 {
 /*	bool old_phys = block_has_physics(&level->blocks[index]);
@@ -236,7 +250,8 @@ bool level_send(struct client_t *c)
 			char buf[64];
 			snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
 			call_hook(HOOK_CHAT, buf);
-			net_notify_all(buf);
+			level_notify_all(oldlevel, buf);
+			level_notify_all(newlevel, buf);
 
 			/* Despawn this user for all users */
 			if (!c->hidden) client_send_despawn(c->player->client, false);

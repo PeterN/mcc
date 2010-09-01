@@ -229,7 +229,7 @@ void client_process(struct client_t *c, char *message)
 
 		call_hook(HOOK_CHAT, buf);
 		call_level_hook(EVENT_CHAT, c->player->level, c, message);
-		net_notify_all(buf);
+		level_notify_all(c->player->level, buf);
 	}
 }
 
