@@ -213,6 +213,12 @@ void client_process(struct client_t *c, char *message)
 				return;
 			}
 
+			case '!':
+				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message + 1);
+				call_hook(HOOK_CHAT, buf);
+				net_notify_all(buf);
+				return;
+
 //			case ';':
 //				snprintf(buf, sizeof buf, "* %s %s", c->player->colourusername, message + 1);
 //				break;
