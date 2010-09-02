@@ -74,6 +74,9 @@ void client_notify(struct client_t *c, const char *message)
 			bufpp++;
 		}
 
+		/* If string starts with a colour code, don't continue the previous colour. */
+		if (bufp[0] == '&') last_colour[0] = 0;
+
 		memset(buf, 0, sizeof buf);
 		if (last_colour[0] == 'f') last_colour[0] = 0;
 		if (last_colour[0] != 0)
@@ -83,6 +86,11 @@ void client_notify(struct client_t *c, const char *message)
 		}
 		memcpy(buf + (last_colour[0] == 0 ? 0 : 2), bufp, last_space - bufp);
 		last_colour[0] = last_colour[1];
+
+		/* Check if string ends with a colour code, and remove. */
+		size_t l = (last_colour[0] == 0 ? 0 : 2) + (last_space - bufp) - 1;
+		if (buf[l] == '&') buf[l] = '\0';
+		if (buf[l - 1] == '&') buf[l - 1] = '\0';
 
 		client_add_packet(c, packet_send_message(0, buf));
 
