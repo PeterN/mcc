@@ -248,14 +248,15 @@ bool level_send(struct client_t *c)
 		if (oldlevel != newlevel)
 		{
 			char buf[64];
-			snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
-			call_hook(HOOK_CHAT, buf);
-			level_notify_all(oldlevel, buf);
-			level_notify_all(newlevel, buf);
 
 			/* Despawn this user for all users */
 			if (!c->hidden) client_send_despawn(c->player->client, false);
 			oldlevel->clients[c->player->levelid] = NULL;
+
+			snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
+			call_hook(HOOK_CHAT, buf);
+			level_notify_all(oldlevel, buf);
+			level_notify_all(newlevel, buf);
 		}
 
 		/* Despawn users for this user */
