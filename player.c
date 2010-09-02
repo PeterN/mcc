@@ -344,7 +344,7 @@ enum colour_t rank_get_colour(enum rank_t rank)
 		case RANK_GUEST: return COLOUR_SILVER;
 		case RANK_BUILDER: return COLOUR_LIME;
 		case RANK_ADV_BUILDER: return COLOUR_GREEN;
-		case RANK_OP: return COLOUR_TEAL;
+		case RANK_OP: return COLOUR_AQUA;
 		case RANK_ADMIN: return COLOUR_MAROON;
 	}
 
