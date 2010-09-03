@@ -85,12 +85,27 @@ void client_notify(struct client_t *c, const char *message)
 			buf[1] = last_colour[0];
 		}
 		memcpy(buf + (last_colour[0] == 0 ? 0 : 2), bufp, last_space - bufp);
-		last_colour[0] = last_colour[1];
 
 		/* Check if string ends with a colour code, and remove. */
 		size_t l = (last_colour[0] == 0 ? 0 : 2) + (last_space - bufp) - 1;
-		if (buf[l] == '&') buf[l] = '\0';
-		if (buf[l - 1] == '&') buf[l - 1] = '\0';
+
+		for (; l > 1; l--)
+		{
+			if (buf[l] == '&' || buf[l] == ' ')
+			{
+				buf[l] = '\0';
+			}
+			else if (buf[l - 1] == '&')
+			{
+				buf[l - 1] = '\0';
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		last_colour[0] = last_colour[1];
 
 		client_add_packet(c, packet_send_message(0, buf));
 
