@@ -171,7 +171,7 @@ void client_process(struct client_t *c, char *message)
 	/* Max length of username + message is 64 + 64 */
 	char buf[128];
 
-	if (message[0] == '!' || message[0] == '/')
+	if (message[0] == '\\' || message[0] == '/')
 	{
 		char *bufp = message + 1;
 		char *param[10];
