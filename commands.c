@@ -2073,7 +2073,7 @@ struct command_t s_commands[] = {
 	{ "instant", RANK_OP, &cmd_instant, help_instant },
 	{ "kick", RANK_OP, &cmd_kick, help_kick },
 	{ "kickban", RANK_OP, &cmd_kickban, help_kickban },
-	{ "lava", RANK_BUILDER, &cmd_lava, help_lava },
+	{ "lava", RANK_GUEST, &cmd_lava, help_lava },
 	{ "levels", RANK_GUEST, &cmd_levels, help_levels },
 	{ "lvlowner", RANK_OP, &cmd_lvlowner, help_lvlowner },
 	{ "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
@@ -2106,7 +2106,7 @@ struct command_t s_commands[] = {
 	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
-	{ "water", RANK_BUILDER, &cmd_water, help_water },
+	{ "water", RANK_GUEST, &cmd_water, help_water },
 	{ "whois", RANK_GUEST, &cmd_whois, help_whois },
 	{ NULL, -1, NULL, NULL },
 };
