@@ -107,6 +107,9 @@ void irc_process(struct irc_t *s, char *message)
 	{
 		snprintf(buf, sizeof buf, "PONG %s\r\n", arg);
 		irc_queue(s, buf);
+	}
+	else if (strncmp(cmd, "255", 3) == 0)
+	{
 		if (s->irc_stage == 1)
 		{
 			s->irc_stage = 2;
