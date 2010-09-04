@@ -90,7 +90,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 		client_notify(c, TAG_YELLOW "Portal renamed");
 		l->changed = true;
 	}
-	else if (strncasecmp(data, "portal place", 12) == 0)
+	else if (strcasecmp(data, "portal place") == 0)
 	{
 		struct portal_t *p = arg->edit;
 		if (p == NULL) return;
@@ -256,6 +256,9 @@ static void portal_level_hook(int event, struct level_t *l, struct client_t *c, 
 						if (p->pos.x == 0 && p->pos.y == 0 && p->pos.z == 0) continue;
 						snprintf(p->name, sizeof p->name, "unamed");
 					}
+
+					/* Ensure portal edit isn't set after loading */
+					pd->edit = NULL;
 					break;
 				}
 
