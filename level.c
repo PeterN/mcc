@@ -636,10 +636,8 @@ void *level_gen_thread(void *arg)
 
 	level->changed = true;
 
-	snprintf(buf, sizeof buf, "Created level '%s'", level->name);
-	net_notify_all(buf);
-
-	//LOG(buf);
+	snprintf(buf, sizeof buf, "Created level '%s'\n", level->name);
+	LOG(buf);
 
 	pthread_mutex_unlock(&level->mutex);
 
@@ -648,8 +646,8 @@ void *level_gen_thread(void *arg)
 level_error:
 	level->changed = true;
 
-	snprintf(buf, sizeof buf, TAG_YELLOW "Level generation for %s failed", level->name);
-	net_notify_all(buf);
+	snprintf(buf, sizeof buf, TAG_YELLOW "Level generation for %s failed\n", level->name);
+	LOG(buf);
 
 	pthread_mutex_unlock(&level->mutex);
 
@@ -1270,9 +1268,6 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 		if (distance > 12)
 		{
-			char buf[64];
-			snprintf(buf, sizeof buf, TAG_RED "Kicked %s for building too far away", client->player->username);
-			net_notify_all(buf);
 			net_close(client, "Anti-grief: built too far away");
 			return;
 		}
