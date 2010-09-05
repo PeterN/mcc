@@ -17,6 +17,7 @@
 #include "network.h"
 #include "module.h"
 #include "undodb.h"
+#include "util.h"
 
 static const char s_on[] = TAG_RED "on";
 static const char s_off[] = TAG_GREEN "off";
@@ -1560,6 +1561,18 @@ CMD(resetlvl)
 
 	cuboid_remove_for_level(l);
 
+	physics_list_free(&l->physics);
+	physics_list_free(&l->physics2);
+	block_update_list_free(&l->updates);
+
+	undodb_close(l->undo);
+	l->undo = NULL;
+
+	char filename[256];
+	snprintf(filename, sizeof filename, "undo/%s.db", l->name);
+	lcase(filename);
+	unlink(filename);
+
 	level_gen(l, t, hr, sh);
 	return false;
 }
@@ -1922,7 +1935,7 @@ CMD(undo)
 		return false;
 	}
 
-	//,...,...,...client_add_packet(client, packet_send_set_block(x, y, z, pt));
+	//client_add_packet(client, packet_send_set_block(x, y, z, pt));
 	int limit = strtol(param[3], NULL, 10);
 
 	undodb_undo_player(l->undo, globalid, limit, params == 4 ? &undo_show : &undo_real, c);
