@@ -131,11 +131,11 @@ void irc_process(struct irc_t *s, char *message)
 		{
 			if (strncmp(notify, "\001ACTION", 7) == 0)
 			{
-				snprintf(buf, sizeof buf, TAG_NAVY "* %s%s", src, notify + 7);
+				snprintf(buf, sizeof buf, "! " TAG_NAVY "* %s%s", src, notify + 7);
 			}
 			else
 			{
-				snprintf(buf, sizeof buf, TAG_NAVY "%s:" TAG_WHITE " %s", src, notify);
+				snprintf(buf, sizeof buf, "! " TAG_NAVY "%s:" TAG_WHITE " %s", src, notify);
 			}
 
 			/* Strip non-ascii characters */
@@ -177,6 +177,9 @@ static int irc_convert_colour(int colour)
 void irc_message(int hook, void *data, void *arg)
 {
 	struct irc_t *s = arg;
+
+	char *d = data;
+	if (d[0] != '!') return;
 
 	char buf[512];
 	snprintf(buf, sizeof buf, "PRIVMSG %s :%s\r\n", g_server.irc.channel, (char *)data);
