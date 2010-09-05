@@ -87,10 +87,15 @@ void player_del(struct player_t *player)
 
 bool player_change_level(struct player_t *player, struct level_t *level)
 {
-	if (player->level == level) return false;
-	if (level->delete) return false;
+	/* Special case, when level is NULL, choose a starting level */
+	if (level != NULL)
+	{
+		if (player->level == level) return false;
+		if (level->delete) return false;
+	}
 
 	player->new_level = level;
+	player->client->waiting_for_level = true;
 
 	return true;
 }

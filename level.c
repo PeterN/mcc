@@ -162,9 +162,24 @@ bool level_send(struct client_t *c)
 
 	if (newlevel == NULL)
 	{
-		LOG("Tried moving to NULL level for %s\n", c->player->username);
-		c->waiting_for_level = false;
-		return false;
+		static const char *start_levels[] = { "main", "hub", "hub2", "free2" };
+		int i;
+
+		for (i = 0; i < 4; i++)
+		{
+			if (!level_get_by_name(start_levels[i], &newlevel)) continue;
+			if (level_get_new_id(newlevel, NULL) == -1) continue;
+			break;
+		}
+
+		if (i == 4)
+		{
+			LOG("All start levels are full!\n");
+			net_close(c, "All start levels full");
+			return false;
+		}
+
+		c->player->new_level = newlevel;
 	}
 
 	unsigned length = newlevel->x * newlevel->y * newlevel->z;
