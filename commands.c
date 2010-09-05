@@ -1561,9 +1561,9 @@ CMD(resetlvl)
 
 	cuboid_remove_for_level(l);
 
-	physics_list_free(&l->physics);
-	physics_list_free(&l->physics2);
-	block_update_list_free(&l->updates);
+//	physics_list_free(&l->physics);
+//	physics_list_free(&l->physics2);
+//	block_update_list_free(&l->updates);
 
 	undodb_close(l->undo);
 	l->undo = NULL;
