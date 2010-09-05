@@ -1840,12 +1840,16 @@ CMD(unbanip)
 	return false;
 }
 
-static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, void *arg)
+static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
 {
 	struct client_t *client = arg;
 	struct level_t *l = client->player->level;
+
+	if (x >= l->x || y >= l->y || z >= l->z) return;
 	unsigned index = level_get_index(l, x, y, z);
 	struct block_t *b = &l->blocks[index];
+
+	if (b->type != newtype) return;
 	struct block_t backup = *b;
 	b->type = oldtype;
 	b->data = olddata;
@@ -1853,13 +1857,16 @@ static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata,
 	*b = backup;
 }
 
-static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, void *arg)
+static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
 {
 	struct client_t *client = arg;
 	struct level_t *l = client->player->level;
+
+	if (x >= l->x || y >= l->y || z >= l->z) return;
 	unsigned index = level_get_index(l, x, y, z);
 	struct block_t *b = &l->blocks[index];
 
+	if (b->type != newtype) return;
 	b->type = oldtype;
 	b->data = olddata;
 
