@@ -527,6 +527,21 @@ CMD(goto)
 	return false;
 }
 
+static const char help_global[] =
+"/global\n"
+"Toggle global chat mode. When enabled, all chat will go to the global channel instead of to the level.";
+
+CMD(global)
+{
+	ToggleBit(c->player->flags, FLAG_GLOBAL);
+
+	char buf[64];
+	snprintf(buf, sizeof buf, "Global chat %s", HasBit(c->player->flags, FLAG_GLOBAL) ? s_on : s_off);
+	client_notify(c, buf);
+
+	return false;
+}
+
 static const char help_help[] =
 "/help <command>\n"
 "Display help about a command. See /commands.";
@@ -2180,6 +2195,7 @@ struct command_t s_commands[] = {
 	{ "filter", RANK_OP, &cmd_filter, help_filter },
 	{ "follow", RANK_OP, &cmd_follow, help_follow },
 	{ "goto", RANK_GUEST, &cmd_goto, help_goto },
+	{ "global", RANK_BUILDER, &cmd_global, help_global },
 	{ "help", RANK_GUEST, &cmd_help, help_help },
 	{ "hide", RANK_OP, &cmd_hide, help_hide },
 	{ "home", RANK_GUEST, &cmd_home, help_home },

@@ -18,6 +18,7 @@ enum
 	FLAG_PLACE_FIXED,
 	FLAG_PAINT,
 	FLAG_DISOWN,
+	FLAG_GLOBAL,
 };
 
 enum mode_t

@@ -251,6 +251,14 @@ void client_process(struct client_t *c, char *message)
 				break;
 
 			default:
+				if (HasBit(c->player->flags, FLAG_GLOBAL))
+				{
+					snprintf(buf, sizeof buf, "! %s:" TAG_WHITE " %s", c->player->colourusername, message);
+					call_hook(HOOK_CHAT, buf);
+					net_notify_all(buf);
+					return;
+				}
+
 				if (client_botcheck(c, message)) return;
 				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message);
 				break;
