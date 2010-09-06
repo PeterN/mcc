@@ -192,13 +192,6 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	client_add_packet(c, packet_send_player_id(7, g_server.name, g_server.motd, (c->player->rank >= RANK_OP) ? 0x64 : 0));
 
-	struct level_t *l;
-	if (!level_get_by_name("main", &l))
-	{
-		net_close(c, "Cannot load main level");
-		return;
-	}
-
 	call_hook(HOOK_CHAT, buf);
 	net_notify_all(buf);
 	if (identified == 2)
@@ -210,7 +203,9 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 		client_notify(c, TAG_YELLOW "You must identify to use privileged commands.");
 	}
 
-	player_change_level(c->player, l);
+	player_change_level(c->player, NULL);
+
+	notify_file(c, "motd.txt");
 
 	if (newuser)
 	{

@@ -65,7 +65,7 @@ struct undodb_t *undodb_init(const char *name)
 		return NULL;
 	}
 
-	res = sqlite3_prepare_v2(u.db, "SELECT x, y, z, oldtype, olddata FROM undo WHERE playerid = ? ORDER BY id DESC LIMIT ?", -1, &u.query3_stmt, NULL);
+	res = sqlite3_prepare_v2(u.db, "SELECT x, y, z, oldtype, olddata, newtype FROM undo WHERE playerid = ? ORDER BY id DESC LIMIT ?", -1, &u.query3_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
 		LOG("Can't prepare statement: %s", sqlite3_errmsg(u.db));
@@ -170,7 +170,8 @@ void undodb_undo_player(struct undodb_t *u, int playerid, int limit, undo_func_t
 		int16_t z = sqlite3_column_int(u->query3_stmt, 2);
 		int oldtype = sqlite3_column_int(u->query3_stmt, 3);
 		int olddata = sqlite3_column_int(u->query3_stmt, 4);
+		int newtype = sqlite3_column_int(u->query3_stmt, 5);
 
-		func(x, y, z, oldtype, olddata, arg);
+		func(x, y, z, oldtype, olddata, newtype, arg);
 	}
 }

@@ -17,6 +17,7 @@
 #include "network.h"
 #include "module.h"
 #include "undodb.h"
+#include "util.h"
 
 static const char s_on[] = TAG_RED "on";
 static const char s_off[] = TAG_GREEN "off";
@@ -740,6 +741,76 @@ CMD(instant)
 		}
 	}
 
+	return false;
+}
+
+static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg);
+
+static const char help_kbu[] =
+"/kbu <user> [<message>]\n"
+"Kicks, bans, and undoes the specified <user> from the server.";
+
+CMD(kbu)
+{
+	if (params < 2) return true;
+
+	char buf[128];
+	struct player_t *p;
+
+	enum rank_t oldrank = playerdb_get_rank(param[1]);
+	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
+	{
+		client_notify(c, "Cannot ban op or admin");
+		return false;
+	}
+
+	struct level_t *l;
+	int globalid;
+
+	playerdb_set_rank(param[1], RANK_BANNED);
+	p = player_get_by_name(param[1]);
+	if (p != NULL)
+	{
+		l = p->level;
+		globalid = p->globalid;
+
+		if (params == 2)
+		{
+			snprintf(buf, sizeof buf, "kickbanned by %s", c->player->username);
+		}
+		else
+		{
+			unsigned i;
+			snprintf(buf, sizeof buf, "kickbanned (");
+			for (i = 2; i < params; i++)
+			{
+				strcat(buf, param[i]);
+				strcat(buf, i < params - 1 ? " " : ")");
+			}
+		}
+		net_close(p->client, buf);
+	}
+	else
+	{
+		l = c->player->level;
+		globalid = playerdb_get_globalid(param[1], false, NULL);
+		if (globalid == -1)
+		{
+			client_notify(c, "Unknown username.");
+			return false;
+		}
+	}
+
+	if (l == NULL) return false;
+
+	if (l->undo == NULL) l->undo = undodb_init(l->name);
+	if (l->undo == NULL)
+	{
+		client_notify(c, "Undo not available for level.");
+		return false;
+	}
+
+	undodb_undo_player(l->undo, globalid, 4000, &undo_real, c);
 	return false;
 }
 
@@ -1560,6 +1631,18 @@ CMD(resetlvl)
 
 	cuboid_remove_for_level(l);
 
+//	physics_list_free(&l->physics);
+//	physics_list_free(&l->physics2);
+//	block_update_list_free(&l->updates);
+
+	undodb_close(l->undo);
+	l->undo = NULL;
+
+	char filename[256];
+	snprintf(filename, sizeof filename, "undo/%s.db", l->name);
+	lcase(filename);
+	unlink(filename);
+
 	level_gen(l, t, hr, sh);
 	return false;
 }
@@ -1827,12 +1910,16 @@ CMD(unbanip)
 	return false;
 }
 
-static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, void *arg)
+static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
 {
 	struct client_t *client = arg;
 	struct level_t *l = client->player->level;
+
+	if (x >= l->x || y >= l->y || z >= l->z) return;
 	unsigned index = level_get_index(l, x, y, z);
 	struct block_t *b = &l->blocks[index];
+
+	if (b->type != newtype) return;
 	struct block_t backup = *b;
 	b->type = oldtype;
 	b->data = olddata;
@@ -1840,13 +1927,16 @@ static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata,
 	*b = backup;
 }
 
-static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, void *arg)
+static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
 {
 	struct client_t *client = arg;
 	struct level_t *l = client->player->level;
+
+	if (x >= l->x || y >= l->y || z >= l->z) return;
 	unsigned index = level_get_index(l, x, y, z);
 	struct block_t *b = &l->blocks[index];
 
+	if (b->type != newtype) return;
 	b->type = oldtype;
 	b->data = olddata;
 
@@ -1922,7 +2012,7 @@ CMD(undo)
 		return false;
 	}
 
-	//,...,...,...client_add_packet(client, packet_send_set_block(x, y, z, pt));
+	//client_add_packet(client, packet_send_set_block(x, y, z, pt));
 	int limit = strtol(param[3], NULL, 10);
 
 	undodb_undo_player(l->undo, globalid, limit, params == 4 ? &undo_show : &undo_real, c);
@@ -2071,6 +2161,7 @@ struct command_t s_commands[] = {
 	{ "identify", RANK_GUEST, &cmd_identify, help_identify },
 	{ "info", RANK_BUILDER, &cmd_info, help_info },
 	{ "instant", RANK_OP, &cmd_instant, help_instant },
+	{ "kbu", RANK_OP, &cmd_kbu, help_kbu },
 	{ "kick", RANK_OP, &cmd_kick, help_kick },
 	{ "kickban", RANK_OP, &cmd_kickban, help_kickban },
 	{ "lava", RANK_GUEST, &cmd_lava, help_lava },
