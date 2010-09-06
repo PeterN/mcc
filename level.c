@@ -331,13 +331,13 @@ bool level_send(struct client_t *c)
 	        c->player->hook_data = NULL;
 	}
 
-	client_add_packet(c, packet_send_spawn_player(0xFF, c->player->colourusername, &c->player->pos));
+	client_add_packet(c, packet_send_spawn_player(0xFF, c->player->alias, &c->player->pos));
 
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
 		if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden)
 		{
-			client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->colourusername, &newlevel->clients[i]->player->pos));
+			client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->alias, &newlevel->clients[i]->player->pos));
 		}
 	}
 

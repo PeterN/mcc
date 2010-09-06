@@ -1657,6 +1657,25 @@ CMD(rules)
 	return false;
 }
 
+static const char help_setalias[] =
+"/setalias <user> [<alias>]\n";
+
+CMD(setalias)
+{
+	if (params != 2 && params != 3) return true;
+
+	struct player_t *p = player_get_by_name(param[1]);
+	if (p == NULL)
+	{
+		client_notify(c, "Player is offline.");
+		return false;
+	}
+
+	player_set_alias(p, params == 2 ? NULL : param[2]);
+	client_notify(c, "Alias set.");
+	return false;
+}
+
 static const char help_setpassword[] =
 "/setpassword <password> <password> [<oldpassword>]\n";
 
@@ -1746,8 +1765,13 @@ CMD(setrank)
 	p = player_get_by_name(param[1]);
 	if (p != NULL)
 	{
+		bool setalias = strcmp(p->colourusername, p->alias) == 0;
 		p->rank = newrank;
 		sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), p->username);
+		if (setalias)
+		{
+			strcpy(p->alias, p->colourusername);
+		}
 
 		if (oldrank >= RANK_OP)
 		{
@@ -1759,6 +1783,9 @@ CMD(setrank)
 			/* Give op status */
 			client_add_packet(p->client, packet_send_update_user_type(0x64));
 		}
+
+		client_send_despawn(p->client, false);
+		client_send_spawn(p->client, false);
 	}
 
 	char buf[64];
@@ -2185,6 +2212,7 @@ struct command_t s_commands[] = {
 	{ "replaceall", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
+	{ "setalias", RANK_ADMIN, &cmd_setalias, help_setalias },
 	{ "setpassword", RANK_BUILDER, &cmd_setpassword, help_setpassword },
 	{ "setposinterval", RANK_OP, &cmd_setposinterval, help_setposinterval },
 	{ "setrank", RANK_OP, &cmd_setrank, help_setrank },

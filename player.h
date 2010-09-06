@@ -37,6 +37,7 @@ struct player_t
 	unsigned levelid;
 	char colourusername[128];
 	char *username;
+	char alias[128];
 	enum rank_t rank;
 	enum mode_t mode;
 	uint8_t flags;
@@ -90,5 +91,7 @@ static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 
 void player_send_positions(void);
 bool player_check_spam(struct player_t *player);
+
+void player_set_alias(struct player_t *player, const char *alias);
 
 #endif /* PLAYER_H */

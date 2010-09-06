@@ -32,6 +32,25 @@ struct player_t *player_get_by_name(const char *username)
 	return NULL;
 }
 
+void player_set_alias(struct player_t *p, const char *alias)
+{
+	if (alias == NULL)
+	{
+		alias = p->colourusername;
+	}
+
+	snprintf(p->alias, sizeof p->alias, "%s", alias);
+
+	if (p->client != NULL)
+	{
+		// Renaming own client doesn't work
+//		client_add_packet(p->client, packet_send_despawn_player(0xFF));
+//		client_add_packet(p->client, packet_send_spawn_player(0xFF, p->alias, &p->pos));
+		client_send_despawn(p->client, false);
+		client_send_spawn(p->client, false);
+	}
+}
+
 struct player_t *player_add(const char *username, struct client_t *c, bool *newuser, int *identified)
 {
 	int globalid = playerdb_get_globalid(username, true, newuser);
@@ -43,6 +62,7 @@ struct player_t *player_add(const char *username, struct client_t *c, bool *newu
 	p->rank = playerdb_get_rank(username);
 	snprintf(p->colourusername, sizeof p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
 	p->globalid = globalid;
+	player_set_alias(p, NULL);
 
 	if (p->rank > RANK_BUILDER)
 	{

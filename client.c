@@ -272,7 +272,7 @@ void client_send_spawn(struct client_t *c, bool hiding)
 	{
 		if (level->clients[i] != NULL && level->clients[i] != c)
 		{
-			client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->colourusername, &c->player->pos));
+			client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->alias, &c->player->pos));
 			//printf("Told %s (%d) about %s joining %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
 		}
 	}
