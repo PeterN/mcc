@@ -141,7 +141,7 @@ static void zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 
 void module_init(void **data)
 {
-	register_level_hook_func("zomibes", &zombie_level_hook);
+	register_level_hook_func("zombies", &zombie_level_hook);
 }
 
 void module_deinit(void *data)
