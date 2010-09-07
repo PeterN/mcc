@@ -66,7 +66,7 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 	{
 		struct client_t *cl = l->clients[i];
 		/* cl is self, or already a zombie? */
-		if (cl == c) continue;
+		if (cl == NULL || cl == c) continue;
 		if (strncmp(cl->player->alias, TAG_RED, 2) == 0) continue;
 
 		if (position_match(&c->player->pos, &cl->player->pos, 32))
