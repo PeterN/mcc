@@ -41,7 +41,7 @@ void player_set_alias(struct player_t *p, const char *alias)
 
 	snprintf(p->alias, sizeof p->alias, "%s", alias);
 
-	if (p->client != NULL)
+	if (p->client != NULL && !p->client->hidden)
 	{
 		// Renaming own client doesn't work
 //		client_add_packet(p->client, packet_send_despawn_player(0xFF));
