@@ -227,7 +227,7 @@ void player_send_position(struct player_t *player)
 
 	if (player->level != NULL)
 	{
-		call_level_hook(EVENT_MOVE, player->level, player->client, &index);
+		call_level_hook(EVENT_MOVE, player->level, player->client, &player->levelid);
 	}
 
 	player->oldpos = player->pos;
