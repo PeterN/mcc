@@ -25,10 +25,19 @@ static void zombie_handle_chat(struct level_t *l, struct client_t *c, char *data
 		arg->ticksremaining = 300;
 		level_notify_all(l, TAG_GREEN "Game started!");
 
+		int i;
+		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+		{
+			if (l->clients[i] != NULL)
+			{
+				player_set_alias(l->clients[i]->player, NULL);
+			}
+		}
+
 		int max = 1000;
 		while (--max > 0)
 		{
-			int i = rand() % MAX_CLIENTS_PER_LEVEL;
+			i = rand() % MAX_CLIENTS_PER_LEVEL;
 			if (l->clients[i] != NULL)
 			{
 				char buf[128];
