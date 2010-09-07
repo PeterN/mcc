@@ -264,6 +264,8 @@ bool level_send(struct client_t *c)
 		{
 			char buf[64];
 
+			call_level_hook(EVENT_DESPAWN, oldlevel, c, NULL);
+
 			/* Despawn this user for all users */
 			if (!c->hidden) client_send_despawn(c->player->client, false);
 			oldlevel->clients[c->player->levelid] = NULL;
@@ -272,8 +274,6 @@ bool level_send(struct client_t *c)
 			call_hook(HOOK_CHAT, buf);
 			level_notify_all(oldlevel, buf);
 			level_notify_all(newlevel, buf);
-
-			call_level_hook(EVENT_DESPAWN, oldlevel, c, NULL);
 		}
 
 		/* Despawn users for this user */
