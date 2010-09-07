@@ -46,6 +46,7 @@ struct player_t
 
 	struct position_t pos;
 	struct position_t oldpos;
+	struct position_t lastpos;
 	int speed;
 	int speeds[10];
 	int warnings;

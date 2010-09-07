@@ -145,6 +145,7 @@ void player_move(struct player_t *player, struct position_t *pos)
 	player->speeds[i] = dx + dy + dz;
 	player->speed += player->speeds[i];
 
+	player->lastpos = player->pos;
 	player->pos = *pos;
 }
 
