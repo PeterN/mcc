@@ -1664,11 +1664,6 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 	level->physics_iter = 0;
 
 	level->physics_done = 0;
-
-	if (limit)
-	{
-		call_level_hook(EVENT_TICK, level, NULL, NULL);
-	}
 }
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
@@ -1734,6 +1729,8 @@ void level_process_physics(bool can_init)
 		pthread_mutex_unlock(&level->mutex);
 
 		level_run_physics(level, can_init, true);
+
+		call_level_hook(EVENT_TICK, level, NULL, NULL);
 	}
 }
 
