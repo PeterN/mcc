@@ -69,6 +69,10 @@ PORTALSRC := portal.c
 PORTALOBJ := $(PORTALSRC:.c=.o)
 PORTALO := portal.so
 
+ZOMBIESRC := zombies.c
+ZOMBIEOBJ := $(ZOMBIESRC:.c=.o)
+ZOMBIEO := zombies.so
+
 DOORSSRC := doors.c
 DOORSOBJ := $(DOORSSRC:.c=.o)
 DOORSO := doors.so
@@ -85,13 +89,13 @@ RENDER2SRC := render_chunked.c
 RENDER2OBJ := $(RENDER2SRC:.c=.o)
 RENDER2O := render2
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO) $(RENDERO) $(RENDER2O)
+all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO) $(RENDERO) $(RENDER2O) $(ZOMBIEO)
 
 clean:
-	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO) $(RENDEROBJ) $(RENDERO) $(RENDER2OBJ) $(RENDER2O)
+	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO) $(RENDEROBJ) $(RENDERO) $(RENDER2OBJ) $(RENDER2O) $(ZOMBIEOBJ) $(ZOMBIEO)
 
 depend:
-	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC) $(RENDERSRC) $(RENDER2SRC)
+	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC) $(RENDERSRC) $(RENDER2SRC) $(ZOMBIESRC)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
@@ -119,6 +123,9 @@ $(ALO): $(ALOBJ) $(LIBO)
 
 $(PORTALO): $(PORTALOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(PORTALO) $(PORTALOBJ) -o $@
+
+$(ZOMBIEO): $(ZOMBIEOBJ) $(LIBO)
+	$(CC) -shared -fPIC -Wl,-soname,$(ZOMBIEO) $(ZOMBIEOBJ) -o $@
 
 $(DOORSO): $(DOORSOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(DOORSO) $(DOORSOBJ) -o $@
@@ -264,7 +271,7 @@ commands.o: /usr/include/stdlib.h /usr/include/alloca.h mcc.h packet.h
 commands.o: position.h level.h /usr/include/pthread.h /usr/include/sched.h
 commands.o: /usr/include/bits/sched.h /usr/include/signal.h
 commands.o: /usr/include/bits/setjmp.h block.h bitstuff.h rank.h physics.h
-commands.o: player.h colour.h playerdb.h network.h module.h undodb.h
+commands.o: player.h colour.h playerdb.h network.h module.h undodb.h util.h
 config.o: /usr/include/string.h /usr/include/features.h
 config.o: /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h
 config.o: /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h mcc.h
@@ -848,3 +855,28 @@ render_chunked.o: /usr/include/stdlib.h /usr/include/alloca.h mcc.h rank.h
 render_chunked.o: chunk.h chunked_level.h /usr/include/pthread.h
 render_chunked.o: /usr/include/sched.h /usr/include/bits/sched.h
 render_chunked.o: /usr/include/signal.h landscape.h queue.h util.h
+zombies.o: /usr/include/stdio.h /usr/include/features.h
+zombies.o: /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h
+zombies.o: /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h
+zombies.o: /usr/include/bits/types.h /usr/include/bits/typesizes.h
+zombies.o: /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h
+zombies.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+zombies.o: /usr/include/string.h bitstuff.h /usr/include/stdint.h
+zombies.o: /usr/include/bits/wchar.h block.h /usr/include/limits.h
+zombies.o: /usr/include/bits/posix1_lim.h /usr/include/bits/local_lim.h
+zombies.o: /usr/include/linux/limits.h /usr/include/bits/posix2_lim.h list.h
+zombies.o: /usr/include/stdlib.h /usr/include/sys/types.h /usr/include/time.h
+zombies.o: /usr/include/bits/time.h /usr/include/endian.h
+zombies.o: /usr/include/bits/endian.h /usr/include/sys/select.h
+zombies.o: /usr/include/bits/select.h /usr/include/bits/sigset.h
+zombies.o: /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h
+zombies.o: /usr/include/alloca.h mcc.h rank.h colour.h client.h
+zombies.o: /usr/include/netinet/in.h /usr/include/sys/socket.h
+zombies.o: /usr/include/sys/uio.h /usr/include/bits/uio.h
+zombies.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
+zombies.o: /usr/include/asm/socket.h /usr/include/asm/sockios.h
+zombies.o: /usr/include/bits/in.h /usr/include/bits/byteswap.h hook.h
+zombies.o: packet.h position.h level.h /usr/include/pthread.h
+zombies.o: /usr/include/sched.h /usr/include/bits/sched.h
+zombies.o: /usr/include/signal.h /usr/include/bits/setjmp.h physics.h
+zombies.o: player.h
