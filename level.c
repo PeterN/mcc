@@ -274,6 +274,9 @@ bool level_send(struct client_t *c)
 			call_hook(HOOK_CHAT, buf);
 			level_notify_all(oldlevel, buf);
 			level_notify_all(newlevel, buf);
+
+			/* Reset the player's block mode */
+			c->player->mode = MODE_NORMAL;
 		}
 
 		/* Despawn users for this user */
@@ -1401,7 +1404,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 		if (client->player->rank < blocktype_min_rank(nt))
 		{
-			LOG("[level] %s tried to place %s (%d)\n", client->player->username, blocktype_get_name(nt), nt);
+			LOG("[%s] %s tried to place %s (%d)\n", level->name, client->player->username, blocktype_get_name(nt), nt);
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
 		}
