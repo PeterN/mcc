@@ -2267,7 +2267,7 @@ struct command_t s_commands[] = {
 	{ "solid", RANK_OP, &cmd_solid, help_solid },
 	{ "summon", RANK_OP, &cmd_summon, help_summon },
 	{ "time", RANK_GUEST, &cmd_time, help_time },
-	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
+	{ "tp", RANK_OP, &cmd_tp, help_tp },
 	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
