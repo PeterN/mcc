@@ -1950,6 +1950,12 @@ CMD(tp)
 		client_notify(c, buf);
 		return false;
 	}
+	if (p->client->hidden && c->player->rank < RANK_ADMIN)
+	{
+		snprintf(buf, sizeof buf, "%s is %s", param[1], c->player->rank == RANK_OP ? "hidden" : "offline");
+		client_notify(c, buf);
+		return false;
+	}
 
 	player_teleport(c->player, &p->pos, true);
 
