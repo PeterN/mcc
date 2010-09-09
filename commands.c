@@ -488,6 +488,13 @@ CMD(follow)
 	{
 		c->hidden = true;
 		client_send_despawn(c, true);
+
+		snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected", c->player->colourusername);
+		call_hook(HOOK_CHAT, buf);
+		net_notify_all(buf);
+
+		snprintf(buf, sizeof buf, TAG_AQUA "*** %s " TAG_AQUA "is hidden", c->player->colourusername);
+		net_notify_ops(buf);
 	}
 
 	/* Despawn followed player to prevent following player jitter */
@@ -572,18 +579,29 @@ CMD(hide)
 {
 	c->hidden = !c->hidden;
 
+	char buf[64];
 	if (c->hidden)
 	{
+		snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected", c->player->colourusername);
+		call_hook(HOOK_CHAT, buf);
+		net_notify_all(buf);
+
 		client_send_despawn(c, true);
 	}
 	else
 	{
+		snprintf(buf, sizeof buf, TAG_GREEN "+ %s" TAG_YELLOW " connected", c->player->colourusername);
+		call_hook(HOOK_CHAT, buf);
+		net_notify_all(buf);
+
 		client_send_spawn(c, true);
 	}
 
-	char buf[64];
 	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? s_on : s_off);
 	client_notify(c, buf);
+
+	snprintf(buf, sizeof buf, TAG_AQUA "*** %s " TAG_AQUA "is %s", c->player->colourusername, c->hidden ? "hidden" : "visible");
+	net_notify_ops(buf);
 
 	return false;
 }
