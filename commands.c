@@ -464,7 +464,7 @@ CMD(follow)
 		snprintf(buf, sizeof buf, "Stopped following %s", c->player->following->username);
 		client_notify(c, buf);
 
-		client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->username, &c->player->following->pos));
+		client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->alias, &c->player->following->pos));
 
 		c->player->following = NULL;
 		return false;
@@ -503,7 +503,7 @@ CMD(follow)
 	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? s_on : s_off);
 	client_notify(c, buf);
 
-	snprintf(buf, sizeof buf, "Now following %s", p->username);
+	snprintf(buf, sizeof buf, "Now following %s", p->colourusername);
 	client_notify(c, buf);
 
 	c->player->following = p;
