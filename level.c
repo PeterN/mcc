@@ -270,10 +270,13 @@ bool level_send(struct client_t *c)
 			if (!c->hidden) client_send_despawn(c->player->client, false);
 			oldlevel->clients[c->player->levelid] = NULL;
 
-			snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
-			call_hook(HOOK_CHAT, buf);
-			level_notify_all(oldlevel, buf);
-			level_notify_all(newlevel, buf);
+			if (!c->hidden)
+			{
+				snprintf(buf, sizeof buf, TAG_WHITE "=%s" TAG_YELLOW " moved to '%s'", c->player->colourusername, newlevel->name);
+				call_hook(HOOK_CHAT, buf);
+				level_notify_all(oldlevel, buf);
+				level_notify_all(newlevel, buf);
+			}
 
 			/* Reset the player's block mode */
 			c->player->mode = MODE_NORMAL;
