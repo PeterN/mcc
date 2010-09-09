@@ -483,3 +483,15 @@ void net_notify_all(const char *message)
 
 	LOG("[ALL] %s\n", message);
 }
+
+void net_notify_ops(const char *message)
+{
+	unsigned i;
+	for (i = 0; i < s_clients.used; i++)
+	{
+		struct client_t *c = s_clients.items[i];
+		if (c->close) continue;
+		if (c->player == NULL || c->player->rank < RANK_OP) continue;
+		client_notify(c, message);
+	}
+}
