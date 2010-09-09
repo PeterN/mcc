@@ -16,6 +16,8 @@
 	//x |= (1U << y);
 //}
 
+#define ClrBit(x, y) (x) &= ~(1U << (y))
+
 #define ToggleBit(x, y) (x) ^= (1U << (y))
 //static inline void ToggleBit(unsigned x, unsigned y)
 //{

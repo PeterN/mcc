@@ -248,6 +248,15 @@ CMD(blocks)
 	return false;
 }
 
+static const char help_clones[] =
+"/clones\n"
+"List all clients connected from same IP address.";
+
+CMD(clones)
+{
+	return false;
+}
+
 static const char help_commands[] =
 "/commands\n"
 "List all commands available to you.";
@@ -292,6 +301,12 @@ static const char help_cuboid[] =
 CMD(cuboid)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /cuboid when playing games");
+		return false;
+	}
 
 	if (params > 2) return true;
 
@@ -375,6 +390,12 @@ static const char help_disown[] =
 
 CMD(disown)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /disown when playing games");
+		return false;
+	}
+
 	ToggleBit(c->player->flags, FLAG_DISOWN);
 
 	char buf[64];
@@ -402,6 +423,12 @@ static const char help_filter[] =
 
 CMD(filter)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /filter when playing games");
+		return false;
+	}
+
 	if (params > 2) return true;
 
 	if (params == 2)
@@ -433,6 +460,12 @@ static const char help_fixed[] =
 
 CMD(fixed)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /fixed when playing games");
+		return false;
+	}
+
 	ToggleBit(c->player->flags, FLAG_PLACE_FIXED);
 
 	char buf[64];
@@ -450,6 +483,12 @@ static const char help_follow[] =
 CMD(follow)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't follow when playing games");
+		return false;
+	}
 
 	if (params > 2) return true;
 
@@ -583,6 +622,12 @@ static const char help_hide[] =
 
 CMD(hide)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /hide when playing games");
+		return false;
+	}
+
 	c->hidden = !c->hidden;
 
 	char buf[64];
@@ -942,6 +987,12 @@ static const char help_lava[] =
 
 CMD(lava)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /lava when playing games");
+		return false;
+	}
+
 	player_toggle_mode(c->player, MODE_PLACE_LAVA);
 
 	char buf[64];
@@ -1476,6 +1527,12 @@ CMD(place)
 {
 	char buf[64];
 
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /place when playing games");
+		return false;
+	}
+
 	if (params != 2 || params > 5) return true;
 
 	if (c->player->level == NULL || c->waiting_for_level)
@@ -1546,6 +1603,12 @@ CMD(replace)
 {
 	char buf[64];
 
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /replace when playing games");
+		return false;
+	}
+
 	if (params != 2 && params != 3) return true;
 
 	c->player->replace_type = blocktype_get_by_name(param[1]);
@@ -1595,6 +1658,12 @@ static const char help_replaceall[] =
 CMD(replaceall)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /replaceall when playing games");
+		return false;
+	}
 
 	if (params != 3) return true;
 
@@ -1860,6 +1929,12 @@ static const char help_spawn[] =
 
 CMD(spawn)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /spawn when playing games");
+		return false;
+	}
+
 	player_teleport(c->player, &c->player->level->spawn, true);
 
 	return false;
@@ -1871,6 +1946,12 @@ static const char help_solid[] =
 
 CMD(solid)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /solid when playing games");
+		return false;
+	}
+
 	player_toggle_mode(c->player, MODE_PLACE_SOLID);
 
 	char buf[64];
@@ -1887,6 +1968,12 @@ static const char help_summon[] =
 CMD(summon)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /summon when playing games");
+		return false;
+	}
 
 	if (params != 2) return true;
 
@@ -1940,6 +2027,12 @@ static const char help_tp[] =
 CMD(tp)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /tp when playing games");
+		return false;
+	}
 
 	if (params != 2) return true;
 
@@ -2154,6 +2247,12 @@ static const char help_water[] =
 
 CMD(water)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /water when playing games");
+		return false;
+	}
+
 	player_toggle_mode(c->player, MODE_PLACE_WATER);
 
 	char buf[64];
@@ -2215,6 +2314,7 @@ struct command_t s_commands[] = {
 	{ "banip", RANK_OP, &cmd_banip, help_banip },
 	{ "bind", RANK_BUILDER, &cmd_bind, help_bind },
 	{ "blocks", RANK_BUILDER, &cmd_blocks, help_blocks },
+	{ "clones", RANK_OP, &cmd_clones, help_clones },
 	{ "commands", RANK_BANNED, &cmd_commands, help_commands },
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
