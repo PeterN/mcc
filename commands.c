@@ -629,6 +629,27 @@ CMD(home)
 	return false;
 }
 
+static const char help_hooks[] =
+"/hooks";
+
+CMD(hooks)
+{
+	if (params != 1) return true;
+
+	int i;
+	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
+	{
+		if (*c->player->level->level_hook[i].name != '\0')
+		{
+			char buf[64];
+			snprintf(buf, sizeof buf, "%d) %s - %s", i + 1, c->player->level->level_hook[i].name, c->player->level->level_hook[i].func == NULL ? "inactive" : "active");
+			client_notify(c, buf);
+		}
+	}
+
+	return false;
+}
+
 static const char help_hookattach[] =
 "/hookattach <hook>";
 
@@ -2199,6 +2220,7 @@ struct command_t s_commands[] = {
 	{ "help", RANK_GUEST, &cmd_help, help_help },
 	{ "hide", RANK_OP, &cmd_hide, help_hide },
 	{ "home", RANK_GUEST, &cmd_home, help_home },
+	{ "hooks", RANK_OP, &cmd_hooks, help_hooks },
 	{ "hookattach", RANK_OP, &cmd_hookattach, help_hookattach },
 	{ "hookdetach", RANK_OP, &cmd_hookdetach, help_hookdetach },
 	{ "identify", RANK_GUEST, &cmd_identify, help_identify },

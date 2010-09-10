@@ -9,6 +9,7 @@
 #include "list.h"
 
 #define MAX_CLIENTS_PER_LEVEL 64
+#define MAX_HOOKS_PER_LEVEL 4
 
 struct player_t;
 struct client_t;
@@ -41,6 +42,13 @@ enum
 
 typedef void(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg);
 
+struct level_hooks_t
+{
+	char name[16];
+	level_hook_func_t func;
+	struct level_hook_data_t data;
+};
+
 struct level_t
 {
 	char name[64];
@@ -69,9 +77,7 @@ struct level_t
 	unsigned physics_runtime_last, updates_runtime_last;
 	unsigned physics_count_last, updates_count_last;
 
-	char level_hook_name[16];
-	level_hook_func_t level_hook_func;
-	struct level_hook_data_t level_hook_data;
+	struct level_hooks_t level_hook[MAX_HOOKS_PER_LEVEL];
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];

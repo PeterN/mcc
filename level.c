@@ -725,7 +725,12 @@ void level_unload(struct level_t *level)
 		LOG("Level '%s' deleted\n", level->name);
 	}
 
-	free(level->level_hook_data.data);
+	int i;
+	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
+	{
+		free(level->level_hook[i].data.data);
+	}
+
 	free(level->blocks);
 	free(level);
 }
@@ -922,15 +927,18 @@ static void *level_load_thread(void *arg)
 
 		if (version >= 4)
 		{
-			unsigned u;
-			if (gzread(gz, &u, sizeof u) != sizeof u) return level_load_thread_abort(l, "level_hooks");
+			unsigned n;
+			if (gzread(gz, &n, sizeof n) != sizeof n) return level_load_thread_abort(l, "level_hooks");
 
-			gzread(gz, l->level_hook_name, sizeof l->level_hook_name);
-			gzread(gz, &l->level_hook_data.size, sizeof l->level_hook_data.size);
-			l->level_hook_data.data = malloc(l->level_hook_data.size);
-			gzread(gz, l->level_hook_data.data, l->level_hook_data.size);
+			for (i = 0; i < (int)n; i++)
+			{
+				gzread(gz, l->level_hook[i].name, sizeof l->level_hook[i].name);
+				gzread(gz, &l->level_hook[i].data.size, sizeof l->level_hook[i].data.size);
+				l->level_hook[i].data.data = malloc(l->level_hook[i].data.size);
+				gzread(gz, l->level_hook[i].data.data, l->level_hook[i].data.size);
 
-			level_hook_attach(l, l->level_hook_name);
+				level_hook_attach(l, l->level_hook[i].name);
+			}
 		}
 
 		int count = l->x * l->y * l->z;
@@ -1053,18 +1061,13 @@ void *level_save_thread(void *arg)
 		gzwrite(gz, &l->userown.items[i], sizeof l->userown.items[i]);
 	}
 
-	if (*l->level_hook_name == '\0')
+	i = MAX_HOOKS_PER_LEVEL;
+	gzwrite(gz, &i, sizeof i);
+	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
 	{
-		i = 0;
-		gzwrite(gz, &i, sizeof i);
-	}
-	else
-	{
-		i = 1;
-		gzwrite(gz, &i, sizeof i);
-		gzwrite(gz, l->level_hook_name, sizeof l->level_hook_name);
-		gzwrite(gz, &l->level_hook_data.size, sizeof l->level_hook_data.size);
-		gzwrite(gz, l->level_hook_data.data, l->level_hook_data.size);
+		gzwrite(gz, l->level_hook[i].name, sizeof l->level_hook[i].name);
+		gzwrite(gz, &l->level_hook[i].data.size, sizeof l->level_hook[i].data.size);
+		gzwrite(gz, l->level_hook[i].data.data, l->level_hook[i].data.size);
 	}
 
 	gzclose(gz);
@@ -1782,14 +1785,17 @@ void register_level_hook_func(const char *name, level_hook_func_t level_hook_fun
 
 	LOG("Registered level hook %s\n", name);
 
-	unsigned i;
+	unsigned i, j;
 	for (i = 0; i < s_levels.used; i++)
 	{
 		struct level_t *l = s_levels.items[i];
 		if (l == NULL) continue;
-		if (l->level_hook_func == NULL && strcasecmp(l->level_hook_name, name) == 0)
+		for (j = 0; j < MAX_HOOKS_PER_LEVEL; j++)
 		{
-			level_hook_attach(l, name);
+			if (l->level_hook[j].func == NULL && strcasecmp(l->level_hook[j].name, name) == 0)
+			{
+				level_hook_attach(l, name);
+			}
 		}
 	}
 }
@@ -1799,15 +1805,18 @@ void deregister_level_hook_func(const char *name)
 	struct level_hook_t lh;
 	strncpy(lh.name, name, sizeof lh.name);
 
-	unsigned i;
+	unsigned i, j;
 	for (i = 0; i < s_levels.used; i++)
 	{
 		struct level_t *l = s_levels.items[i];
 		if (l == NULL) continue;
-		if (l->level_hook_func != NULL && strcasecmp(l->level_hook_name, name) == 0)
+		for (j = 0; j < MAX_HOOKS_PER_LEVEL; j++)
 		{
-			l->level_hook_func = NULL;
-			LOG("Detached level hook %s from %s\n", name, l->name);
+			if (l->level_hook[j].func != NULL && strcasecmp(l->level_hook[j].name, name) == 0)
+			{
+				l->level_hook[j].func = NULL;
+				LOG("Detached level hook %s from %s\n", name, l->name);
+			}
 		}
 	}
 
@@ -1828,31 +1837,70 @@ void level_hooks_deinit(void)
 
 bool level_hook_attach(struct level_t *l, const char *name)
 {
-	unsigned i;
+	unsigned i, j, n = -1, m = -1;
 	for (i = 0; i < s_level_hooks.used; i++)
 	{
 		if (strcasecmp(s_level_hooks.items[i].name, name) == 0)
 		{
-			strcpy(l->level_hook_name, s_level_hooks.items[i].name);
-			l->level_hook_func = s_level_hooks.items[i].level_hook_func;
-			LOG("Attached level hook %s to %s\n", name, l->name);
-			call_level_hook(EVENT_INIT, l, NULL, NULL);
-			return true;
+			m = i;
+			break;
 		}
 	}
 
-	return false;
+	if (m == -1)
+	{
+		LOG("Hook not found\n");
+		return false;
+	}
+
+	for (j = 0; j < MAX_HOOKS_PER_LEVEL; j++)
+	{
+		if (*l->level_hook[j].name == '\0' && n == -1)
+		{
+			n = j;
+		}
+
+		if (strcasecmp(l->level_hook[j].name, s_level_hooks.items[i].name) == 0)
+		{
+			if (l->level_hook[j].func != NULL)
+			{
+				LOG("Hook already attached\n");
+				return false;
+			}
+			n = j;
+			break;
+		}
+	}
+
+	if (n == -1)
+	{
+		LOG("Slot not found\n");
+		return false;
+	}
+
+	strcpy(l->level_hook[n].name, s_level_hooks.items[m].name);
+	l->level_hook[n].func = s_level_hooks.items[m].level_hook_func;
+
+	char buf[128];
+	snprintf(buf, sizeof buf, TAG_YELLOW "Attached level hook %s (%d)", l->level_hook[n].name, n + 1);
+	level_notify_all(l, buf);
+
+	call_level_hook(EVENT_INIT, l, NULL, NULL);
+	return true;
 }
 
 bool level_hook_detach(struct level_t *l, const char *name)
 {
 	unsigned i;
-	for (i = 0; i < 1; i++)
+	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
 	{
-		if (strcasecmp(l->level_hook_name, name) == 0)
+		if (strcasecmp(l->level_hook[i].name, name) == 0)
 		{
-			LOG("Detached level hook %s from %s\n", name, l->name);
-			l->level_hook_func = NULL;
+			char buf[128];
+			snprintf(buf, sizeof buf, TAG_YELLOW "Detached level hook %s (%d)", l->level_hook[i].name, i + 1);
+			level_notify_all(l, buf);
+
+			l->level_hook[i].func = NULL;
 			return true;
 		}
 	}
@@ -1862,7 +1910,12 @@ bool level_hook_detach(struct level_t *l, const char *name)
 
 void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data)
 {
-	if (l == NULL || l->level_hook_func == NULL) return;
+	if (l == NULL) return;
 
-	l->level_hook_func(hook, l, c, data, &l->level_hook_data);
+	unsigned i;
+	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
+	{
+		if (l->level_hook[i].func == NULL) continue;
+		l->level_hook[i].func(hook, l, c, data, &l->level_hook[i].data);
+	}
 }
