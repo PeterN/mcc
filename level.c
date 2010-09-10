@@ -1279,6 +1279,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	unsigned index = level_get_index(level, x, y, z);
 	struct block_t *b = &level->blocks[index];
 	enum blocktype_t bt = b->type;
+	bool ingame = HasBit(client->player->flags, FLAG_GAMES);
 
 	if (click)
 	{
@@ -1287,7 +1288,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		distance += abs(client->player->pos.y / 32 - y);
 		distance += abs(client->player->pos.z / 32 - z);
 
-		if (distance > 12)
+		if (distance > 12 && !ingame)
 		{
 			net_close(client, "Anti-grief: built too far away");
 			return;
@@ -1319,42 +1320,45 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 	bool can_build = level_user_can_build(level, client->player);
 
-	if (click && client->player->mode == MODE_CUBOID && can_build)
+	if (click && can_build && !ingame)
 	{
-		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-
-		if (client->player->cuboid_start == UINT_MAX)
+		if (client->player->mode == MODE_CUBOID)
 		{
-			client->player->cuboid_start = index;
-			client_notify(client, "Cuboid start placed");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+
+			if (client->player->cuboid_start == UINT_MAX)
+			{
+				client->player->cuboid_start = index;
+				client_notify(client, "Cuboid start placed");
+				return;
+			}
+
+			client_notify(client, "Cuboid end placed");
+			level_cuboid(level, client->player->cuboid_start, index, -1, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
+			client->player->mode = MODE_NORMAL;
 			return;
 		}
-
-		client_notify(client, "Cuboid end placed");
-		level_cuboid(level, client->player->cuboid_start, index, -1, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
-		client->player->mode = MODE_NORMAL;
-		return;
-	}
-	else if (click && client->player->mode == MODE_REPLACE && can_build)
-	{
-		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-
-		if (client->player->cuboid_start == UINT_MAX)
+		else if (client->player->mode == MODE_REPLACE)
 		{
-			client->player->cuboid_start = index;
-			client_notify(client, "Replace start placed");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+
+			if (client->player->cuboid_start == UINT_MAX)
+			{
+				client->player->cuboid_start = index;
+				client_notify(client, "Replace start placed");
+				return;
+			}
+
+			client_notify(client, "Replace end placed");
+			level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
+			client->player->mode = MODE_NORMAL;
 			return;
 		}
-
-		client_notify(client, "Replace end placed");
-		level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
-		client->player->mode = MODE_NORMAL;
-		return;
 	}
 
 	enum blocktype_t nt = click ? client->player->bindings[t] : t;
 
-	if (click)
+	if (click && !ingame)
 	{
 		if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
 		else if (client->player->mode == MODE_PLACE_WATER) nt = WATERSTILL;
@@ -1397,7 +1401,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	{
 		/* Not level owner, so check block permissions */
 
-		if (client->player->rank < RANK_OP && (bt == ADMINIUM || b->fixed))
+		if ((ingame || client->player->rank < RANK_OP) && (bt == ADMINIUM || b->fixed))
 			// || (b->owner != 0 && b->owner != client->player->globalid)))
 		{
 			client_notify(client, "Block cannot be changed");
@@ -1415,6 +1419,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		/* Air with owner can be replaced */
 		if ((b->owner != 0 && b->owner != client->player->globalid && b->type != AIR) && !level_user_can_own(level, client->player))
 		{
+			client_notify(client, "Block cannot be changed");
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
 		}
