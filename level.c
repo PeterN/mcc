@@ -1288,7 +1288,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		distance += abs(client->player->pos.y / 32 - y);
 		distance += abs(client->player->pos.z / 32 - z);
 
-		if (distance > 12 && !ingame)
+		if (distance > 12 && !ingame && !client->player->teleport)
 		{
 			net_close(client, "Anti-grief: built too far away");
 			return;
