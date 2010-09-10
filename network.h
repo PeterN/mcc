@@ -22,6 +22,7 @@ void net_run(void);
 void net_close(struct client_t *c, const char *reason);
 
 void net_notify_all(const char *message);
+void net_notify_ops(const char *message);
 
 void net_set_nonblock(int fd);
 

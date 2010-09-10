@@ -219,8 +219,12 @@ static void net_close_real(struct client_t *c)
 		{
 			snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected (%s)", c->player->colourusername, reason);
 		}
-		call_hook(HOOK_CHAT, buf);
-		net_notify_all(buf);
+
+		if (!c->hidden)
+		{
+			call_hook(HOOK_CHAT, buf);
+			net_notify_all(buf);
+		}
 
 		LOG("Closing connection from %s - %s (%d): %s\n", c->ip, c->player->username, c->player->globalid, reason);
 		player_del(c->player);
@@ -482,4 +486,16 @@ void net_notify_all(const char *message)
 	}
 
 	LOG("[ALL] %s\n", message);
+}
+
+void net_notify_ops(const char *message)
+{
+	unsigned i;
+	for (i = 0; i < s_clients.used; i++)
+	{
+		struct client_t *c = s_clients.items[i];
+		if (c->close) continue;
+		if (c->player == NULL || c->player->rank < RANK_OP) continue;
+		client_notify(c, message);
+	}
 }

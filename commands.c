@@ -248,6 +248,15 @@ CMD(blocks)
 	return false;
 }
 
+static const char help_clones[] =
+"/clones\n"
+"List all clients connected from same IP address.";
+
+CMD(clones)
+{
+	return false;
+}
+
 static const char help_commands[] =
 "/commands\n"
 "List all commands available to you.";
@@ -292,6 +301,12 @@ static const char help_cuboid[] =
 CMD(cuboid)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /cuboid when playing games");
+		return false;
+	}
 
 	if (params > 2) return true;
 
@@ -375,6 +390,12 @@ static const char help_disown[] =
 
 CMD(disown)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /disown when playing games");
+		return false;
+	}
+
 	ToggleBit(c->player->flags, FLAG_DISOWN);
 
 	char buf[64];
@@ -402,6 +423,12 @@ static const char help_filter[] =
 
 CMD(filter)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /filter when playing games");
+		return false;
+	}
+
 	if (params > 2) return true;
 
 	if (params == 2)
@@ -433,6 +460,12 @@ static const char help_fixed[] =
 
 CMD(fixed)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /fixed when playing games");
+		return false;
+	}
+
 	ToggleBit(c->player->flags, FLAG_PLACE_FIXED);
 
 	char buf[64];
@@ -451,6 +484,12 @@ CMD(follow)
 {
 	char buf[64];
 
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't follow when playing games");
+		return false;
+	}
+
 	if (params > 2) return true;
 
 	if (params == 1)
@@ -464,7 +503,7 @@ CMD(follow)
 		snprintf(buf, sizeof buf, "Stopped following %s", c->player->following->username);
 		client_notify(c, buf);
 
-		client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->username, &c->player->following->pos));
+		client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->alias, &c->player->following->pos));
 
 		c->player->following = NULL;
 		return false;
@@ -483,11 +522,24 @@ CMD(follow)
 		client_notify(c, buf);
 		return false;
 	}
+	if (p->client->hidden && c->player->rank < RANK_ADMIN)
+	{
+		snprintf(buf, sizeof buf, "%s is %s", param[1], c->player->rank == RANK_OP ? "hidden" : "offline");
+		client_notify(c, buf);
+		return false;
+	}
 
 	if (!c->hidden)
 	{
 		c->hidden = true;
 		client_send_despawn(c, true);
+
+		snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected", c->player->colourusername);
+		call_hook(HOOK_CHAT, buf);
+		net_notify_all(buf);
+
+		snprintf(buf, sizeof buf, TAG_AQUA "*** %s " TAG_AQUA "is hidden", c->player->colourusername);
+		net_notify_ops(buf);
 	}
 
 	/* Despawn followed player to prevent following player jitter */
@@ -496,7 +548,7 @@ CMD(follow)
 	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? s_on : s_off);
 	client_notify(c, buf);
 
-	snprintf(buf, sizeof buf, "Now following %s", p->username);
+	snprintf(buf, sizeof buf, "Now following %s", p->colourusername);
 	client_notify(c, buf);
 
 	c->player->following = p;
@@ -570,20 +622,37 @@ static const char help_hide[] =
 
 CMD(hide)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /hide when playing games");
+		return false;
+	}
+
 	c->hidden = !c->hidden;
 
+	char buf[64];
 	if (c->hidden)
 	{
+		snprintf(buf, sizeof buf, TAG_RED "- %s" TAG_YELLOW " disconnected", c->player->colourusername);
+		call_hook(HOOK_CHAT, buf);
+		net_notify_all(buf);
+
 		client_send_despawn(c, true);
 	}
 	else
 	{
+		snprintf(buf, sizeof buf, TAG_GREEN "+ %s" TAG_YELLOW " connected", c->player->colourusername);
+		call_hook(HOOK_CHAT, buf);
+		net_notify_all(buf);
+
 		client_send_spawn(c, true);
 	}
 
-	char buf[64];
 	snprintf(buf, sizeof buf, "Hidden %s", c->hidden ? s_on : s_off);
 	client_notify(c, buf);
+
+	snprintf(buf, sizeof buf, TAG_AQUA "*** %s " TAG_AQUA "is %s", c->player->colourusername, c->hidden ? "hidden" : "visible");
+	net_notify_ops(buf);
 
 	return false;
 }
@@ -939,6 +1008,12 @@ static const char help_lava[] =
 
 CMD(lava)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /lava when playing games");
+		return false;
+	}
+
 	player_toggle_mode(c->player, MODE_PLACE_LAVA);
 
 	char buf[64];
@@ -1473,6 +1548,12 @@ CMD(place)
 {
 	char buf[64];
 
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /place when playing games");
+		return false;
+	}
+
 	if (params != 2 || params > 5) return true;
 
 	if (c->player->level == NULL || c->waiting_for_level)
@@ -1543,6 +1624,12 @@ CMD(replace)
 {
 	char buf[64];
 
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /replace when playing games");
+		return false;
+	}
+
 	if (params != 2 && params != 3) return true;
 
 	c->player->replace_type = blocktype_get_by_name(param[1]);
@@ -1592,6 +1679,12 @@ static const char help_replaceall[] =
 CMD(replaceall)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /replaceall when playing games");
+		return false;
+	}
 
 	if (params != 3) return true;
 
@@ -1857,6 +1950,12 @@ static const char help_spawn[] =
 
 CMD(spawn)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /spawn when playing games");
+		return false;
+	}
+
 	player_teleport(c->player, &c->player->level->spawn, true);
 
 	return false;
@@ -1868,6 +1967,12 @@ static const char help_solid[] =
 
 CMD(solid)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /solid when playing games");
+		return false;
+	}
+
 	player_toggle_mode(c->player, MODE_PLACE_SOLID);
 
 	char buf[64];
@@ -1884,6 +1989,12 @@ static const char help_summon[] =
 CMD(summon)
 {
 	char buf[64];
+
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /summon when playing games");
+		return false;
+	}
 
 	if (params != 2) return true;
 
@@ -1938,6 +2049,12 @@ CMD(tp)
 {
 	char buf[64];
 
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /tp when playing games");
+		return false;
+	}
+
 	if (params != 2) return true;
 
 	const struct player_t *p = player_get_by_name(param[1]);
@@ -1950,6 +2067,12 @@ CMD(tp)
 	if (p->level != c->player->level)
 	{
 		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], p->level->name);
+		client_notify(c, buf);
+		return false;
+	}
+	if (p->client->hidden && c->player->rank < RANK_ADMIN)
+	{
+		snprintf(buf, sizeof buf, "%s is %s", param[1], c->player->rank == RANK_OP ? "hidden" : "offline");
 		client_notify(c, buf);
 		return false;
 	}
@@ -2145,6 +2268,12 @@ static const char help_water[] =
 
 CMD(water)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /water when playing games");
+		return false;
+	}
+
 	player_toggle_mode(c->player, MODE_PLACE_WATER);
 
 	char buf[64];
@@ -2206,6 +2335,7 @@ struct command_t s_commands[] = {
 	{ "banip", RANK_OP, &cmd_banip, help_banip },
 	{ "bind", RANK_BUILDER, &cmd_bind, help_bind },
 	{ "blocks", RANK_BUILDER, &cmd_blocks, help_blocks },
+	{ "clones", RANK_OP, &cmd_clones, help_clones },
 	{ "commands", RANK_BANNED, &cmd_commands, help_commands },
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
@@ -2259,7 +2389,7 @@ struct command_t s_commands[] = {
 	{ "solid", RANK_OP, &cmd_solid, help_solid },
 	{ "summon", RANK_OP, &cmd_summon, help_summon },
 	{ "time", RANK_GUEST, &cmd_time, help_time },
-	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
+	{ "tp", RANK_OP, &cmd_tp, help_tp },
 	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },

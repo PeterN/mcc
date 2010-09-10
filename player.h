@@ -19,6 +19,7 @@ enum
 	FLAG_PAINT,
 	FLAG_DISOWN,
 	FLAG_GLOBAL,
+	FLAG_GAMES,
 };
 
 enum mode_t
