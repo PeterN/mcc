@@ -2395,6 +2395,8 @@ struct command_t s_commands[] = {
 	{ "activewater", RANK_OP, &cmd_activewater, help_activewater },
 	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
+	{ "al", RANK_OP, &cmd_activelava, help_activelava },
+	{ "aw", RANK_OP, &cmd_activewater, help_activewater },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },
 	{ "banip", RANK_OP, &cmd_banip, help_banip },
 	{ "bind", RANK_BUILDER, &cmd_bind, help_bind },
