@@ -32,7 +32,7 @@ struct player_t *player_get_by_name(const char *username)
 	return NULL;
 }
 
-void player_set_alias(struct player_t *p, const char *alias)
+void player_set_alias(struct player_t *p, const char *alias, bool send_spawn)
 {
 	if (alias == NULL)
 	{
@@ -41,7 +41,7 @@ void player_set_alias(struct player_t *p, const char *alias)
 
 	snprintf(p->alias, sizeof p->alias, "%s", alias);
 
-	if (p->client != NULL && !p->client->hidden)
+	if (p->client != NULL && !p->client->hidden && send_spawn)
 	{
 		// Renaming own client doesn't work
 //		client_add_packet(p->client, packet_send_despawn_player(0xFF));
@@ -62,7 +62,7 @@ struct player_t *player_add(const char *username, struct client_t *c, bool *newu
 	p->rank = playerdb_get_rank(username);
 	snprintf(p->colourusername, sizeof p->colourusername, "&%x%s", rank_get_colour(p->rank), username);
 	p->globalid = globalid;
-	player_set_alias(p, NULL);
+	player_set_alias(p, NULL, false);
 
 	if (p->rank > RANK_BUILDER)
 	{
@@ -147,11 +147,17 @@ void player_move(struct player_t *player, struct position_t *pos)
 
 	player->lastpos = player->pos;
 	player->pos = *pos;
+
+	if (player->level != NULL)
+	{
+		call_level_hook(EVENT_MOVE, player->level, player->client, &player->levelid);
+	}
 }
 
 void player_teleport(struct player_t *player, const struct position_t *pos, bool instant)
 {
 	player->pos = *pos;
+	player->lastpos = *pos;
 	player->teleport = true;
 
 	if (instant)
@@ -225,11 +231,6 @@ void player_send_position(struct player_t *player)
 	}
 
 	if (changed == 0) return;
-
-	if (player->level != NULL)
-	{
-		call_level_hook(EVENT_MOVE, player->level, player->client, &player->levelid);
-	}
 
 	player->oldpos = player->pos;
 

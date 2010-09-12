@@ -97,6 +97,6 @@ static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 void player_send_positions(void);
 bool player_check_spam(struct player_t *player);
 
-void player_set_alias(struct player_t *player, const char *alias);
+void player_set_alias(struct player_t *player, const char *alias, bool send_spawn);
 
 #endif /* PLAYER_H */

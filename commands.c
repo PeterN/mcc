@@ -1862,7 +1862,7 @@ CMD(setalias)
 		return false;
 	}
 
-	player_set_alias(p, params == 2 ? NULL : param[2]);
+	player_set_alias(p, params == 2 ? NULL : param[2], true);
 	client_notify(c, "Alias set.");
 	return false;
 }
