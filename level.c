@@ -1366,6 +1366,18 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		if (client->player->mode == MODE_PLACE_SOLID) nt = ADMINIUM;
 		else if (client->player->mode == MODE_PLACE_WATER) nt = WATERSTILL;
 		else if (client->player->mode == MODE_PLACE_LAVA) nt = LAVASTILL;
+		else if (client->player->mode == MODE_PLACE_ACTIVE_WATER)
+		{
+			client->player->mode = MODE_NORMAL;
+			nt = WATER;
+			client_notify(client, "Active water " TAG_GREEN "off");
+		}
+		else if (client->player->mode == MODE_PLACE_ACTIVE_LAVA)
+		{
+			client->player->mode = MODE_NORMAL;
+			nt = LAVA;
+			client_notify(client, "Active lava " TAG_GREEN "off");
+		}
 	}
 
 	/* Client thinks it has changed to air */

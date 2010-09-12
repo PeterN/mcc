@@ -89,6 +89,50 @@ struct command_t s_commands[];
 
 #define CMD(x) static bool cmd_ ## x (struct client_t *c, int params, const char **param)
 
+static const char help_activelava[] =
+"/activelava\n"
+"Toggle active lava mode. Any block placed will be converted to lava.";
+
+CMD(activelava)
+{
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /activelava when playing games");
+		return false;
+	}
+
+	player_toggle_mode(c->player, MODE_PLACE_ACTIVE_LAVA);
+
+	char buf[64];
+	snprintf(buf, sizeof buf, "Active lava %s", (c->player->mode == MODE_PLACE_ACTIVE_LAVA) ? s_on : s_off);
+	client_notify(c, buf);
+
+	return false;
+}
+
+static const char help_activewater[] =
+"/activewater\n"
+"Toggle active water mode. Any block placed will be converted to water.";
+
+CMD(activewater)
+{
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /activewater when playing games");
+		return false;
+	}
+
+	player_toggle_mode(c->player, MODE_PLACE_ACTIVE_WATER);
+
+	char buf[64];
+	snprintf(buf, sizeof buf, "Active water %s", (c->player->mode == MODE_PLACE_ACTIVE_WATER) ? s_on : s_off);
+	client_notify(c, buf);
+
+	return false;
+}
+
+
+
 static const char help_adminrules[] =
 "/adminrules\n"
 "Display the server's admin rules.";
@@ -2347,6 +2391,8 @@ CMD(whois)
 }
 
 struct command_t s_commands[] = {
+	{ "activelava", RANK_OP, &cmd_activelava, help_activelava },
+	{ "activewater", RANK_OP, &cmd_activewater, help_activewater },
 	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },
