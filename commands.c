@@ -65,6 +65,16 @@ void notify_multipart(const char *text, void *arg)
 	t->bufp += len;
 }
 
+static void reconstruct(char *buf, size_t len, int params, const char **param)
+{
+	int i;
+	for (i = 0; i < params; i++)
+	{
+		strcat(buf, param[i]);
+		if (i < params - 1) strcat(buf, " ");
+	}
+}
+
 typedef bool(*command_func_t)(struct client_t *c, int params, const char **param);
 
 struct command_t
@@ -131,13 +141,9 @@ CMD(ban)
 	}
 	else
 	{
-		unsigned i;
 		snprintf(buf, sizeof buf, "%s banned (", param[1]);
-		for (i = 2; i < params; i++)
-		{
-			strcat(buf, param[i]);
-			strcat(buf, i < params - 1 ? " " : ")");
-		}
+		reconstruct(buf, sizeof buf, params - 2, param + 2);
+		strcat(buf, ")");
 	}
 	net_notify_all(buf);
 	return false;
@@ -885,13 +891,9 @@ CMD(kbu)
 		}
 		else
 		{
-			unsigned i;
 			snprintf(buf, sizeof buf, "kickbanned (");
-			for (i = 2; i < params; i++)
-			{
-				strcat(buf, param[i]);
-				strcat(buf, i < params - 1 ? " " : ")");
-			}
+			reconstruct(buf, sizeof buf, params - 2, param + 2);
+			strcat(buf, ")");
 		}
 		net_close(p->client, buf);
 	}
@@ -943,13 +945,9 @@ CMD(kick)
 	}
 	else
 	{
-		unsigned i;
 		snprintf(buf, sizeof buf, "kicked (");
-		for (i = 2; i < params; i++)
-		{
-			strcat(buf, param[i]);
-			strcat(buf, i < params - 1 ? " " : ")");
-		}
+		reconstruct(buf, sizeof buf, params - 2, param + 2);
+		strcat(buf, ")");
 	}
 	net_close(p->client, buf);
 
@@ -989,13 +987,9 @@ CMD(kickban)
 	}
 	else
 	{
-		unsigned i;
 		snprintf(buf, sizeof buf, "kickbanned (");
-		for (i = 2; i < params; i++)
-		{
-			strcat(buf, param[i]);
-			strcat(buf, i < params - 1 ? " " : ")");
-		}
+		reconstruct(buf, sizeof buf, params - 2, param + 2);
+		strcat(buf, ")");
 	}
 	net_close(p->client, buf);
 
@@ -1167,6 +1161,30 @@ CMD(mapinfo)
 			snprintf(buf, sizeof buf, "Own permission: %s", playerdb_get_username(c->player->level->userown.items[i]));
 			client_notify(c, buf);
 		}
+	}
+
+	return false;
+}
+
+static const char help_me[] =
+"/me <message>\n";
+
+CMD(me)
+{
+	if (params < 2) return true;
+
+	char buf[128];
+	snprintf(buf, sizeof buf, "%s%c%c* %s ", HasBit(c->player->flags, FLAG_GLOBAL) ? "! " : "", c->player->colourusername[0], c->player->colourusername[1], c->player->username);
+	reconstruct(buf, sizeof buf, params - 1, param + 1);
+
+	call_hook(HOOK_CHAT, buf);
+	if (HasBit(c->player->flags, FLAG_GLOBAL))
+	{
+		net_notify_all(buf);
+	}
+	else
+	{
+		level_notify_all(c->player->level, buf);
 	}
 
 	return false;
@@ -2362,6 +2380,7 @@ struct command_t s_commands[] = {
 	{ "levels", RANK_GUEST, &cmd_levels, help_levels },
 	{ "lvlowner", RANK_OP, &cmd_lvlowner, help_lvlowner },
 	{ "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
+	{ "me", RANK_GUEST, &cmd_me, help_me },
 	{ "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
 	{ "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
 	{ "modules", RANK_ADMIN, &cmd_modules, help_modules },
