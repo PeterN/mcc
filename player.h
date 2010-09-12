@@ -31,6 +31,8 @@ enum mode_t
 	MODE_PLACE_SOLID,
 	MODE_PLACE_WATER,
 	MODE_PLACE_LAVA,
+	MODE_PLACE_ACTIVE_WATER,
+	MODE_PLACE_ACTIVE_LAVA,
 };
 
 struct player_t
@@ -95,6 +97,6 @@ static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 void player_send_positions(void);
 bool player_check_spam(struct player_t *player);
 
-void player_set_alias(struct player_t *player, const char *alias);
+void player_set_alias(struct player_t *player, const char *alias, bool send_spawn);
 
 #endif /* PLAYER_H */

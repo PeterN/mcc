@@ -196,7 +196,7 @@ void client_process(struct client_t *c, char *message)
 
 		for (;;)
 		{
-			size_t l = strcspn(bufp, " ,");
+			size_t l = strcspn(bufp, " ");
 			bool end = false;
 
 			if (bufp[l] == '\0') end = true;

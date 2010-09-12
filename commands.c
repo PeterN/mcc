@@ -65,6 +65,16 @@ void notify_multipart(const char *text, void *arg)
 	t->bufp += len;
 }
 
+static void reconstruct(char *buf, size_t len, int params, const char **param)
+{
+	int i;
+	for (i = 0; i < params; i++)
+	{
+		strcat(buf, param[i]);
+		if (i < params - 1) strcat(buf, " ");
+	}
+}
+
 typedef bool(*command_func_t)(struct client_t *c, int params, const char **param);
 
 struct command_t
@@ -78,6 +88,50 @@ struct command_t
 struct command_t s_commands[];
 
 #define CMD(x) static bool cmd_ ## x (struct client_t *c, int params, const char **param)
+
+static const char help_activelava[] =
+"/activelava\n"
+"Toggle active lava mode. Any block placed will be converted to lava.";
+
+CMD(activelava)
+{
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /activelava when playing games");
+		return false;
+	}
+
+	player_toggle_mode(c->player, MODE_PLACE_ACTIVE_LAVA);
+
+	char buf[64];
+	snprintf(buf, sizeof buf, "Active lava %s", (c->player->mode == MODE_PLACE_ACTIVE_LAVA) ? s_on : s_off);
+	client_notify(c, buf);
+
+	return false;
+}
+
+static const char help_activewater[] =
+"/activewater\n"
+"Toggle active water mode. Any block placed will be converted to water.";
+
+CMD(activewater)
+{
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /activewater when playing games");
+		return false;
+	}
+
+	player_toggle_mode(c->player, MODE_PLACE_ACTIVE_WATER);
+
+	char buf[64];
+	snprintf(buf, sizeof buf, "Active water %s", (c->player->mode == MODE_PLACE_ACTIVE_WATER) ? s_on : s_off);
+	client_notify(c, buf);
+
+	return false;
+}
+
+
 
 static const char help_adminrules[] =
 "/adminrules\n"
@@ -131,13 +185,9 @@ CMD(ban)
 	}
 	else
 	{
-		unsigned i;
 		snprintf(buf, sizeof buf, "%s banned (", param[1]);
-		for (i = 2; i < params; i++)
-		{
-			strcat(buf, param[i]);
-			strcat(buf, i < params - 1 ? " " : ")");
-		}
+		reconstruct(buf, sizeof buf, params - 2, param + 2);
+		strcat(buf, ")");
 	}
 	net_notify_all(buf);
 	return false;
@@ -885,13 +935,9 @@ CMD(kbu)
 		}
 		else
 		{
-			unsigned i;
 			snprintf(buf, sizeof buf, "kickbanned (");
-			for (i = 2; i < params; i++)
-			{
-				strcat(buf, param[i]);
-				strcat(buf, i < params - 1 ? " " : ")");
-			}
+			reconstruct(buf, sizeof buf, params - 2, param + 2);
+			strcat(buf, ")");
 		}
 		net_close(p->client, buf);
 	}
@@ -943,13 +989,9 @@ CMD(kick)
 	}
 	else
 	{
-		unsigned i;
 		snprintf(buf, sizeof buf, "kicked (");
-		for (i = 2; i < params; i++)
-		{
-			strcat(buf, param[i]);
-			strcat(buf, i < params - 1 ? " " : ")");
-		}
+		reconstruct(buf, sizeof buf, params - 2, param + 2);
+		strcat(buf, ")");
 	}
 	net_close(p->client, buf);
 
@@ -989,13 +1031,9 @@ CMD(kickban)
 	}
 	else
 	{
-		unsigned i;
 		snprintf(buf, sizeof buf, "kickbanned (");
-		for (i = 2; i < params; i++)
-		{
-			strcat(buf, param[i]);
-			strcat(buf, i < params - 1 ? " " : ")");
-		}
+		reconstruct(buf, sizeof buf, params - 2, param + 2);
+		strcat(buf, ")");
 	}
 	net_close(p->client, buf);
 
@@ -1167,6 +1205,30 @@ CMD(mapinfo)
 			snprintf(buf, sizeof buf, "Own permission: %s", playerdb_get_username(c->player->level->userown.items[i]));
 			client_notify(c, buf);
 		}
+	}
+
+	return false;
+}
+
+static const char help_me[] =
+"/me <message>\n";
+
+CMD(me)
+{
+	if (params < 2) return true;
+
+	char buf[128];
+	snprintf(buf, sizeof buf, "%s%c%c* %s ", HasBit(c->player->flags, FLAG_GLOBAL) ? "! " : "", c->player->colourusername[0], c->player->colourusername[1], c->player->username);
+	reconstruct(buf, sizeof buf, params - 1, param + 1);
+
+	call_hook(HOOK_CHAT, buf);
+	if (HasBit(c->player->flags, FLAG_GLOBAL))
+	{
+		net_notify_all(buf);
+	}
+	else
+	{
+		level_notify_all(c->player->level, buf);
 	}
 
 	return false;
@@ -1800,7 +1862,7 @@ CMD(setalias)
 		return false;
 	}
 
-	player_set_alias(p, params == 2 ? NULL : param[2]);
+	player_set_alias(p, params == 2 ? NULL : param[2], true);
 	client_notify(c, "Alias set.");
 	return false;
 }
@@ -2329,8 +2391,12 @@ CMD(whois)
 }
 
 struct command_t s_commands[] = {
+	{ "activelava", RANK_OP, &cmd_activelava, help_activelava },
+	{ "activewater", RANK_OP, &cmd_activewater, help_activewater },
 	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
+	{ "al", RANK_OP, &cmd_activelava, help_activelava },
+	{ "aw", RANK_OP, &cmd_activewater, help_activewater },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },
 	{ "banip", RANK_OP, &cmd_banip, help_banip },
 	{ "bind", RANK_BUILDER, &cmd_bind, help_bind },
@@ -2340,7 +2406,6 @@ struct command_t s_commands[] = {
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
 	{ "dellvl", RANK_OP, &cmd_dellvl, help_dellvl },
-	{ "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "exit", RANK_ADMIN, &cmd_exit, help_exit },
 	{ "fixed", RANK_OP, &cmd_fixed, help_fixed },
 	{ "filter", RANK_OP, &cmd_filter, help_filter },
@@ -2363,6 +2428,7 @@ struct command_t s_commands[] = {
 	{ "levels", RANK_GUEST, &cmd_levels, help_levels },
 	{ "lvlowner", RANK_OP, &cmd_lvlowner, help_lvlowner },
 	{ "mapinfo", RANK_GUEST, &cmd_mapinfo, help_mapinfo },
+	{ "me", RANK_GUEST, &cmd_me, help_me },
 	{ "module_load", RANK_ADMIN, &cmd_module_load, help_module_load },
 	{ "module_unload", RANK_ADMIN, &cmd_module_unload, help_module_unload },
 	{ "modules", RANK_ADMIN, &cmd_modules, help_modules },
@@ -2376,6 +2442,8 @@ struct command_t s_commands[] = {
 	{ "physics", RANK_OP, &cmd_physics, help_physics },
 	{ "place", RANK_ADV_BUILDER, &cmd_place, help_place },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
+	{ "r", RANK_ADV_BUILDER, &cmd_replace, help_replace },
+	{ "ra", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "replaceall", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
@@ -2395,6 +2463,7 @@ struct command_t s_commands[] = {
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
 	{ "water", RANK_GUEST, &cmd_water, help_water },
 	{ "whois", RANK_GUEST, &cmd_whois, help_whois },
+	{ "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ NULL, -1, NULL, NULL },
 };
 
