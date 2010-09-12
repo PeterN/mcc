@@ -2340,7 +2340,6 @@ struct command_t s_commands[] = {
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
 	{ "dellvl", RANK_OP, &cmd_dellvl, help_dellvl },
-	{ "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "exit", RANK_ADMIN, &cmd_exit, help_exit },
 	{ "fixed", RANK_OP, &cmd_fixed, help_fixed },
 	{ "filter", RANK_OP, &cmd_filter, help_filter },
@@ -2376,6 +2375,8 @@ struct command_t s_commands[] = {
 	{ "physics", RANK_OP, &cmd_physics, help_physics },
 	{ "place", RANK_ADV_BUILDER, &cmd_place, help_place },
 	{ "players", RANK_GUEST, &cmd_players, help_players },
+	{ "r", RANK_ADV_BUILDER, &cmd_replace, help_replace },
+	{ "ra", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "replaceall", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
@@ -2395,6 +2396,7 @@ struct command_t s_commands[] = {
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
 	{ "water", RANK_GUEST, &cmd_water, help_water },
 	{ "whois", RANK_GUEST, &cmd_whois, help_whois },
+	{ "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ NULL, -1, NULL, NULL },
 };
 
