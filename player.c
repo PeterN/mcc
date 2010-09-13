@@ -405,7 +405,7 @@ void player_list(struct client_t *c, const struct level_t *l)
 			if (i == 0 && p->rank != RANK_ADMIN && p->rank != RANK_OP) continue;
 			if (i == 1 && p->rank != RANK_ADV_BUILDER && p->rank != RANK_BUILDER) continue;
 			if (i == 2 && p->rank != RANK_GUEST && p->rank != RANK_BANNED) continue;
-			if (c->player->rank < RANK_ADMIN && p->client->hidden) continue;
+			if (c->player->rank < RANK_OP && p->client->hidden) continue;
 
 			size_t len = strlen(p->colourusername) + 1;
 			if (len >= sizeof buf - (bufp - buf))
