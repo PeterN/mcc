@@ -807,6 +807,25 @@ CMD(hookdetach)
 	return false;
 }
 
+static const char help_hookdelete[] =
+"/hookdelete <hook>";
+
+CMD(hookdelete)
+{
+	if (params != 2) return true;
+
+	if (level_hook_delete(c->player->level, param[1]))
+	{
+		client_notify(c, "Hook deleted");
+	}
+	else
+	{
+		client_notify(c, "Hook not deleted");
+	}
+
+	return false;
+}
+
 static const char help_identify[] =
 "/identify <password>\n"
 "Identify your account so that you may use privileged commands.";
@@ -2417,6 +2436,7 @@ struct command_t s_commands[] = {
 	{ "home", RANK_GUEST, &cmd_home, help_home },
 	{ "hooks", RANK_OP, &cmd_hooks, help_hooks },
 	{ "hookattach", RANK_OP, &cmd_hookattach, help_hookattach },
+	{ "hookdelete", RANK_OP, &cmd_hookdelete, help_hookdelete },
 	{ "hookdetach", RANK_OP, &cmd_hookdetach, help_hookdetach },
 	{ "identify", RANK_GUEST, &cmd_identify, help_identify },
 	{ "info", RANK_BUILDER, &cmd_info, help_info },

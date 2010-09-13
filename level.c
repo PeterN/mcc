@@ -1917,13 +1917,41 @@ bool level_hook_detach(struct level_t *l, const char *name)
 	unsigned i;
 	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
 	{
-		if (strcasecmp(l->level_hook[i].name, name) == 0)
+		if (strcasecmp(l->level_hook[i].name, name) == 0 && l->level_hook[i].func != NULL)
 		{
+			call_level_hook(EVENT_DEINIT, l, NULL, NULL);
+
 			char buf[128];
 			snprintf(buf, sizeof buf, TAG_YELLOW "Detached level hook %s (%d)", l->level_hook[i].name, i + 1);
 			level_notify_all(l, buf);
 
 			l->level_hook[i].func = NULL;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool level_hook_delete(struct level_t *l, const char *name)
+{
+	unsigned i;
+	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
+	{
+		if (strcasecmp(l->level_hook[i].name, name) == 0)
+		{
+			if (l->level_hook[i].func != NULL)
+			{
+				call_level_hook(EVENT_DEINIT, l, NULL, NULL);
+
+				char buf[128];
+				snprintf(buf, sizeof buf, TAG_YELLOW "Detached level hook %s (%d)", l->level_hook[i].name, i + 1);
+				level_notify_all(l, buf);
+
+				l->level_hook[i].func = NULL;
+			}
+
+			*l->level_hook[i].name = '\0';
 			return true;
 		}
 	}

@@ -38,6 +38,7 @@ enum
 	EVENT_SAVE    = 1 << 6,
 	EVENT_UNLOAD  = 1 << 7,
 	EVENT_INIT    = 1 << 8,
+	EVENT_DEINIT  = 1 << 9,
 };
 
 typedef void(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg);
@@ -137,6 +138,7 @@ void deregister_level_hook_func(const char *name);
 
 bool level_hook_attach(struct level_t *l, const char *name);
 bool level_hook_detach(struct level_t *l, const char *name);
+bool level_hook_delete(struct level_t *l, const char *name);
 
 void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data);
 
