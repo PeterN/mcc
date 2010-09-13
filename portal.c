@@ -217,7 +217,7 @@ static void portal_handle_move(struct level_t *l, struct client_t *c, int index,
 	if (HasBit(c->player->flags, 7))
 	{
 //		client_notify(c, "Moved out of portal");
-		c->player->flags ^= 1 << 7;
+		ClrBit(c->player->flags, 7);
 	}
 }
 
