@@ -399,6 +399,20 @@ static void zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 			arg->data = calloc(1, arg->size);
 			break;
 		}
+		case EVENT_DEINIT:
+		{
+			if (l == NULL) return;
+
+			int i;
+			for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+			{
+				struct client_t *cl = l->clients[i];
+				if (cl == NULL) continue;
+
+				player_set_alias(cl->player, NULL, true);
+				ClrBit(cl->player->flags, FLAG_GAMES);
+			}
+		}
 	}
 }
 
