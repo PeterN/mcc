@@ -940,7 +940,10 @@ static void *level_load_thread(void *arg)
 				l->level_hook[i].data.data = malloc(l->level_hook[i].data.size);
 				gzread(gz, l->level_hook[i].data.data, l->level_hook[i].data.size);
 
-				level_hook_attach(l, l->level_hook[i].name);
+				if (*l->level_hook[i].name != '\0')
+				{
+					level_hook_attach(l, l->level_hook[i].name);
+				}
 			}
 		}
 
