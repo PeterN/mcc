@@ -54,6 +54,7 @@ int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_
 	free(descp->name);
 	descp->name = strdup(name);
 	descp->loaded = true;
+	descp->clear = clear;
 	descp->min_rank = min_rank;
 	descp->convert_func = convert_func;
 	descp->trigger_func = trigger_func;
@@ -192,6 +193,41 @@ bool sponge_test(struct level_t *l, int16_t x, int16_t y, int16_t z)
 	return false;
 }
 
+void delete_air(struct level_t *l, unsigned index, const struct block_t *block)
+{
+
+	int16_t x, y, z;
+	level_get_xyz(l, index, &x, &y, &z);
+
+	if (y > 0)
+	{
+		/* "Fall" down to the surface */
+		unsigned index2;
+//		do
+		{
+			y--;
+			index2 = level_get_index(l, x, y, z);
+		}
+//		while (y > 0 && s_blocks.items[l->blocks[index2].type].clear);
+		if (l->blocks[index2].fixed) return;
+
+		switch (l->blocks[index2].type)
+		{
+			case GRASS:
+				if (l->blocks[index2].data == 1)
+					level_addupdate(l, index2, BLOCK_INVALID, 0);
+				break;
+
+//			case DIRT:
+				// We're not deleted yet, so just add update
+//				if (l->blocks[index2].data == 91)
+//					level_addupdate(l, index2, BLOCK_INVALID, 0);
+//				break;
+		}
+	}
+	
+}
+
 void physics_air(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	int16_t x, y, z;
@@ -228,13 +264,28 @@ void physics_air(struct level_t *l, unsigned index, const struct block_t *block)
 	physics_air_sub(l, index, x, y, z + 1, false, flood);
 }
 
+void physics_grass(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	if (block->data > 0)
+	{
+		if (!light_check(l, index))
+		{
+			level_addupdate(l, index, DIRT, 1);
+		}
+	}
+	else
+	{
+		level_addupdate(l, index, BLOCK_INVALID, block->data + 1);
+	}
+}
+
 void physics_dirt(struct level_t *l, unsigned index, const struct block_t *block)
 {
-	if (block->data > 90)
+	if (block->data > 0)
 	{
 		if (light_check(l, index))
 		{
-			level_addupdate(l, index, GRASS, 0);
+			level_addupdate(l, index, GRASS, 1);
 		}
 	}
 	else
@@ -517,10 +568,10 @@ enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const st
 
 void blocktype_init(void)
 {
-	register_blocktype(AIR, "air", RANK_GUEST, NULL, NULL, NULL, &physics_air, true);
+	register_blocktype(AIR, "air", RANK_GUEST, NULL, NULL, &delete_air, &physics_air, true);
 	register_blocktype(ROCK, "stone", RANK_GUEST, NULL, NULL, NULL, NULL, false);
-	register_blocktype(GRASS, "grass", RANK_GUEST, NULL, NULL, NULL, NULL, false);
-	register_blocktype(DIRT, "dirt", RANK_GUEST, NULL, NULL, NULL, NULL, false);
+	register_blocktype(GRASS, "grass", RANK_GUEST, NULL, NULL, NULL, &physics_grass, false);
+	register_blocktype(DIRT, "dirt", RANK_GUEST, NULL, NULL, NULL, &physics_dirt, false);
 	register_blocktype(STONE, "cobblestone", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 	register_blocktype(WOOD, "wood", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 	register_blocktype(SHRUB, "plant", RANK_GUEST, NULL, NULL, NULL, NULL, true);

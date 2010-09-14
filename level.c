@@ -649,7 +649,7 @@ void *level_gen_thread(void *arg)
 
 	LOG("levelgen: %llu physics blocks, prerunning\n", (long long unsigned)level->physics.used);
 
-	//level_prerun(level);
+	level_prerun(level);
 
 	LOG("levelgen: %llu physics blocks remaining\n", (long long unsigned)level->physics.used);
 
@@ -1735,7 +1735,7 @@ void level_prerun(struct level_t *l)
 {
 	int n;
 
-	for (n = 0; n < 100; n++)
+	for (n = 0; n < 4; n++)
 	{
 		level_run_physics(l, true, false);
 		level_run_updates(l, true, false);
