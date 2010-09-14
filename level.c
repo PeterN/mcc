@@ -203,7 +203,7 @@ bool level_send(struct client_t *c)
 	{
 		c->waiting_for_level = false;
 		c->player->new_level = oldlevel;
-		client_notify(c, "You do not have sufficient permission to join level");
+		client_notify(c, "You can't join this level");
 		return false;
 	}
 
@@ -1410,7 +1410,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 	if (!can_build)
 	{
-		client_notify(client, "You do not have sufficient permission to build on this level");
+		client_notify(client, "You can't build on this level");
 		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 		return;
 	}

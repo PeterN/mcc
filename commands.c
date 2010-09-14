@@ -167,7 +167,7 @@ CMD(ban)
 	oldrank = playerdb_get_rank(param[1]);
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
-		client_notify(c, "Cannot ban op or admin");
+		client_notify(c, "Can't ban op or admin");
 		return false;
 	}
 
@@ -622,7 +622,7 @@ CMD(goto)
 	else
 	{
 		char buf[64];
-		snprintf(buf, sizeof buf, "Cannot go to level '%s'", param[1]);
+		snprintf(buf, sizeof buf, "Can't go to level '%s'", param[1]);
 		client_notify(c, buf);
 	}
 
@@ -934,7 +934,7 @@ CMD(kbu)
 	enum rank_t oldrank = playerdb_get_rank(param[1]);
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
-		client_notify(c, "Cannot ban op or admin");
+		client_notify(c, "Can't ban op or admin");
 		return false;
 	}
 
@@ -1031,7 +1031,7 @@ CMD(kickban)
 	enum rank_t oldrank = playerdb_get_rank(param[1]);
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
-		client_notify(c, "Cannot ban op or admin");
+		client_notify(c, "Can't ban op or admin");
 		return false;
 	}
 
@@ -1967,7 +1967,7 @@ CMD(setrank)
 	}
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
-		client_notify(c, "Cannot demote op or admin");
+		client_notify(c, "Can't demote op or admin");
 		return false;
 	}
 
@@ -2141,24 +2141,27 @@ CMD(tp)
 	const struct player_t *p = player_get_by_name(param[1]);
 	if (p == NULL)
 	{
-		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+		snprintf(buf, sizeof buf, TAG_YELLOW "%s is offline", param[1]);
 		client_notify(c, buf);
-		return false;
 	}
-	if (p->level != c->player->level)
+	else if (p->level != c->player->level)
 	{
-		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], p->level->name);
+		snprintf(buf, sizeof buf, TAG_YELLOW "%s is on '%s'", param[1], p->level->name);
 		client_notify(c, buf);
-		return false;
 	}
-	if (p->client->hidden && c->player->rank < RANK_ADMIN)
+	else if (p->client->hidden && c->player->rank < RANK_ADMIN)
 	{
-		snprintf(buf, sizeof buf, "%s is %s", param[1], c->player->rank == RANK_OP ? "hidden" : "offline");
+		snprintf(buf, sizeof buf, TAG_YELLOW "%s is %s", param[1], c->player->rank == RANK_OP ? "hidden" : "offline");
 		client_notify(c, buf);
-		return false;
 	}
-
-	player_teleport(c->player, &p->pos, true);
+	else if (c->player->rank < RANK_OP && !level_user_can_own(c->player->level, c->player))
+	{
+		client_notify(c, TAG_YELLOW "You can't /tp on this level");
+	}
+	else
+	{
+		player_teleport(c->player, &p->pos, true);
+	}
 
 	return false;
 }
@@ -2234,7 +2237,7 @@ CMD(undo)
 	struct level_t *l;
 	if (!level_get_by_name(param[1], &l))
 	{
-		client_notify(c, "Cannot load level.");
+		client_notify(c, "Can't load level.");
 		return false;
 	}
 
@@ -2275,7 +2278,7 @@ CMD(undo)
 
 	if (c->player->level != l)
 	{
-		client_notify(c, "Cannot preview undo on a different level.");
+		client_notify(c, "Can't preview undo on a different level.");
 		return false;
 	}
 
@@ -2410,12 +2413,12 @@ CMD(whois)
 }
 
 struct command_t s_commands[] = {
-	{ "activelava", RANK_OP, &cmd_activelava, help_activelava },
-	{ "activewater", RANK_OP, &cmd_activewater, help_activewater },
+	{ "activelava", RANK_ADV_BUILDER, &cmd_activelava, help_activelava },
+	{ "activewater", RANK_ADV_BUILDER, &cmd_activewater, help_activewater },
 	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
-	{ "al", RANK_OP, &cmd_activelava, help_activelava },
-	{ "aw", RANK_OP, &cmd_activewater, help_activewater },
+	{ "al", RANK_ADV_BUILDER, &cmd_activelava, help_activelava },
+	{ "aw", RANK_ADV_BUILDER, &cmd_activewater, help_activewater },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },
 	{ "banip", RANK_OP, &cmd_banip, help_banip },
 	{ "bind", RANK_BUILDER, &cmd_bind, help_bind },
@@ -2477,7 +2480,7 @@ struct command_t s_commands[] = {
 	{ "solid", RANK_OP, &cmd_solid, help_solid },
 	{ "summon", RANK_OP, &cmd_summon, help_summon },
 	{ "time", RANK_GUEST, &cmd_time, help_time },
-	{ "tp", RANK_OP, &cmd_tp, help_tp },
+	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
 	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
