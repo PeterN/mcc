@@ -131,6 +131,8 @@ void irc_process(struct irc_t *s, char *message)
 		{
 			if (strncmp(notify, "\001ACTION", 7) == 0)
 			{
+				/* Trim \001 character from end */
+				notify[strlen(notify) - 1] = '\0';
 				snprintf(buf, sizeof buf, "! " TAG_NAVY "* %s%s", src, notify + 7);
 			}
 			else
