@@ -1210,7 +1210,7 @@ void level_unload_empty(void *arg)
 		for (j = 0; j < s_cuboids.used; j++)
 		{
 			const struct cuboid_t *c = &s_cuboids.items[j];
-			if (c->level == l)
+			if (c->level == l || c->srclevel == l)
 			{
 				cuboid = true;
 				break;
