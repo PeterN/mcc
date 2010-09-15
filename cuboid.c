@@ -12,7 +12,7 @@ void cuboid_process(void)
 	for (i = 0; i < s_cuboids.used; i++)
 	{
 		struct cuboid_t *c = &s_cuboids.items[i];
-		int max = 50;
+		int max = g_server.cuboid_max;
 
 		if (c->srclevel != NULL)
 		{

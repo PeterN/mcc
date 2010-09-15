@@ -103,6 +103,7 @@ int main(int argc, char **argv)
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
 	g_server.pos_interval = 40;
+	g_server.cuboid_max = 100;
 
 	g_server.irc.hostname = "fuzzle.org";
 	g_server.irc.port = 6667;

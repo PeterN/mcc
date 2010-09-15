@@ -18,6 +18,7 @@ struct server_t
 	clock_t cpu_start;
 	double cpu_time;
 	int pos_interval;
+	int cuboid_max;
 
 	FILE *logfile;
 

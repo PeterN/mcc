@@ -1918,6 +1918,26 @@ CMD(setalias)
 	return false;
 }
 
+static const char help_setcuboidmax[] =
+"/setcuboidmax <max>\n"
+"Set maximum block changes to perform during cuboiding.";
+
+CMD(setcuboidmax)
+{
+	if (params != 2) return true;
+
+	int max = atoi(param[1]);
+
+	g_server.cuboid_max = max;
+
+	char buf[64];
+	snprintf(buf, sizeof buf, TAG_YELLOW "Cuboid max set to %d ms", g_server.cuboid_max);
+	client_notify(c, buf);
+	LOG("%s\n", buf);
+
+	return false;
+}
+
 static const char help_setpassword[] =
 "/setpassword <password> <password> [<oldpassword>]\n";
 
@@ -2505,6 +2525,7 @@ struct command_t s_commands[] = {
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
 	{ "setalias", RANK_ADMIN, &cmd_setalias, help_setalias },
+	{ "setcuboidmax", RANK_OP, &cmd_setcuboidmax, help_setcuboidmax },
 	{ "setpassword", RANK_BUILDER, &cmd_setpassword, help_setpassword },
 	{ "setposinterval", RANK_OP, &cmd_setposinterval, help_setposinterval },
 	{ "setrank", RANK_OP, &cmd_setrank, help_setrank },
