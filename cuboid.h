@@ -20,6 +20,7 @@ struct cuboid_t
 	bool fixed;
 	bool owner_is_op;
 	int count;
+	struct level_t *srclevel;
 };
 
 static inline bool cuboid_t_compare(struct cuboid_t *a, struct cuboid_t *b)

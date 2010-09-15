@@ -1237,6 +1237,27 @@ bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int1
 	return true;
 }
 
+void level_copy(struct level_t *src, struct level_t *dst)
+{
+	struct cuboid_t c;
+
+	c.sx = c.ex = c.cx = 0;
+	c.sy = c.ey = c.cy = 0;
+	c.sz = c.ez = c.cz = 0;
+	c.level = dst;
+	c.srclevel = src;
+	c.count = 0;
+	c.old_type = BLOCK_INVALID;
+	c.new_type = BLOCK_INVALID;
+	c.owner = 0;
+	c.owner_is_op = true;
+	c.fixed = false;
+
+	cuboid_list_add(&s_cuboids, c);
+
+	dst->no_changes = 1;
+}
+
 void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t old_type, enum blocktype_t new_type, const struct player_t *p)
 {
 	struct cuboid_t c;
@@ -1253,6 +1274,7 @@ void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum bloc
 	c.cy = c.ey;
 	c.cz = c.sz;
 	c.level = level;
+	c.srclevel = NULL;
 	c.count = 0;
 	c.old_type = old_type;
 	c.new_type = new_type;
@@ -1286,6 +1308,12 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	struct block_t *b = &level->blocks[index];
 	enum blocktype_t bt = b->type;
 	bool ingame = HasBit(client->player->flags, FLAG_GAMES);
+
+	if (level->no_changes)
+	{
+		client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
+		return;
+	}
 
 	if (click)
 	{

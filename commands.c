@@ -343,6 +343,38 @@ CMD(commands)
 	return false;
 }
 
+static const char help_copylvl[] =
+"/copylvl <src> <dst>\n"
+"Copy map from src level to dst level.";
+
+CMD(copylvl)
+{
+	if (params != 3) return true;
+
+	char buf[64];
+
+	struct level_t *src;
+	if (!level_get_by_name(param[1], &src))
+	{
+		snprintf(buf, sizeof buf, TAG_YELLOW "Can't load level %s for copying", param[1]);
+		client_notify(c, buf);
+		return false;
+	}
+
+	struct level_t *dst;
+	if (!level_get_by_name(param[2], &dst))
+	{
+		snprintf(buf, sizeof buf, TAG_YELLOW "Can't load level %s for copying", param[2]);
+		client_notify(c, buf);
+		return false;
+	}
+
+	level_copy(src, dst);
+
+	return false;
+}
+
+
 static const char help_cuboid[] =
 "/cuboid [<type>]\n"
 "Place a cuboid, using two corners specified after using the command. "
@@ -2425,6 +2457,7 @@ struct command_t s_commands[] = {
 	{ "blocks", RANK_BUILDER, &cmd_blocks, help_blocks },
 	{ "clones", RANK_OP, &cmd_clones, help_clones },
 	{ "commands", RANK_BANNED, &cmd_commands, help_commands },
+	{ "copylvl", RANK_OP, &cmd_copylvl, help_copylvl },
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
 	{ "dellvl", RANK_OP, &cmd_dellvl, help_dellvl },

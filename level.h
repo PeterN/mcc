@@ -95,6 +95,7 @@ struct level_t
 	uint8_t convert:1;
 	uint8_t delete:1;
 	uint8_t thread_valid:1;
+	uint8_t no_changes:1;
 
 	pthread_t thread;
 	pthread_mutex_t mutex;
@@ -135,6 +136,8 @@ void level_process_updates(bool can_init);
 
 void register_level_hook_func(const char *name, level_hook_func_t level_hook_func);
 void deregister_level_hook_func(const char *name);
+
+void level_copy(struct level_t *src, struct level_t *dst);
 
 bool level_hook_attach(struct level_t *l, const char *name);
 bool level_hook_detach(struct level_t *l, const char *name);
