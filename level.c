@@ -333,8 +333,10 @@ bool level_send(struct client_t *c)
 	if (oldlevel != newlevel)
 	{
 		c->player->pos = newlevel->spawn;
+		c->player->lastpos = newlevel->spawn;
+		c->player->teleport = true;
 		call_level_hook(EVENT_SPAWN, newlevel, c, c->player->hook_data);
-	        c->player->hook_data = NULL;
+		c->player->hook_data = NULL;
 	}
 
 	client_add_packet(c, packet_send_spawn_player(0xFF, c->player->alias, &c->player->pos));
