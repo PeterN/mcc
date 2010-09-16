@@ -1281,7 +1281,7 @@ void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum bloc
 	c.old_type = old_type;
 	c.new_type = new_type;
 	c.owner = HasBit(p->flags, FLAG_DISOWN) ? 0 : p->globalid;
-	c.owner_is_op = p->rank >= RANK_OP;
+	c.owner_is_op = (p->rank >= RANK_OP) || level_user_can_own(level, p);
 	c.fixed = HasBit(p->flags, FLAG_PLACE_FIXED);
 
 	cuboid_list_add(&s_cuboids, c);
