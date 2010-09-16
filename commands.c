@@ -369,7 +369,19 @@ CMD(copylvl)
 		return false;
 	}
 
+	cuboid_remove_for_level(dst);
+
 	level_copy(src, dst);
+
+	undodb_close(dst->undo);
+	dst->undo = NULL;
+
+	char filename[256];
+	snprintf(filename, sizeof filename, "undo/%s.db", dst->name);
+	lcase(filename);
+	unlink(filename);
+
+	level_notify_all(dst, TAG_YELLOW "Started level copy");
 
 	return false;
 }
