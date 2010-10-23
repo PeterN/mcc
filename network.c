@@ -258,10 +258,18 @@ static void net_packetsend(struct client_t *c)
 		res = send(c->sock, p->buffer, p->loc - p->buffer, MSG_NOSIGNAL);
 		if (res == -1)
 		{
-			//if (errno != EWOULDBLOCK)
-			//{
-				LOG("send: %s\n", strerror(errno));
-			//}
+			if (errno == ECONNRESET)
+			{
+				/* Connection reset by peer... normal disconnect */
+				net_close(c, NULL);
+			}
+			else if (errno != EWOULDBLOCK && errno != EAGAIN)
+			{
+				/* Abnormal error */
+				char buf[128];
+				snprintf(buf, sizeof buf, "send: %s", strerror(errno));
+				net_close(c, buf);
+			}
 			break;
 		}
 
@@ -281,6 +289,8 @@ static void net_packetsend(struct client_t *c)
 			c->packet_send_end = &c->packet_send;
 			break;
 		}
+
+		break;
 	}
 }
 
@@ -468,7 +478,7 @@ void net_run(void)
 		{
 			net_packetsend(c);
 		}
-		if (FD_ISSET(c->sock, &read_fd))
+		if (!c->close && FD_ISSET(c->sock, &read_fd))
 		{
 			net_packetrecv(c);
 		}
