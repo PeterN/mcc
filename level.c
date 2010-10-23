@@ -1655,7 +1655,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 
 	//LOG("Done %d out of %lu\n", level->updates_iter, level->updates.used);
 
-	int n = 40;
+	int n = g_server.cuboid_max;
 	for (; level->updates_iter < level->updates.used; level->updates_iter++)
 	{
 		struct block_update_t *bu = &level->updates.items[level->updates_iter];
