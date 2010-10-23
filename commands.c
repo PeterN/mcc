@@ -776,8 +776,8 @@ CMD(home)
 
 		l->owner = c->player->globalid;
 		l->rankvisit = RANK_GUEST;
-		l->rankbuild = RANK_ADMIN;
-		l->rankown   = RANK_ADMIN;
+		l->rankbuild = RANK_OP;
+		l->rankown   = RANK_OP;
 		user_list_add(&l->uservisit, l->owner);
 		user_list_add(&l->userbuild, l->owner);
 		user_list_add(&l->userown,   l->owner);
