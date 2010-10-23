@@ -214,7 +214,7 @@ void delete_air(struct level_t *l, unsigned index, const struct block_t *block)
 		switch (l->blocks[index2].type)
 		{
 			case GRASS:
-				if (l->blocks[index2].data == 1)
+//				if (l->blocks[index2].data == 1)
 					level_addupdate(l, index2, BLOCK_INVALID, 0);
 				break;
 
