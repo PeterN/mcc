@@ -1355,6 +1355,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	}
 
 	bool can_build = level_user_can_build(level, client->player);
+	enum blocktype_t nt = click ? client->player->bindings[t] : t;
 
 	if (click && can_build && !ingame)
 	{
@@ -1369,8 +1370,18 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 				return;
 			}
 
+			nt = (client->player->cuboid_type == BLOCK_INVALID) ? nt : client->player->cuboid_type;
+			if (client->player->globalid != level->owner && client->player->rank < blocktype_min_rank(nt))
+			{
+				char buf[128];
+				snprintf(buf, sizeof buf, "You do not have permission to place %s", blocktype_get_name(nt));
+				client_notify(client, buf);
+				client->player->mode = MODE_NORMAL;
+				return;
+			}
+
 			client_notify(client, "Cuboid end placed");
-			level_cuboid(level, client->player->cuboid_start, index, -1, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
+			level_cuboid(level, client->player->cuboid_start, index, -1, nt, client->player);
 			client->player->mode = MODE_NORMAL;
 			return;
 		}
@@ -1385,14 +1396,22 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 				return;
 			}
 
+			nt = (client->player->cuboid_type == BLOCK_INVALID) ? nt : client->player->cuboid_type;
+			if (client->player->globalid != level->owner && client->player->rank < blocktype_min_rank(nt))
+			{
+				char buf[128];
+				snprintf(buf, sizeof buf, "You do not have permission to place %s", blocktype_get_name(nt));
+				client_notify(client, buf);
+				client->player->mode = MODE_NORMAL;
+				return;
+			}
+
 			client_notify(client, "Replace end placed");
-			level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, client->player->cuboid_type == BLOCK_INVALID ? client->player->bindings[t] : client->player->cuboid_type, client->player);
+			level_cuboid(level, client->player->cuboid_start, index, client->player->replace_type, nt, client->player);
 			client->player->mode = MODE_NORMAL;
 			return;
 		}
 	}
-
-	enum blocktype_t nt = click ? client->player->bindings[t] : t;
 
 	if (click && !ingame)
 	{

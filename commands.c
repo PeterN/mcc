@@ -404,9 +404,7 @@ CMD(cuboid)
 
 	if (params > 2) return true;
 
-	c->player->mode = MODE_CUBOID;
-	c->player->cuboid_start = UINT_MAX;
-	c->player->replace_type = BLOCK_INVALID;
+	c->player->mode = MODE_NORMAL;
 
 	if (params == 2)
 	{
@@ -416,9 +414,9 @@ CMD(cuboid)
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
 			return false;
 		}
-		else if (c->player->cuboid_type == ADMINIUM && c->player->rank < RANK_OP)
+		else if (c->player->rank < blocktype_min_rank(c->player->cuboid_type))
 		{
-			snprintf(buf, sizeof buf, "You do not have permission to place adminium");
+			snprintf(buf, sizeof buf, "You do not have permission to place %s", param[1]);
 			return false;
 		}
 	}
@@ -427,6 +425,9 @@ CMD(cuboid)
 		c->player->cuboid_type = BLOCK_INVALID;
 	}
 
+	c->player->mode = MODE_CUBOID;
+	c->player->cuboid_start = UINT_MAX;
+	c->player->replace_type = BLOCK_INVALID;
 
 	snprintf(buf, sizeof buf, "Place corners of cuboid");
 	client_notify(c, buf);
@@ -1757,15 +1758,17 @@ CMD(replace)
 
 	if (params != 2 && params != 3) return true;
 
+	c->player->mode = MODE_NORMAL;
+
 	c->player->replace_type = blocktype_get_by_name(param[1]);
 	if (c->player->replace_type == BLOCK_INVALID)
 	{
 		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
 		return false;
 	}
-	else if (c->player->replace_type == ADMINIUM && c->player->rank < RANK_OP)
+	else if (c->player->rank < blocktype_min_rank(c->player->replace_type))
 	{
-		snprintf(buf, sizeof buf, "You do not have permission to replace adminium");
+		snprintf(buf, sizeof buf, "You do not have permission to replace %s", param[1]);
 		return false;
 	}
 
@@ -1777,9 +1780,9 @@ CMD(replace)
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
 			return false;
 		}
-		else if (c->player->cuboid_type == ADMINIUM && c->player->rank < RANK_OP)
+		else if (c->player->rank < blocktype_min_rank(c->player->cuboid_type))
 		{
-			snprintf(buf, sizeof buf, "You do not have permission to place adminium");
+			snprintf(buf, sizeof buf, "You do not have permission to place %s", param[2]);
 			return false;
 		}
 	}
