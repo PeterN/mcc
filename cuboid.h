@@ -19,6 +19,7 @@ struct cuboid_t
 	unsigned owner;
 	bool fixed;
 	bool owner_is_op;
+	bool undo;
 	int count;
 	struct level_t *srclevel;
 };

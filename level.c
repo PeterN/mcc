@@ -1254,6 +1254,7 @@ void level_copy(struct level_t *src, struct level_t *dst)
 	c.owner = 0;
 	c.owner_is_op = true;
 	c.fixed = false;
+	c.undo = false;
 
 	cuboid_list_add(&s_cuboids, c);
 
@@ -1283,6 +1284,7 @@ void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum bloc
 	c.owner = HasBit(p->flags, FLAG_DISOWN) ? 0 : p->globalid;
 	c.owner_is_op = (p->rank >= RANK_OP) || level_user_can_own(level, p);
 	c.fixed = HasBit(p->flags, FLAG_PLACE_FIXED);
+	c.undo = false;
 
 	cuboid_list_add(&s_cuboids, c);
 }
@@ -1308,6 +1310,7 @@ void level_user_undo(struct level_t *level, unsigned globalid)
 	c.owner = globalid;
 	c.owner_is_op = false;
 	c.fixed = false;
+	c.undo = true;
 
 	cuboid_list_add(&s_cuboids, c);
 }

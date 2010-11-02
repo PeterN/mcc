@@ -43,7 +43,7 @@ void cuboid_process(void)
 
 			if (c->old_type == BLOCK_INVALID || bt == c->old_type)
 			{
-				if (c->owner_is_op || b->owner == 0 || b->owner == c->owner)
+				if ((!c->undo && (c->owner_is_op || b->owner == 0)) || b->owner == c->owner)
 				{
 					delete(c->level, index, b);
 
