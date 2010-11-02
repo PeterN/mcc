@@ -990,7 +990,7 @@ CMD(kbu)
 	p = player_get_by_name(param[1]);
 	if (p != NULL)
 	{
-		l = p->level;
+		l = c->player->level;
 		globalid = p->globalid;
 
 		if (params == 2)
