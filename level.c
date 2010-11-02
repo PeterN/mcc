@@ -1296,9 +1296,9 @@ void level_user_undo(struct level_t *level, unsigned globalid)
 	c.sx = 0;
 	c.sy = 0;
 	c.sz = 0;
-	c.ex = level->x;
-	c.ey = level->y;
-	c.ez = level->z;
+	c.ex = level->x - 1;
+	c.ey = level->y - 1;
+	c.ez = level->z - 1;
 	c.cx = c.sx;
 	c.cy = c.ey;
 	c.cz = c.sz;
