@@ -148,4 +148,6 @@ void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data
 bool level_user_can_visit(const struct level_t *l, const struct player_t *p);
 bool level_user_can_build(const struct level_t *l, const struct player_t *p);
 
+void level_user_undo(struct level_t *level, unsigned globalid);
+
 #endif /* LEVEL_H */

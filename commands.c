@@ -1016,6 +1016,7 @@ CMD(kbu)
 		}
 	}
 
+/*
 	if (l == NULL) return false;
 
 	if (l->undo == NULL) l->undo = undodb_init(l->name);
@@ -1026,6 +1027,10 @@ CMD(kbu)
 	}
 
 	undodb_undo_player(l->undo, globalid, 4000, &undo_real, c);
+*/
+
+	level_user_undo(l, globalid);
+
 	return false;
 }
 

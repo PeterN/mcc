@@ -1287,6 +1287,31 @@ void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum bloc
 	cuboid_list_add(&s_cuboids, c);
 }
 
+void level_user_undo(struct level_t *level, unsigned globalid)
+{
+	struct cuboid_t c;
+
+	c.sx = 0;
+	c.sy = 0;
+	c.sz = 0;
+	c.ex = level->x;
+	c.ey = level->y;
+	c.ez = level->z;
+	c.cx = c.sx;
+	c.cy = c.ey;
+	c.cz = c.sz;
+	c.level = level;
+	c.srclevel = NULL;
+	c.count = 0;
+	c.old_type = BLOCK_INVALID;
+	c.new_type = AIR;
+	c.owner = globalid;
+	c.owner_is_op = false;
+	c.fixed = false;
+
+	cuboid_list_add(&s_cuboids, c);
+}
+
 void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click)
 {
 	if (client->player == NULL || client->player->rank == RANK_BANNED)
