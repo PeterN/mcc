@@ -61,7 +61,7 @@ static struct portal_t *portal_get_by_name(const char *name, struct portal_data_
 
 static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data, struct portal_data_t *arg, struct level_hook_data_t *ld)
 {
-	if (!level_user_can_build(l, c->player)) return;
+	if (!level_user_can_own(l, c->player)) return;
 
 	if (strncasecmp(data, "portal edit ", 12) == 0)
 	{
