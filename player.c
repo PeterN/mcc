@@ -342,8 +342,10 @@ enum rank_t rank_get_by_name(const char *rank)
 {
 	if (!strcasecmp(rank, "banned")) return RANK_BANNED;
 	if (!strcasecmp(rank, "guest")) return RANK_GUEST;
+	if (!strcasecmp(rank, "regular")) return RANK_REGULAR;
 	if (!strcasecmp(rank, "builder")) return RANK_BUILDER;
 	if (!strcasecmp(rank, "advbuilder")) return RANK_ADV_BUILDER;
+	if (!strcasecmp(rank, "mod")) return RANK_MOD;
 	if (!strcasecmp(rank, "op")) return RANK_OP;
 	if (!strcasecmp(rank, "admin")) return RANK_ADMIN;
 	return -1;
@@ -352,8 +354,10 @@ enum rank_t rank_get_by_name(const char *rank)
 static const char *s_ranks[] = {
 	"banned",
 	"guest",
+	"regular",
 	"builder",
 	"advbuilder",
+	"mod",
 	"op",
 	"admin",
 };
@@ -369,8 +373,10 @@ enum colour_t rank_get_colour(enum rank_t rank)
 	{
 		case RANK_BANNED: return COLOUR_SILVER;
 		case RANK_GUEST: return COLOUR_SILVER;
+		case RANK_REGULAR: return COLOUR_GOLD;
 		case RANK_BUILDER: return COLOUR_LIME;
 		case RANK_ADV_BUILDER: return COLOUR_GREEN;
+		case RANK_MOD: return COLOUR_TEAL;
 		case RANK_OP: return COLOUR_AQUA;
 		case RANK_ADMIN: return COLOUR_MAROON;
 	}
