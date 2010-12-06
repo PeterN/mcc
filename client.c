@@ -166,14 +166,14 @@ bool client_botcheck(struct client_t *c, char *message)
 	if (bot)
 	{
 		LOG("%s triggered bot detection: %s\n", c->player->username, message);
-		playerdb_set_rank(c->player->username, RANK_BANNED);
+		playerdb_set_rank(c->player->username, RANK_BANNED, "auto-bot");
 		net_close(c, "Bot detected");
 		return true;
 	}
 	if (botuser)
 	{
 		LOG("%s triggered bot user detection: %s\n", c->player->username, message);
-		playerdb_set_rank(c->player->username, RANK_BANNED);
+		playerdb_set_rank(c->player->username, RANK_BANNED, "auto-botuser");
 		net_close(c, "Bot user detected");
 		return true;
 	}

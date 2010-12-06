@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 		lcase(buf);
 
 		playerdb_get_globalid(buf, true, &added);
-		playerdb_set_rank(buf, rank);
+		playerdb_set_rank(buf, rank, "console");
 	}
 
 	playerdb_close();

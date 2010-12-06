@@ -171,7 +171,7 @@ CMD(ban)
 		return false;
 	}
 
-	playerdb_set_rank(param[1], RANK_BANNED);
+	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
 	p = player_get_by_name(param[1]);
 	if (p != NULL)
 	{
@@ -986,7 +986,7 @@ CMD(kbu)
 	struct level_t *l;
 	int globalid;
 
-	playerdb_set_rank(param[1], RANK_BANNED);
+	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
 	p = player_get_by_name(param[1]);
 	if (p != NULL)
 	{
@@ -1085,7 +1085,7 @@ CMD(kickban)
 		return false;
 	}
 
-	playerdb_set_rank(param[1], RANK_BANNED);
+	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
 	p = player_get_by_name(param[1]);
 	if (p == NULL)
 	{
@@ -2043,7 +2043,7 @@ CMD(setrank)
 		return false;
 	}
 
-	playerdb_set_rank(param[1], newrank);
+	playerdb_set_rank(param[1], newrank, c->player->username);
 	p = player_get_by_name(param[1]);
 	if (p != NULL)
 	{

@@ -259,7 +259,7 @@ int playerdb_get_rank(const char *username)
 	return res;
 }
 
-void playerdb_set_rank(const char *username, int rank)
+void playerdb_set_rank(const char *username, int rank, const char *changedby)
 {
 	if (sqlite3_bind_int(s_rank_set_stmt, 1, rank) != SQLITE_OK)
 	{
@@ -273,6 +273,8 @@ void playerdb_set_rank(const char *username, int rank)
 	{
 		LOG("[playerdb_set_rank] %s\n", sqlite3_errmsg(s_db));
 	}
+
+	LOG("Rank set to %s for %s by %s\n", rank_get_name(rank), username, changedby);
 
 	sqlite3_reset(s_rank_set_stmt);
 }
