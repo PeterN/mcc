@@ -251,7 +251,7 @@ int playerdb_get_rank(const char *username)
 	}
 	else
 	{
-		LOG("Unable to get rank for '%s'", username);
+		LOG("[playerdb_get_rank] Unable to get rank for '%s'\n", username);
 	}
 
 	sqlite3_reset(s_rank_get_stmt);
