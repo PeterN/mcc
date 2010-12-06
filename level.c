@@ -817,6 +817,8 @@ static void *level_load_thread(void *arg)
 			/* MCSharp uses a different set of permission values for levels for some reason */
 			if (l->rankvisit <= 3) l->rankvisit++;
 			if (l->rankbuild <= 3) l->rankbuild++;
+			l->rankvisit = rank_convert(l->rankvisit);
+			l->rankbuild = rank_convert(l->rankbuild);
 			l->rankown   = RANK_OP;
 		}
 		else
@@ -894,11 +896,19 @@ static void *level_load_thread(void *arg)
 			if (gzread(gz, &l->rankbuild, sizeof l->rankbuild) != sizeof l->rankbuild) return level_load_thread_abort(l, "rankbuild");
 			if (version < 5)
 			{
+				l->rankvisit = rank_convert(l->rankvisit);
+				l->rankbuild = rank_convert(l->rankbuild);
 				l->rankown = RANK_OP;
 			}
 			else
 			{
 				if (gzread(gz, &l->rankown, sizeof l->rankown) != sizeof l->rankown) return level_load_thread_abort(l, "rankown");
+				if (version < 6)
+				{
+					l->rankvisit = rank_convert(l->rankvisit);
+					l->rankbuild = rank_convert(l->rankbuild);
+					l->rankown = rank_convert(l->rankown);
+				}
 			}
 
 			unsigned n;
@@ -1032,7 +1042,7 @@ void *level_save_thread(void *arg)
 	}
 
 	unsigned header  = 'MCLV';
-	unsigned version = 5;
+	unsigned version = 6;
 	gzwrite(gz, &header, sizeof header);
 	gzwrite(gz, &version, sizeof version);
 

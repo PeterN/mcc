@@ -351,20 +351,24 @@ enum rank_t rank_get_by_name(const char *rank)
 	return -1;
 }
 
-static const char *s_ranks[] = {
-	"banned",
-	"guest",
-	"regular",
-	"builder",
-	"advbuilder",
-	"mod",
-	"op",
-	"admin",
-};
-
 const char *rank_get_name(enum rank_t rank)
 {
-	return s_ranks[rank];
+	static char numeric_rank[5];
+
+	switch (rank)
+	{
+		case RANK_BANNED:      return "banned";
+		case RANK_GUEST:       return "guest";
+		case RANK_REGULAR:     return "regular";
+		case RANK_BUILDER:     return "builder";
+		case RANK_ADV_BUILDER: return "advbuilder";
+		case RANK_MOD:         return "mod";
+		case RANK_OP:          return "op";
+		case RANK_ADMIN:       return "admin";
+		default:
+			snprintf(numeric_rank, sizeof numeric_rank, "%d", rank);
+			return numeric_rank;
+	}
 }
 
 enum colour_t rank_get_colour(enum rank_t rank)
@@ -396,8 +400,10 @@ void player_list(struct client_t *c, const struct level_t *l)
 
 		switch (i) {
 			case 0: snprintf(buf, sizeof buf, TAG_TEAL "Ops: "); break;
-			case 1: snprintf(buf, sizeof buf, TAG_GREEN "Builders: "); break;
-			case 2: snprintf(buf, sizeof buf, TAG_SILVER "Guests: "); break;
+			case 1: snprintf(buf, sizeof buf, TAG_TEAL "Mods: "); break;
+			case 2: snprintf(buf, sizeof buf, TAG_GREEN "Builders: "); break;
+			case 3: snprintf(buf, sizeof buf, TAG_GOLD "Regulars: "); break;
+			case 4: snprintf(buf, sizeof buf, TAG_SILVER "Guests: "); break;
 		}
 		bufp += strlen(buf);
 
@@ -408,9 +414,12 @@ void player_list(struct client_t *c, const struct level_t *l)
 			if (p == NULL) continue;
 			if (l != NULL && p->level != l) continue;
 
-			if (i == 0 && p->rank != RANK_ADMIN && p->rank != RANK_OP) continue;
-			if (i == 1 && p->rank != RANK_ADV_BUILDER && p->rank != RANK_BUILDER) continue;
-			if (i == 2 && p->rank != RANK_GUEST && p->rank != RANK_BANNED) continue;
+			if (i == 0 && p->rank < RANK_OP) continue;
+			if (i == 1 && (p->rank < RANK_MOD || p->rank >= RANK_OP)) continue;
+			if (i == 2 && (p->rank < RANK_BUILDER || p->rank >= RANK_MOD)) continue;
+			if (i == 3 && (p->rank < RANK_REGULAR || p->rank >= RANK_BUILDER)) continue;
+			if (i == 4 && p->rank >= RANK_REGULAR) continue;
+
 			if (c->player->rank < RANK_OP && p->client->hidden) continue;
 
 			size_t len = strlen(p->colourusername) + 1;
