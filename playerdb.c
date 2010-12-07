@@ -62,7 +62,7 @@ void playerdb_init(void)
 		return;
 	}
 
-	res = sqlite3_prepare_v2(s_db, "INSERT INTO players (username, rank) VALUES (lower(?), 1)", -1, &s_new_user_stmt, NULL);
+	res = sqlite3_prepare_v2(s_db, "INSERT INTO players (username, rank) VALUES (lower(?), 10)", -1, &s_new_user_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
 		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
