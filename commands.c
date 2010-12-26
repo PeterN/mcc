@@ -1972,7 +1972,7 @@ CMD(setcuboidmax)
 	g_server.cuboid_max = max;
 
 	char buf[64];
-	snprintf(buf, sizeof buf, TAG_YELLOW "Cuboid max set to %d ms", g_server.cuboid_max);
+	snprintf(buf, sizeof buf, TAG_YELLOW "Cuboid max set to %d per 40ms", g_server.cuboid_max);
 	client_notify(c, buf);
 	LOG("%s\n", buf);
 
@@ -2004,6 +2004,28 @@ CMD(setpassword)
 	LOG("Setpassword %s: success\n", c->player->username);
 	return false;
 }
+
+static const char help_setplayermax[] =
+"/setplayermax <max>\n"
+"Set maximum number of players connected before guests cannot join.";
+
+CMD(setplayermax)
+{
+	if (params != 2) return true;
+
+	int max = atoi(param[1]);
+
+	g_server.max_players = max;
+
+	char buf[64];
+	snprintf(buf, sizeof buf, TAG_YELLOW "Player max set to %d", g_server.max_players);
+	client_notify(c, buf);
+	LOG("%s\n", buf);
+
+	return false;
+}
+
+
 
 static const char help_setposinterval[] =
 "/setposinterval <interval>\n"
@@ -2570,6 +2592,7 @@ struct command_t s_commands[] = {
 	{ "setcuboidmax", RANK_OP, &cmd_setcuboidmax, help_setcuboidmax },
 	{ "setpassword", RANK_BUILDER, &cmd_setpassword, help_setpassword },
 	{ "setposinterval", RANK_OP, &cmd_setposinterval, help_setposinterval },
+	{ "setplayermax", RANK_OP, &cmd_setplayermax, help_setplayermax },
 	{ "setrank", RANK_OP, &cmd_setrank, help_setrank },
 	{ "setspawn", RANK_GUEST, &cmd_setspawn, help_setspawn },
 	{ "spawn", RANK_GUEST, &cmd_spawn, help_spawn },
