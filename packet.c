@@ -187,6 +187,13 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
+	if (player->rank < RANK_BUILDER && g_server.players > g_server.max_players)
+	{
+		player_del(player);
+		net_close(c, "Too many players online, please try later");
+		return;
+	}
+
 	c->player = player;
 	player->client = c;
 
