@@ -1451,23 +1451,25 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 		else if (client->player->mode == MODE_REMOVE_PILLAR)
 		{
-			unsigned indexs, indexe;
-			int sz, ez;
+			unsigned indexs = index, indexe = index;
+			int sy, ey;
 			/* Search up */
-			for (ez = z; ez < level->z; ez++)
+			for (ey = y; ey < level->y; ey++)
 			{
-				indexe = level_get_index(level, x, y, ez);
-				struct block_t *b2 = &level->blocks[indexe];
-				enum blocktype_t bt2 = b->type;
-				if (bt != bt2) continue;
+				index = level_get_index(level, x, ey, z);
+				struct block_t *b2 = &level->blocks[index];
+				enum blocktype_t bt2 = b2->type;
+				if (bt != bt2) break;
+				indexe = index;
 			}
 			/* Search down */
-			for (sz = z; sz > 0; sz--)
+			for (sy = y; sy > 0; sy--)
 			{
-				indexs = level_get_index(level, x, y, sz);
-				struct block_t *b2 = &level->blocks[indexs];
-				enum blocktype_t bt2 = b->type;
-				if (bt != bt2) continue;
+				index = level_get_index(level, x, sy, z);
+				struct block_t *b2 = &level->blocks[index];
+				enum blocktype_t bt2 = b2->type;
+				if (bt != bt2) break;
+				indexs = index;
 			}
 			level_cuboid(level, indexs, indexe, BLOCK_INVALID, AIR, client->player);
 			return;
