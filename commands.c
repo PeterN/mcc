@@ -1909,6 +1909,27 @@ CMD(resetlvl)
 	return false;
 }
 
+static const char help_rp[] =
+"/rp\n"
+"Toggle Remove Pillar mode.";
+
+CMD(rp)
+{
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /rp when playing games");
+		return false;
+	}
+
+	player_toggle_mode(c->player, MODE_REMOVE_PILLAR);
+
+	char buf[64];
+	snprintf(buf, sizeof buf, "Remove pillars %s", (c->player->mode == MODE_REMOVE_PILLAR) ? s_on : s_off);
+	client_notify(c, buf);
+
+	return false;
+}
+
 static const char help_rules[] =
 "/rules\n"
 "Display the server rules.";
@@ -2543,6 +2564,7 @@ struct command_t s_commands[] = {
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "replaceall", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
+	{ "rp", RANK_OP, &cmd_rp, help_rp },
 	{ "rules", RANK_BANNED, &cmd_rules, help_rules },
 	{ "setalias", RANK_ADMIN, &cmd_setalias, help_setalias },
 	{ "setcuboidmax", RANK_OP, &cmd_setcuboidmax, help_setcuboidmax },

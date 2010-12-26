@@ -1449,6 +1449,29 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 			client->player->mode = MODE_NORMAL;
 			return;
 		}
+		else if (client->player->mode == MODE_REMOVE_PILLAR)
+		{
+			unsigned indexs, indexe;
+			int sz, ez;
+			/* Search up */
+			for (ez = z; ez < level->z; ez++)
+			{
+				indexe = level_get_index(level, x, y, ez);
+				struct block_t *b2 = &level->blocks[indexe];
+				enum blocktype_t bt2 = b->type;
+				if (bt != bt2) continue;
+			}
+			/* Search down */
+			for (sz = z; sz > 0; sz--)
+			{
+				indexs = level_get_index(level, x, y, sz);
+				struct block_t *b2 = &level->blocks[indexs];
+				enum blocktype_t bt2 = b->type;
+				if (bt != bt2) continue;
+			}
+			level_cuboid(level, indexs, indexe, BLOCK_INVALID, AIR, client->player);
+			return;
+		}
 	}
 
 	if (click && !ingame)
