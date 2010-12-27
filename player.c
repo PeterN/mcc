@@ -137,7 +137,7 @@ void player_move(struct player_t *player, struct position_t *pos)
 
 	unsigned i;
 	player->speed = 0;
-	for (i = 0; i < sizeof player->speed - 1; i++)
+	for (i = 0; i < 10 - 1; i++)
 	{
 		player->speeds[i] = player->speeds[i + 1];
 		player->speed += player->speeds[i];
@@ -273,7 +273,7 @@ void player_send_positions(void)
 		if (player->following != NULL)
 		{
 			player->pos = player->following->pos;
-			player->pos.y -= 8;
+			player->pos.y -= 23;
 			client_add_packet(player->client, packet_send_teleport_player(0xFF, &player->pos));
 			continue;
 		}
