@@ -163,7 +163,10 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 		int dy = player->pos.y - player->lastpos.y;
 		int dz = player->pos.z - player->lastpos.z;
 
-		if (abs(dx) > 32 || dy > 32 || dy < -96 || abs(dz) > 32)
+		/* Calculate diagonal distance */
+		int dp = dx * dx + dz * dz;
+
+		if (dp > 100 || dy > 32 || dy < -96)
 		{
 			/* Player moved too far! */
 			player_teleport(player, &player->oldpos, true);
