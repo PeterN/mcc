@@ -158,26 +158,30 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 			return;
 		}
 
-		struct player_t *player = c->player;
-		int dx = player->pos.x - player->lastpos.x;
-		int dy = player->pos.y - player->lastpos.y;
-		int dz = player->pos.z - player->lastpos.z;
-
-		/* Calculate diagonal distance */
-		int dp = dx * dx + dz * dz;
-
-		if (dp > 100 || dy > 20 || dy < -120)
+		/* Don't check for teleporting directly after respawn */
+		if (arg->zombieticks < 200)
 		{
-			/* Player moved too far! */
-			player_teleport(player, &player->oldpos, true);
+			struct player_t *player = c->player;
+			int dx = player->pos.x - player->lastpos.x;
+			int dy = player->pos.y - player->lastpos.y;
+			int dz = player->pos.z - player->lastpos.z;
 
-			if (dp < 100000)
+			/* Calculate diagonal distance */
+			int dp = dx * dx + dz * dz;
+
+			if (dp > 100 || dy > 20 || dy < -120)
 			{
-				client_notify(c, TAG_RED "Client hacks are forbidden during game");
-			}
-			else
-			{
-				client_notify(c, TAG_RED "Teleporting forbidden during game");
+				/* Player moved too far! */
+				player_teleport(player, &player->oldpos, true);
+
+				if (dp < 100000)
+				{
+					client_notify(c, TAG_RED "Client hacks are forbidden during game");
+				}
+				else
+				{
+					client_notify(c, TAG_RED "Teleporting forbidden during game");
+				}
 			}
 		}
 	}
