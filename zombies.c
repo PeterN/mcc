@@ -170,7 +170,15 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 		{
 			/* Player moved too far! */
 			player_teleport(player, &player->oldpos, true);
-			client_notify(c, TAG_RED "Teleporting forbidden during game");
+
+			if (dp < 100000)
+			{
+				client_notify(c, TAG_RED "Client hacks are forbidden during game");
+			}
+			else
+			{
+				client_notify(c, TAG_RED "Teleporting forbidden during game");
+			}
 		}
 	}
 
