@@ -335,7 +335,7 @@ bool level_send(struct client_t *c)
 		c->player->pos = newlevel->spawn;
 		c->player->lastpos = newlevel->spawn;
 		c->player->teleport = true;
-		call_level_hook(EVENT_SPAWN, newlevel, c, c->player->hook_data);
+		call_level_hook(EVENT_SPAWN, newlevel, c, (void*)c->player->hook_data);
 		c->player->hook_data = NULL;
 	}
 
@@ -362,6 +362,8 @@ bool level_send(struct client_t *c)
 	return true;
 }
 
+extern void level_gen_mcsharp(struct level_t *level, const char *type);
+
 void *level_gen_thread(void *arg)
 {
 	int i;
@@ -377,24 +379,48 @@ void *level_gen_thread(void *arg)
 
 	memset(level->blocks, 0, sizeof *level->blocks * mx * my * mz);
 
-	if (level->type == 0 || level->type == 1)
+	if (!strcmp(level->type, "flat") || !strcmp(level->type, "adminium"))
 	{
+		bool adminium = !strcmp(level->type, "adminium");
+
+		int h = my / 2;
+
 		for (z = 0; z < mz; z++)
 		{
 			for (x = 0; x < mx; x++)
 			{
-				int h = my / 2 + 1;
-
 				for (y = 0; y < h; y++)
 				{
 					block.type = (y < h - 5) ? ROCK : (y < h - 1) ? DIRT : GRASS;
-					if (level->type == 1 && y == h - 2) block.type = ADMINIUM;
+					if (adminium && y == h - 2) block.type = ADMINIUM;
 					level_set_block(level, &block, level_get_index(level, x, y, z));
 				}
 			}
 		}
 	}
-	else
+	else if (!strcmp(level->type, "pixel"))
+	{
+		block.type = WHITE;
+
+		for (z = 0; z < mz; z++)
+			for (x = 0; x < mx; x++)
+				level_set_block(level, &block, level_get_index(level, x, 0, z));
+
+		for (y = 0; y < my; y++)
+		{
+			for (z = 0; z < mz; z++)
+			{
+				level_set_block(level, &block, level_get_index(level, 0, y, z));
+				level_set_block(level, &block, level_get_index(level, mx - 1, y, z));
+			}
+			for (x = 0; x < mx; x++)
+			{
+				level_set_block(level, &block, level_get_index(level, x, y, 0));
+				level_set_block(level, &block, level_get_index(level, x, y, mz - 1));
+			}
+		}
+	}
+	else if (!strcmp(level->type, "old"))
 	{
 		struct faultgen_t *fg = faultgen_init(mx, mz);
 		if (fg == NULL)
@@ -414,7 +440,7 @@ void *level_gen_thread(void *arg)
 		const float *hm1 = filter_map(ft);
 
 
-		struct perlin_t *pp = perlin_init(mx, mz, rand(), 0.250 * level->type, 6);
+		struct perlin_t *pp = perlin_init(mx, mz, rand(), 0.250 * (rand() % 6), 6);
 		if (pp == NULL)
 		{
 			filter_deinit(ft);
@@ -585,6 +611,10 @@ void *level_gen_thread(void *arg)
 			}
 		}
 	}
+	else
+	{
+		level_gen_mcsharp(level, level->type);
+	}
 
 	LOG("levelgen: setting spawn\n");
 
@@ -657,10 +687,14 @@ void *level_gen_thread(void *arg)
 
 	LOG("levelgen: complete\n");
 
+	free(level->type);
+	level->type = NULL;
+
 	level->changed = true;
 
 	snprintf(buf, sizeof buf, "Created level '%s'\n", level->name);
 	LOG(buf);
+	net_notify_ops(buf);
 
 	pthread_mutex_unlock(&level->mutex);
 
@@ -677,9 +711,9 @@ level_error:
 	return NULL;
 }
 
-void level_gen(struct level_t *level, int type, int height_range, int sea_height)
+void level_gen(struct level_t *level, const char *type, int height_range, int sea_height)
 {
-	level->type = type;
+	level->type = strdup(type);
 	level->height_range = height_range;
 	level->sea_height = sea_height;
 

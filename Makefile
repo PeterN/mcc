@@ -16,6 +16,7 @@ LIBSRC += faultgen.c
 LIBSRC += filter.c
 LIBSRC += hook.c
 LIBSRC += landscape.c
+LIBSRC += land2.c
 LIBSRC += level.c
 LIBSRC += module.c
 LIBSRC += network.c

@@ -14,10 +14,21 @@ struct position_t
 
 static inline bool position_match(const struct position_t *a, const struct position_t *b, int area)
 {
-	if (abs(a->x - b->x) >= area) return false;
-	if (abs(a->y - b->y) >= area) return false;
-	if (abs(a->z - b->z) >= area) return false;
-	return true;
+	int dx = a->x - b->x;
+	int dy = abs(a->y - b->y);
+	int dz = a->z - b->z;
+
+	/* Elongate the centre vertically */
+	if (dy < area / 2)
+	{
+		dy = 0;
+	}
+	else
+	{
+		dy -= area / 2;
+	}
+
+	return (dx * dx + dy * dy + dz * dz < area * area);
 }
 
 #endif /* POSITION */

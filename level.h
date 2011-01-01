@@ -85,7 +85,7 @@ struct level_t
 
 	struct undodb_t *undo;
 
-	int type;
+	char *type;
 	int height_range;
 	int sea_height;
 
@@ -113,10 +113,15 @@ static inline unsigned level_get_index(const struct level_t *level, unsigned x, 
 	return x + (z + y * level->z) * level->x;
 }
 
+static inline bool level_valid_xyz(const struct level_t *level, int x, int y, int z)
+{
+	return x >= 0 && x < level->x && y >= 0 && y < level->y && z >= 0 && z < level->z;
+}
+
 bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const char *name, bool zero);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 bool level_send(struct client_t *client);
-void level_gen(struct level_t *level, int type, int height_range, int sea_height);
+void level_gen(struct level_t *level, const char *type, int height_range, int sea_height);
 bool level_is_loaded(const char *name);
 bool level_get_by_name(const char *name, struct level_t **level);
 bool level_load(const char *name, struct level_t **level);

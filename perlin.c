@@ -78,7 +78,7 @@ void perlin_noise(struct perlin_t *pp)
 	float max = -INFINITY;
 	int x, y;
 
-//	LOG("perlin: generating %d by %d map\n", pp->x, pp->y);
+	LOG("perlin: generating %d by %d map\n", pp->x, pp->y);
 
 	for (x = 0; x < pp->x; x++)
 	{
@@ -92,16 +92,16 @@ void perlin_noise(struct perlin_t *pp)
 		}
 	}
 
-//	LOG("perlin: range %f to %f\n", min, max);
+	LOG("perlin: range %f to %f\n", min, max);
 
-//	LOG("perlin: normalizing\n");
+	LOG("perlin: normalizing\n");
 
-//	for (x = 0; x < pp->x * pp->y; x++)
-//	{
-//		pp->map[x] = (pp->map[x] - min) / (max - min);
-//	}
+	for (x = 0; x < pp->x * pp->y; x++)
+	{
+		pp->map[x] = (pp->map[x] - min) / (max - min);
+	}
 
-//	LOG("perlin: complete\n");
+	LOG("perlin: complete\n");
 }
 
 struct perlin_t *perlin_init(int x, int y, int seed, float persistence, int octaves)

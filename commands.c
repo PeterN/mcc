@@ -783,7 +783,7 @@ CMD(home)
 		user_list_add(&l->userbuild, l->owner);
 		user_list_add(&l->userown,   l->owner);
 
-		level_gen(l, 0, l->y / 2, l->y / 2);
+		level_gen(l, "flat", l->y / 2, l->y / 2);
 		level_list_add(&s_levels, l);
 	}
 
@@ -1016,18 +1016,13 @@ CMD(kbu)
 		}
 	}
 
-/*
 	if (l == NULL) return false;
 
 	if (l->undo == NULL) l->undo = undodb_init(l->name);
-	if (l->undo == NULL)
+	if (l->undo != NULL)
 	{
-		client_notify(c, "Undo not available for level.");
-		return false;
+		undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
 	}
-
-	undodb_undo_player(l->undo, globalid, 4000, &undo_real, c);
-*/
 
 	level_user_undo(l, globalid);
 
@@ -1382,21 +1377,24 @@ CMD(motd)
 }
 
 static const char help_newlvl[] =
-"/newlvl <name> <x> <y> <z> <type> <height_range> <sea_height>\n"
+//"/newlvl <name> <x> <y> <z> <type> <height_range> <sea_height>\n"
+//"Create a new level. <y> is height. "
+//"Type: 0=flat 1=flat/adminium 2=smooth 6=rough";
+"/newlvl <name> <x> <y> <z> <type>\n"
 "Create a new level. <y> is height. "
-"Type: 0=flat 1=flat/adminium 2=smooth 6=rough";
+"Type: flat, adminium, pixel, old, island, mountains, ocean, forest";
 
 CMD(newlvl)
 {
-	if (params != 8) return true;
+	if (params != 6) return true;
 
 	const char *name = param[1];
 	int x = strtol(param[2], NULL, 10);
 	int y = strtol(param[3], NULL, 10);
 	int z = strtol(param[4], NULL, 10);
-	int t = strtol(param[5], NULL, 10);
-	int hr = strtol(param[6], NULL, 10);
-	int sh = strtol(param[7], NULL, 10);
+	const char *t = param[5];
+//	int hr = strtol(param[6], NULL, 10);
+//	int sh = strtol(param[7], NULL, 10);
 
 	if (x < 16 || y < 16 || z < 16)
 	{
@@ -1416,9 +1414,18 @@ CMD(newlvl)
 		return false;
 	}
 
+/*
 	if (t < 0 || t > 6)
 	{
 		client_notify(c, "Type must be from 0 to 6 only");
+		return false;
+	}
+*/
+	if (strcmp(t, "flat") && strcmp(t, "adminium") && strcmp(t, "pixel") &&
+		strcmp(t, "island") && strcmp(t, "mountains") && strcmp(t, "ocean") &&
+		strcmp(t, "forest"))
+	{
+		client_notify(c, "Invalid type, see /help newlvl");
 		return false;
 	}
 
@@ -1440,7 +1447,7 @@ CMD(newlvl)
 		l->rankbuild = c->player->rank;
 		l->rankown   = c->player->rank;
 
-		level_gen(l, t, hr, sh);
+		level_gen(l, t, 0, 0);
 		level_list_add(&s_levels, l);
 	}
 	else
