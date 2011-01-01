@@ -1427,7 +1427,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	}
 
 	bool can_build = level_user_can_build(level, client->player);
-	enum blocktype_t nt = click ? client->player->bindings[t] : t;
+	enum blocktype_t nt = (click && !ingame) ? client->player->bindings[t] : t;
 
 	if (click && can_build && !ingame)
 	{
@@ -1531,7 +1531,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 	/* Client thinks it has changed to air */
 	if (m == 0) t = AIR;
-	if (click && !HasBit(client->player->flags, FLAG_PAINT))
+	if (click && !ingame && !HasBit(client->player->flags, FLAG_PAINT))
 	{
 		if (m == 0) {
 			int r = trigger(level, index, b, client);
@@ -1561,7 +1561,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		return;
 	}
 
-	if (client->player->globalid != level->owner)
+	if (client->player->globalid != level->owner || ingame)
 	{
 		/* Not level owner, so check block permissions */
 
