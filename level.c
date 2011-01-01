@@ -408,7 +408,7 @@ void *level_gen_thread(void *arg)
 			goto level_error;
 		}
 //		const float *hm1 = faultgen_map(fg);
-		faultgen_create(fg);
+		faultgen_create(fg, false);
 		filter_process(ft, faultgen_map(fg));
 		faultgen_deinit(fg);
 		const float *hm1 = filter_map(ft);

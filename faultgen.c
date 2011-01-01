@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 #include "faultgen.h"
 #include "mcc.h"
@@ -6,8 +7,6 @@
 struct faultgen_t
 {
 	int x, y;
-	float disp_max;
-	float disp_delta;
 	float map[];
 };
 
@@ -22,8 +21,6 @@ struct faultgen_t *faultgen_init(int x, int y)
 
 	f->x = x;
 	f->y = y;
-	f->disp_max = 0.05f;
-	f->disp_delta = -0.005f;
 
 	return f;
 }
@@ -33,16 +30,33 @@ void faultgen_deinit(struct faultgen_t *f)
 	free(f);
 }
 
-void faultgen_create(struct faultgen_t *f)
+void faultgen_create(struct faultgen_t *f, bool mountains)
 {
+	float disp_max;
+	float disp_delta;
+	float start_height;
+
+	if (mountains)
+	{
+		disp_max = 0.02f;
+		disp_delta = -0.0025f;
+		start_height = 0.6f;
+	}
+	else
+	{
+		disp_max = 0.05f;
+		disp_delta = -0.005f;
+		start_height = 0.5f;
+	}
+
 	int hx = f->x / 2;
 	int hy = f->y / 2;
 	int hx2 = hx * hx;
 	int hy2 = hy * hy;
 	float d = sqrt(hx2 + hy2);
 
-	float disp_min = -f->disp_max;
-	float disp = f->disp_max;
+	float disp_min = -disp_max;
+	float disp = disp_max;
 
 	int i;
 
@@ -50,7 +64,7 @@ void faultgen_create(struct faultgen_t *f)
 
 	for (i = 0; i < f->x * f->y; i++)
 	{
-		f->map[i] = 0.5;
+		f->map[i] = start_height;
 	}
 
 	LOG("faultgen: starting %d iterations\n", f->x + f->y);
@@ -77,8 +91,8 @@ void faultgen_create(struct faultgen_t *f)
 			}
 		}
 
-		disp += f->disp_delta;
-		if (disp < disp_min) disp = f->disp_max;
+		disp += disp_delta;
+		if (disp < disp_min) disp = disp_max;
 	}
 
 	LOG("faultgen: normalizing\n");
