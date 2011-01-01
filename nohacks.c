@@ -49,7 +49,7 @@ static void nohacks_handle_chat(struct level_t *l, struct client_t *c, char *dat
 			struct client_t *cl = l->clients[i];
 			if (cl == NULL) continue;
 
-			ClrBit(cl->player->flags, FLAG_GAMES);
+			SetBit(cl->player->flags, FLAG_GAMES);
 		}
 	}
 }
