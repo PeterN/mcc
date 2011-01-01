@@ -1880,13 +1880,13 @@ CMD(resetlvl)
 		return false;
 	}
 
-	int t = strtol(param[1], NULL, 10);
-	int hr = strtol(param[2], NULL, 10);
-	int sh = strtol(param[3], NULL, 10);
+	const char *t = param[1];
 
-	if (t < 0 || t > 6)
+	if (strcmp(t, "flat") && strcmp(t, "adminium") && strcmp(t, "pixel") &&
+		strcmp(t, "island") && strcmp(t, "mountains") && strcmp(t, "ocean") &&
+		strcmp(t, "forest"))
 	{
-		client_notify(c, "Type must be from 0 to 6 only");
+		client_notify(c, "Invalid type, see /help newlvl");
 		return false;
 	}
 
@@ -1912,7 +1912,7 @@ CMD(resetlvl)
 	lcase(filename);
 	unlink(filename);
 
-	level_gen(l, t, hr, sh);
+	level_gen(l, t, 0, 0);
 	return false;
 }
 
