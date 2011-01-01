@@ -915,6 +915,12 @@ static const char help_info[] =
 
 CMD(info)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /info when playing games");
+		return false;
+	}
+
 	player_toggle_mode(c->player, MODE_INFO);
 
 	char buf[64];
@@ -1477,6 +1483,12 @@ static const char help_paint[] =
 
 CMD(paint)
 {
+	if (HasBit(c->player->flags, FLAG_GAMES))
+	{
+		client_notify(c, TAG_RED "You can't /paint when playing games");
+		return false;
+	}
+
 	ToggleBit(c->player->flags, FLAG_PAINT);
 
 	char buf[64];
