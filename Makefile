@@ -130,7 +130,7 @@ $(PORTALO): $(PORTALOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(PORTALO) $(PORTALOBJ) -o $@
 
 $(SIGNSO): $(SIGNSOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(SIGNSO) $(PORTALOBJ) -o $@
+	$(CC) -shared -fPIC -Wl,-soname,$(SIGNSO) $(SIGNSOBJ) -o $@
 
 $(ZOMBIEO): $(ZOMBIEOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(ZOMBIEO) $(ZOMBIEOBJ) -o $@
