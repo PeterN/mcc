@@ -1382,7 +1382,7 @@ static const char help_newlvl[] =
 //"Type: 0=flat 1=flat/adminium 2=smooth 6=rough";
 "/newlvl <name> <x> <y> <z> <type>\n"
 "Create a new level. <y> is height. "
-"Type: flat, adminium, pixel, old, island, mountains, ocean, forest";
+"Type: flat, adminium, pixel, island, mountains, ocean, forest";
 
 CMD(newlvl)
 {
@@ -1865,12 +1865,13 @@ CMD(replaceall)
 
 
 static const char help_resetlvl[] =
-"/resetlvl <type> <height_range> <sea_height>\n"
-"";
+"/resetlvl <type>\n"
+"Resets the current level. "
+"Type: flat, adminium, pixel, island, mountains, ocean, forest";
 
 CMD(resetlvl)
 {
-	if (params != 4) return true;
+	if (params != 2) return true;
 
 	struct level_t *l = c->player->level;
 
