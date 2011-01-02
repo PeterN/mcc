@@ -2521,9 +2521,11 @@ CMD(whois)
 	}
 
 	struct player_t *p = player_get_by_name(param[1]);
-	if (p == NULL)
+	if (p == NULL || p->client->hidden)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
+		client_notify(c, buf);
+		snprintf(buf, sizeof buf, "%s's rank is %s", param[1], rank_get_name(playerdb_get_rank(param[1])));
 		client_notify(c, buf);
 
 		if (c->player->rank >= RANK_OP)
@@ -2535,6 +2537,8 @@ CMD(whois)
 	else
 	{
 		snprintf(buf, sizeof buf, "%s" TAG_WHITE " is online, on level %s", p->colourusername, p->level->name);
+		client_notify(c, buf);
+		snprintf(buf, sizeof buf, "%s's rank is %s", param[1], rank_get_name(p->rank));
 		client_notify(c, buf);
 
 		if (c->player->rank >= RANK_OP)
