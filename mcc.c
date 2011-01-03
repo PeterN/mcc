@@ -122,6 +122,8 @@ int main(int argc, char **argv)
 	module_load("heartbeat.so");
 	module_load("portal.so");
 	module_load("irc.so");
+	module_load("signs.so");
+	module_load("nohacks.so");
 	//irc_start();
 
 	register_timer("save levels", 120000, &level_save_all, NULL);
