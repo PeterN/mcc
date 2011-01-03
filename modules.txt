@@ -1,0 +1,6 @@
+heartbeat.so
+irc.so
+portal.so
+zombies.so
+signs.so
+nohacks.so

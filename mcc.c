@@ -5,6 +5,7 @@
 #include "block.h"
 #include "mcc.h"
 #include "level.h"
+#include "module.h"
 #include "network.h"
 #include "player.h"
 #include "playerdb.h"
@@ -119,12 +120,7 @@ int main(int argc, char **argv)
 
 	net_init(g_server.port);
 
-	module_load("heartbeat.so");
-	module_load("portal.so");
-	module_load("irc.so");
-	module_load("signs.so");
-	module_load("nohacks.so");
-	//irc_start();
+	modules_init();
 
 	register_timer("save levels", 120000, &level_save_all, NULL);
 	register_timer("unload levels", 20000, &level_unload_empty, NULL);
