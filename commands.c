@@ -149,7 +149,17 @@ static const char help_afk[] =
 
 CMD(afk)
 {
-	return true;
+	if (params == 1)
+	{
+		c->player->afk[0] = '\0';
+		client_notify(c, "Away message cleared");
+	}
+	else
+	{
+		reconstruct(c->player->afk, sizeof c->player->afk, params - 1, param + 1);
+		client_notify(c, "Away message set");
+	}
+	return false;
 }
 
 static const char help_ban[] =
@@ -2540,6 +2550,12 @@ CMD(whois)
 		client_notify(c, buf);
 		snprintf(buf, sizeof buf, "%s's rank is %s", param[1], rank_get_name(p->rank));
 		client_notify(c, buf);
+
+		if (p->afk[0] != '\0')
+		{
+			snprintf(buf, sizeof buf, "%s is away: %s\n", param[1], p->afk);
+			client_notify(c, buf);
+		}
 
 		if (c->player->rank >= RANK_OP)
 		{

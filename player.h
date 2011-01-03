@@ -48,6 +48,8 @@ struct player_t
 	uint8_t flags;
 	uint8_t	teleport;
 
+	char afk[64];
+
 	struct position_t pos;
 	struct position_t oldpos;
 	struct position_t lastpos;
