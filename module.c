@@ -14,7 +14,7 @@ void module_load(const char *name)
 	m->handle = dlopen(name, RTLD_LAZY);
 	if (m->handle == NULL)
 	{
-		LOG("dlopen: %s", dlerror());
+		LOG("dlopen: %s\n", dlerror());
 		free(m);
 		return;
 	}
@@ -61,6 +61,32 @@ void module_deinit(struct module_t *m)
 	{
 		m->deinit_func(m->data);
 	}
+}
+
+void modules_init(void)
+{
+	FILE *f = fopen("modules.txt", "r");
+	if (f == NULL)
+	{
+		LOG("No module list to load\n");
+		return;
+	}
+
+	while (!feof(f))
+	{
+		char buf[1024];
+		fgets(buf, sizeof buf, f);
+
+		if (buf[0] == '#') continue;
+
+		/* Remove newline characters */
+		char *eol = strchr(buf, '\n');
+		if (eol != NULL) *eol = '\0';
+
+		module_load(buf);
+	}
+
+	fclose(f);
 }
 
 void modules_deinit(void)
