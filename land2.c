@@ -14,8 +14,8 @@ static float range(float i, float l, float h)
 
 static float negate_edge(int x, int y, int mx, int my)
 {
-	float tx = ((float)x / mx) * 0.5f;
-	float ty = ((float)y / my) * 0.5f;
+	float tx = ((float)x / (mx - 1)) * 0.5f;
+	float ty = ((float)y / (my - 1)) * 0.5f;
 	tx = fabsf(tx - 0.25f);
 	ty = fabsf(ty - 0.25f);
 	float t = (tx > ty ? tx : ty) - 0.15f;
