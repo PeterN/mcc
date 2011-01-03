@@ -53,6 +53,8 @@ static void add_tree(struct level_t *level, int x, int y, int z)
 	block.type = TRUNK;
 	for (yy = 0; yy < h; yy++)
 	{
+		if (!level_valid_xyz(level, x, y + yy, z)) return;
+
 		unsigned index = level_get_index(level, x, y + yy, z);
 		if (level->blocks[index].type == AIR)
 		{
