@@ -219,7 +219,7 @@ void client_process(struct client_t *c, char *message)
 		{
 			case '@': // Private message
 			{
-				size_t l = strcspn(message, " ,");
+				size_t l = strcspn(message, " ");
 				if (l != strlen(message))
 				{
 					message[l] = '\0';
