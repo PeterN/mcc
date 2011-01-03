@@ -1776,6 +1776,16 @@ CMD(players)
 	return false;
 }
 
+static const char help_ranks[] =
+"/ranks\n"
+"Display information about ranks.";
+
+CMD(ranks)
+{
+	notify_file(c, "ranks.txt");
+	return false;
+}
+
 static const char help_replace[] =
 "/replace <oldtype> [<newtype>]\n"
 "";
@@ -2623,6 +2633,7 @@ struct command_t s_commands[] = {
 	{ "players", RANK_GUEST, &cmd_players, help_players },
 	{ "r", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "ra", RANK_OP, &cmd_replaceall, help_replaceall },
+	{ "ranks", RANK_GUEST, &cmd_ranks, help_ranks },
 	{ "replace", RANK_ADV_BUILDER, &cmd_replace, help_replace },
 	{ "replaceall", RANK_OP, &cmd_replaceall, help_replaceall },
 	{ "resetlvl", RANK_GUEST, &cmd_resetlvl, help_resetlvl },
