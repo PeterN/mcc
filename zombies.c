@@ -228,11 +228,24 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 			
 			if (arg->intervalticks == s_interval)
 			{
-				char buf[128];
-				//snprintf(buf, sizeof buf, TAG_YELLOW "Game will restart in %d seconds", s_interval / 25);
-				//level_notify_all(l, buf);
-				snprintf(buf, sizeof buf, TAG_YELLOW "! New game in " TAG_WHITE "%s " TAG_YELLOW "will start in %d seconds", l->name, s_interval / 25);
-				net_notify_all(buf);
+				int i;
+				int players = 0;
+				for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+				{
+					struct client_t *cl = l->clients[i];
+					if (cl == NULL) continue;
+
+					if (!is_mod(cl->player)) players++;
+				}
+
+				if (players >= 2)
+				{
+					char buf[128];
+					//snprintf(buf, sizeof buf, TAG_YELLOW "Game will restart in %d seconds", s_interval / 25);
+					//level_notify_all(l, buf);
+					snprintf(buf, sizeof buf, TAG_YELLOW "! New game in " TAG_WHITE "%s " TAG_YELLOW "will start in %d seconds", l->name, s_interval / 25);
+					net_notify_all(buf);
+				}
 			}
 			arg->intervalticks--;
 			if (arg->intervalticks == 5 * 25)
