@@ -1531,7 +1531,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 	/* Client thinks it has changed to air */
 	if (m == 0) t = AIR;
-	if (click && !ingame && !HasBit(client->player->flags, FLAG_PAINT))
+	if (click && (!HasBit(client->player->flags, FLAG_PAINT) || ingame))
 	{
 		if (m == 0) {
 			int r = trigger(level, index, b, client);
@@ -1604,8 +1604,8 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 		b->type = nt;
 		b->data = 0;
-		b->fixed = HasBit(client->player->flags, FLAG_PLACE_FIXED);
-		b->owner = HasBit(client->player->flags, FLAG_DISOWN) ? 0 : client->player->globalid;
+		b->fixed = ingame ? false : HasBit(client->player->flags, FLAG_PLACE_FIXED);
+		b->owner = !ingame && HasBit(client->player->flags, FLAG_DISOWN) ? 0 : client->player->globalid;
 		b->physics = blocktype_has_physics(nt);
 
 		if (oldphysics != b->physics)
