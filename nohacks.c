@@ -41,7 +41,7 @@ static void nohacks_handle_chat(struct level_t *l, struct client_t *c, char *dat
 
 			ClrBit(cl->player->flags, FLAG_GAMES);
 		}
-		level_notify_all(l, TAG_YELLOW "Game mode enabled");
+		level_notify_all(l, TAG_YELLOW "Game mode disabled");
 	}
 	else if (strcasecmp(data, "game on") == 0)
 	{
@@ -54,7 +54,7 @@ static void nohacks_handle_chat(struct level_t *l, struct client_t *c, char *dat
 
 			SetBit(cl->player->flags, FLAG_GAMES);
 		}
-		level_notify_all(l, TAG_YELLOW "Game mode disabled");
+		level_notify_all(l, TAG_YELLOW "Game mode enabled");
 	}
 }
 
@@ -75,7 +75,7 @@ static void nohacks_handle_move(struct level_t *l, struct client_t *c, int index
 		/* Calculate diagonal distance */
 		int dp = dx * dx + dz * dz;
 
-		LOG("nohacks: %d - %d\n", dp, dy);
+		//LOG("nohacks: %d - %d\n", dp, dy);
 
 		if (dp > 100 || dy > 20 || dy < -120)
 		{
