@@ -81,15 +81,17 @@ void modules_init(void)
 	while (!feof(f))
 	{
 		char buf[1024];
-		fgets(buf, sizeof buf, f);
+		if (fgets(buf, sizeof buf, f) > 0)
+		{
 
-		if (buf[0] == '#') continue;
+			if (buf[0] == '#') continue;
 
-		/* Remove newline characters */
-		char *eol = strchr(buf, '\n');
-		if (eol != NULL) *eol = '\0';
+			/* Remove newline characters */
+			char *eol = strchr(buf, '\n');
+			if (eol != NULL) *eol = '\0';
 
-		module_load(buf);
+			module_load(buf);
+		}
 	}
 
 	fclose(f);
