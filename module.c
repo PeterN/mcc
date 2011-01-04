@@ -8,6 +8,12 @@ struct module_list_t s_modules;
 
 void module_load(const char *name)
 {
+	if (module_get_by_name(name) != NULL)
+	{
+		LOG("Module %s already registered\n", name);
+		return;
+	}
+
 	struct module_t *m = malloc(sizeof *m);
 
 	strncpy(m->name, name, sizeof m->name);
