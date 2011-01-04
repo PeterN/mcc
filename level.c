@@ -1933,8 +1933,26 @@ LIST(level_hook, struct level_hook_t, level_hook_compare)
 
 static struct level_hook_list_t s_level_hooks;
 
+static struct level_hook_t *level_hook_get_by_name(const char *name)
+{
+	unsigned i;
+	for (i = 0; i < s_level_hooks.used; i++)
+	{
+		struct level_hook_t *lh = &s_level_hooks.items[i];
+		if (strcasecmp(lh->name, name) == 0) return lh;
+	}
+
+	return NULL;
+}
+
 void register_level_hook_func(const char *name, level_hook_func_t level_hook_func)
 {
+	if (level_hook_get_by_name(name) != NULL)
+	{
+		LOG("Level hook %s already registered\n", name);
+		return;
+	}
+
 	struct level_hook_t lh;
 	strncpy(lh.name, name, sizeof lh.name);
 	lh.level_hook_func = level_hook_func;
