@@ -10,6 +10,16 @@
 
 static struct blocktype_desc_list_t s_blocks;
 
+void preregister_blocktype(const char *name)
+{
+	struct blocktype_desc_t desc;
+	memset(&desc, 0, sizeof desc);
+
+	desc.name = strdup(name);
+
+	blocktype_desc_list_add(&s_blocks, desc);
+}
+
 int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_rank, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear)
 {
 	struct blocktype_desc_t desc;
@@ -32,6 +42,7 @@ int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_
 		{
 			blocktype_desc_list_add(&s_blocks, desc);
 			type = s_blocks.used - 1;
+			LOG("Allocating new block type %d\n", type);
 		}
 	}
 	else
@@ -594,6 +605,24 @@ enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const st
 
 void blocktype_init(void)
 {
+	FILE *f = fopen("blocks.txt", "r");
+	if (f != NULL)
+	{
+		while (!feof(f))
+		{
+			char buf[1024];
+			if (fgets(buf, sizeof buf, f) > 0)
+			{
+				char *eol = strchr(buf, '\n');
+				if (eol != NULL) *eol = '\0';
+
+				preregister_blocktype(buf);
+			}
+		}
+
+		fclose(f);
+	}
+
 	register_blocktype(AIR, "air", RANK_GUEST, NULL, NULL, &delete_air, &physics_air, true);
 	register_blocktype(ROCK, "stone", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 	register_blocktype(GRASS, "grass", RANK_GUEST, NULL, NULL, NULL, &physics_grass, false);
@@ -664,10 +693,19 @@ void blocktype_init(void)
 void blocktype_deinit(void)
 {
 	unsigned i;
+	FILE *f = fopen("blocks.txt", "w");
+	if (f == NULL)
+	{
+		LOG("Unable to write blocks list\n");
+	}
+
 	for (i = 0; i < s_blocks.used; i++)
 	{
+		if (f != NULL) fprintf(f, "%s\n", s_blocks.items[i].name);
 		free(s_blocks.items[i].name);
 	}
+
+	if (f != NULL) fclose(f);
 
 	blocktype_desc_list_free(&s_blocks);
 }
