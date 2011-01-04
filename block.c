@@ -612,13 +612,7 @@ void blocktype_init(void)
 	register_blocktype(BLOCK_INVALID, "single_stair", RANK_GUEST, &convert_single_stair, NULL, NULL, NULL, false);
 	register_blocktype(BLOCK_INVALID, "parquet", RANK_GUEST, &convert_parquet, NULL, NULL, NULL, false);
 
-	module_load("wireworld.so");
-
 	register_blocktype(BLOCK_INVALID, "active_sponge", RANK_ADV_BUILDER, &convert_active_sponge, NULL, NULL, &physics_active_sponge, false);
-
-	module_load("tnt.so");
-	module_load("spleef.so");
-	module_load("doors.so");
 }
 
 void blocktype_deinit(void)
