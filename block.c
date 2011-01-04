@@ -294,15 +294,22 @@ void physics_dirt(struct level_t *l, unsigned index, const struct block_t *block
 	}
 }
 
-void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
+void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, enum blocktype_t clash, enum blocktype_t convert)
 {
 	// Test x,y,z are valid!
 	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
 
 	unsigned index = level_get_index(l, x, y, z);
-	if (l->blocks[index].type == AIR && !l->blocks[index].fixed && l->blocks[index].data == 0)
+	if (!l->blocks[index].fixed)
 	{
-		if (!sponge_test(l, x, y, z)) level_addupdate(l, index, type, 0);
+		if (l->blocks[index].type == AIR)
+		{
+			if (l->blocks[index].data == 0 && !sponge_test(l, x, y, z)) level_addupdate(l, index, type, 0);
+		}
+		else if (l->blocks[index].type == clash)
+		{
+			level_addupdate(l, index, convert, 0);
+		}
 	}
 }
 
@@ -311,11 +318,30 @@ void physics_active_water(struct level_t *l, unsigned index, const struct block_
 	int16_t x, y, z;
 	level_get_xyz(l, index, &x, &y, &z);
 
-	physics_active_water_sub(l, x, y - 1, z, block->type);
-	physics_active_water_sub(l, x - 1, y, z, block->type);
-	physics_active_water_sub(l, x + 1, y, z, block->type);
-	physics_active_water_sub(l, x, y, z - 1, block->type);
-	physics_active_water_sub(l, x, y, z + 1, block->type);
+	physics_active_water_sub(l, x, y - 1, z, block->type, LAVA, OBSIDIAN);
+	physics_active_water_sub(l, x - 1, y, z, block->type, LAVA, OBSIDIAN);
+	physics_active_water_sub(l, x + 1, y, z, block->type, LAVA, OBSIDIAN);
+	physics_active_water_sub(l, x, y, z - 1, block->type, LAVA, OBSIDIAN);
+	physics_active_water_sub(l, x, y, z + 1, block->type, LAVA, OBSIDIAN);
+}
+
+void physics_active_lava(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	if (block->data < 20)
+	{
+		level_addupdate(l, index, BLOCK_INVALID, block->data + 1);
+	}
+	else
+	{
+		int16_t x, y, z;
+		level_get_xyz(l, index, &x, &y, &z);
+
+		physics_active_water_sub(l, x, y - 1, z, block->type, WATER, STONE);
+		physics_active_water_sub(l, x - 1, y, z, block->type, WATER, STONE);
+		physics_active_water_sub(l, x + 1, y, z, block->type, WATER, STONE);
+		physics_active_water_sub(l, x, y, z - 1, block->type, WATER, STONE);
+		physics_active_water_sub(l, x, y, z + 1, block->type, WATER, STONE);
+	}
 }
 
 void physics_gravity(struct level_t *l, unsigned index, const struct block_t *block)
@@ -578,7 +604,7 @@ void blocktype_init(void)
 	register_blocktype(ADMINIUM, "adminium", RANK_OP, NULL, NULL, NULL, NULL, false);
 	register_blocktype(WATER, "active_water", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_water, false);
 	register_blocktype(WATERSTILL, "water", RANK_BUILDER, NULL, NULL, NULL, NULL, false);
-	register_blocktype(LAVA, "active_lava", RANK_ADV_BUILDER, NULL, NULL, NULL, NULL, false);
+	register_blocktype(LAVA, "active_lava", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_lava, false);
 	register_blocktype(LAVASTILL, "lava", RANK_BUILDER, NULL, NULL, NULL, NULL, false);
 	register_blocktype(SAND, "sand", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false);
 	register_blocktype(GRAVEL, "gravel", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false);
