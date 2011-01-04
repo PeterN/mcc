@@ -2054,7 +2054,7 @@ bool level_hook_attach(struct level_t *l, const char *name)
 	snprintf(buf, sizeof buf, TAG_YELLOW "Attached level hook %s (%d)", l->level_hook[n].name, n + 1);
 	level_notify_all(l, buf);
 
-	call_level_hook(EVENT_INIT, l, NULL, NULL);
+	l->level_hook[n].func(EVENT_INIT, l, NULL, NULL, &l->level_hook[n].data);
 	return true;
 }
 
@@ -2065,7 +2065,7 @@ bool level_hook_detach(struct level_t *l, const char *name)
 	{
 		if (strcasecmp(l->level_hook[i].name, name) == 0 && l->level_hook[i].func != NULL)
 		{
-			call_level_hook(EVENT_DEINIT, l, NULL, NULL);
+			l->level_hook[i].func(EVENT_DEINIT, l, NULL, NULL, &l->level_hook[i].data);
 
 			char buf[128];
 			snprintf(buf, sizeof buf, TAG_YELLOW "Detached level hook %s (%d)", l->level_hook[i].name, i + 1);
@@ -2088,7 +2088,7 @@ bool level_hook_delete(struct level_t *l, const char *name)
 		{
 			if (l->level_hook[i].func != NULL)
 			{
-				call_level_hook(EVENT_DEINIT, l, NULL, NULL);
+				l->level_hook[i].func(EVENT_DEINIT, l, NULL, NULL, &l->level_hook[i].data);
 
 				char buf[128];
 				snprintf(buf, sizeof buf, TAG_YELLOW "Detached level hook %s (%d)", l->level_hook[i].name, i + 1);
