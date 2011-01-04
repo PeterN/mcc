@@ -363,6 +363,7 @@ bool level_send(struct client_t *c)
 }
 
 extern void level_gen_mcsharp(struct level_t *level, const char *type);
+void level_prerun(struct level_t *l);
 
 void *level_gen_thread(void *arg)
 {
@@ -1663,18 +1664,6 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
 			client_add_packet(c, packet_send_set_block(x, y, z, convert(level, index, b)));
 		}
 	}
-}
-
-static void level_mark_teleporter(struct level_t *level, struct position_t *pos)
-{
-	unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
-	level->blocks[index].teleporter = 1;
-}
-
-static void level_unmark_teleporter(struct level_t *level, struct position_t *pos)
-{
-	unsigned index = level_get_index(level, pos->x / 32, pos->y / 32, pos->z / 32);
-	level->blocks[index].teleporter = 0;
 }
 
 static int gettime(void)
