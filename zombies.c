@@ -355,9 +355,17 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 		arg->intervalticks = s_interval;
 		zombie_totals(l, arg);
 	}
+	else if (dead == 0)
+	{
+		level_notify_all(l, TAG_RED "No zombies remaining, game over.");
+		arg->intervalticks = s_interval;
+		zombie_totals(l, arg);
+	}
 	else if (arg->ticksremaining == 0)
 	{
-		level_notify_all(l, TAG_RED "Zombies fail, humans are alive...");
+		char buf[64];
+		snprintf(buf, sizeof buf, TAG_RED "Zombies fail, %d human%s alive!", alive, alive == 1 ? " is" : "s are");
+		level_notify_all(l, buf);
 		arg->humanwins++;
 		arg->intervalticks = s_interval;
 		zombie_totals(l, arg);
