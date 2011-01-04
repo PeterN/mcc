@@ -531,71 +531,6 @@ void physics_stair(struct level_t *l, unsigned index, const struct block_t *bloc
 	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
 }
 
-enum blocktype_t convert_door(struct level_t *level, unsigned index, const struct block_t *block)
-{
-	return block->data ? AIR : TRUNK;
-}
-
-enum blocktype_t convert_door_obsidian(struct level_t *level, unsigned index, const struct block_t *block)
-{
-	return block->data ? AIR : OBSIDIAN;
-}
-
-enum blocktype_t convert_door_glass(struct level_t *level, unsigned index, const struct block_t *block)
-{
-	return block->data ? AIR : GLASS;
-}
-
-enum blocktype_t convert_door_stair(struct level_t *level, unsigned index, const struct block_t *block)
-{
-	return block->data ? AIR : STAIRCASESTEP;
-}
-
-void trigger_door_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
-{
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
-
-	unsigned index = level_get_index(l, x, y, z);
-	if (l->blocks[index].type == type && l->blocks[index].data == 0)
-	{
-		level_addupdate(l, index, -1, 20);
-	}
-}
-
-int trigger_door(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
-{
-	if (block->data == 0)
-	{
-		level_addupdate(l, index, -1, 20);
-	}
-
-	return TRIG_EMPTY;
-}
-
-void physics_door(struct level_t *l, unsigned index, const struct block_t *block)
-{
-	if (block->data > 0)
-	{
-		if (block->data == 20)
-		{
-			int16_t x, y, z;
-			level_get_xyz(l, index, &x, &y, &z);
-
-			trigger_door_sub(l, x - 1, y, z, block->type);
-			trigger_door_sub(l, x + 1, y, z, block->type);
-			trigger_door_sub(l, x, y - 1, z, block->type);
-			trigger_door_sub(l, x, y + 1, z, block->type);
-			trigger_door_sub(l, x, y, z - 1, block->type);
-			trigger_door_sub(l, x, y, z + 1, block->type);
-		}
-
-		level_addupdate(l, index, -1, block->data - 1);
-
-		//LOG("Door physics: %d\n", block->data);
-	}
-}
-
 enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	int16_t x, y, z;
@@ -675,10 +610,6 @@ void blocktype_init(void)
 	register_blocktype(OBSIDIAN, "obsidian", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 
 	register_blocktype(BLOCK_INVALID, "single_stair", RANK_GUEST, &convert_single_stair, NULL, NULL, NULL, false);
-	register_blocktype(BLOCK_INVALID, "door", RANK_BUILDER, &convert_door, &trigger_door, NULL, &physics_door, false);
-	register_blocktype(BLOCK_INVALID, "door_obsidian", RANK_BUILDER, &convert_door_obsidian, &trigger_door, NULL, &physics_door, false);
-	register_blocktype(BLOCK_INVALID, "door_glass", RANK_BUILDER, &convert_door_glass, &trigger_door, NULL, &physics_door, true);
-	register_blocktype(BLOCK_INVALID, "door_step", RANK_BUILDER, &convert_door_stair, &trigger_door, NULL, &physics_door, false);
 	register_blocktype(BLOCK_INVALID, "parquet", RANK_GUEST, &convert_parquet, NULL, NULL, NULL, false);
 
 	module_load("wireworld.so");

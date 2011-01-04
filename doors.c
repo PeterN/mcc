@@ -1,4 +1,5 @@
 #include "block.h"
+#include "level.h"
 #include "mcc.h"
 
 #define DOOR1(n, b) \
@@ -13,6 +14,9 @@
 #define DOOR3(n, r) \
 	register_blocktype(BLOCK_INVALID, "door_" #n, r, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false)
 
+#define DOOR4(n) \
+	register_blocktype(BLOCK_INVALID, "door", RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false)
+
 DOOR1(stone, ROCK)
 DOOR1(grass, GRASS)
 DOOR1(dirt, DIRT)
@@ -25,8 +29,10 @@ DOOR1(gravel, GRAVEL)
 DOOR1(gold_ore, GOLDROCK)
 DOOR1(iron_ore, IRONROCK)
 DOOR1(coal, COAL)
+DOOR1(trunk, TRUNK)
 DOOR1(leaves, LEAF)
 DOOR1(sponge, SPONGE)
+DOOR1(glass, GLASS)
 DOOR1(red, RED)
 DOOR1(orange, ORANGE)
 DOOR1(yellow, YELLOW)
@@ -50,10 +56,55 @@ DOOR1(red_shroom, REDMUSHROOM)
 DOOR1(gold, GOLDSOLID)
 DOOR1(iron, IRON)
 DOOR1(double_step, STAIRCASEFULL)
+DOOR1(step, STAIRCASESTEP)
 DOOR1(brick, BRICK)
 DOOR1(tnt, TNT)
 DOOR1(bookcase, BOOKCASE)
 DOOR1(mossy_cobblestone, STONEVINE)
+DOOR1(obsidian, OBSIDIAN)
+
+static void trigger_door_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
+{
+	// Test x,y,z are valid!
+	if (!level_valid_xyz(l, x, y, z)) return;
+
+	unsigned index = level_get_index(l, x, y, z);
+	if (l->blocks[index].type == type && l->blocks[index].data == 0)
+	{
+		level_addupdate(l, index, -1, 20);
+	}
+}
+
+static int trigger_door(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+{
+	if (block->data == 0)
+	{
+		level_addupdate(l, index, -1, 20);
+	}
+
+	return TRIG_EMPTY;
+}
+
+static void physics_door(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	if (block->data > 0)
+	{
+		if (block->data == 20)
+		{
+			int16_t x, y, z;
+			level_get_xyz(l, index, &x, &y, &z);
+
+			trigger_door_sub(l, x - 1, y, z, block->type);
+			trigger_door_sub(l, x + 1, y, z, block->type);
+			trigger_door_sub(l, x, y - 1, z, block->type);
+			trigger_door_sub(l, x, y + 1, z, block->type);
+			trigger_door_sub(l, x, y, z - 1, block->type);
+			trigger_door_sub(l, x, y, z + 1, block->type);
+		}
+
+		level_addupdate(l, index, -1, block->data - 1);
+	}
+}
 
 void module_init(void **data)
 {
@@ -69,8 +120,10 @@ void module_init(void **data)
 	DOOR2(gold_ore);
 	DOOR2(iron_ore);
 	DOOR2(coal);
+	DOOR4(trunk);
 	DOOR2(leaves);
 	DOOR2(sponge);
+	DOOR2(glass);
 	DOOR2(red);
 	DOOR2(orange);
 	DOOR2(yellow);
@@ -94,10 +147,12 @@ void module_init(void **data)
 	DOOR2(gold);
 	DOOR2(iron);
 	DOOR2(double_step);
+	DOOR2(step);
 	DOOR2(brick);
 	DOOR2(tnt);
 	DOOR2(bookcase);
 	DOOR2(mossy_cobblestone);
+	DOOR2(obsidian);
 }
 
 void module_deinit(void *data)

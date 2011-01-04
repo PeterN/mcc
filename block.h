@@ -153,7 +153,4 @@ struct client_t;
 
 void blocktype_list(struct client_t *c);
 
-int trigger_door(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c);
-void physics_door(struct level_t *l, unsigned index, const struct block_t *block);
-
 #endif /* BLOCK_H */
