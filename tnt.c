@@ -171,3 +171,10 @@ void module_init(void **data)
 	s.explosion = register_blocktype(BLOCK_INVALID, "explosion", RANK_ADV_BUILDER, &convert_explosion, NULL, NULL, &physics_explosion, false);
 	s.fuse = register_blocktype(BLOCK_INVALID, "fuse", RANK_ADV_BUILDER, &convert_fuse, &trigger_fuse, NULL, &physics_fuse, false);
 }
+
+void module_deinit(void *data)
+{
+	deregister_blocktype(s.active_tnt);
+	deregister_blocktype(s.explosion);
+	deregister_blocktype(s.fuse);
+}
