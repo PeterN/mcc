@@ -376,7 +376,7 @@ bool level_send(struct client_t *c)
 	{
 		if (newlevel->npcs[i] != NULL)
 		{
-			client_add_packet(c, packet_send_spawn_player(MAX_CLIENTS_PER_LEVEL + i, newlevel->npcs[i]->name, &newlevel->npcs[i]->current_pos));
+			client_add_packet(c, packet_send_spawn_player(MAX_CLIENTS_PER_LEVEL + i, newlevel->npcs[i]->name, &newlevel->npcs[i]->pos));
 		}
 	}
 
