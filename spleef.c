@@ -123,16 +123,19 @@ struct spleef_data_t
 	struct spleef_board_t board[1];
 };
 
-static void spleef_handle_chat(struct level_t *l, struct client_t *c, char *data, struct spleef_data_t *arg)
+static bool spleef_handle_chat(struct level_t *l, struct client_t *c, char *data, struct spleef_data_t *arg)
 {
+	return false;
 }
 
-static void spleef_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
+static bool spleef_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
 {
 	switch (event)
 	{
-		case EVENT_CHAT: spleef_handle_chat(l, c, data, arg->data);
+		case EVENT_CHAT: return spleef_handle_chat(l, c, data, arg->data);
 	}
+
+	return false;
 }
 
 void module_init(void **data)

@@ -2112,14 +2112,19 @@ bool level_hook_delete(struct level_t *l, const char *name)
 	return false;
 }
 
-void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data)
+bool call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data)
 {
-	if (l == NULL) return;
+	if (l == NULL) return false;
 
 	unsigned i;
 	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
 	{
 		if (l->level_hook[i].func == NULL) continue;
-		l->level_hook[i].func(hook, l, c, data, &l->level_hook[i].data);
+		if (l->level_hook[i].func(hook, l, c, data, &l->level_hook[i].data))
+		{
+			return true;
+		}
 	}
+
+	return false;
 }

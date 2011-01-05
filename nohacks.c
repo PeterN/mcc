@@ -16,9 +16,9 @@ struct nohacks_t
 	bool game;
 };
 
-static void nohacks_handle_chat(struct level_t *l, struct client_t *c, char *data, struct nohacks_t *arg)
+static bool nohacks_handle_chat(struct level_t *l, struct client_t *c, char *data, struct nohacks_t *arg)
 {
-	if (c->player->rank < RANK_OP) return;
+	if (c->player->rank < RANK_OP) return false;
 
 	if (strcasecmp(data, "nohacks on") == 0 || strcasecmp(data, "hacks off") == 0)
 	{
@@ -56,6 +56,12 @@ static void nohacks_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		}
 		level_notify_all(l, TAG_YELLOW "Game mode enabled");
 	}
+	else
+	{
+		return false;
+	}
+
+	return true;
 }
 
 static void nohacks_handle_move(struct level_t *l, struct client_t *c, int index, struct nohacks_t *arg)
@@ -120,11 +126,11 @@ static void nohacks_handle_despawn(struct level_t *l, struct client_t *c, char *
 	}
 }
 
-static void nohacks_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
+static bool nohacks_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
 {
 	switch (event)
 	{
-		case EVENT_CHAT: nohacks_handle_chat(l, c, data, arg->data); break;
+		case EVENT_CHAT: return nohacks_handle_chat(l, c, data, arg->data);
 		case EVENT_MOVE: nohacks_handle_move(l, c, *(int *)data, arg->data); break;
 		case EVENT_SPAWN: nohacks_handle_spawn(l, c, data, arg->data); break;
 		case EVENT_DESPAWN: nohacks_handle_despawn(l, c, data, arg->data); break;
@@ -151,7 +157,7 @@ static void nohacks_level_hook(int event, struct level_t *l, struct client_t *c,
 		}
 		case EVENT_DEINIT:
 		{
-			if (l == NULL) return;
+			if (l == NULL) break;
 
 			int i;
 			for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -164,6 +170,8 @@ static void nohacks_level_hook(int event, struct level_t *l, struct client_t *c,
 			}
 		}
 	}
+
+	return false;
 }
 
 void module_init(void **data)

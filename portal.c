@@ -59,14 +59,14 @@ static struct portal_t *portal_get_by_name(const char *name, struct portal_data_
 	return &arg->portal[i];
 }
 
-static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data, struct portal_data_t *arg, struct level_hook_data_t *ld)
+static bool portal_handle_chat(struct level_t *l, struct client_t *c, char *data, struct portal_data_t *arg, struct level_hook_data_t *ld)
 {
-	if (!level_user_can_own(l, c->player)) return;
+	if (!level_user_can_own(l, c->player)) return false;
 
 	if (strncasecmp(data, "portal edit ", 12) == 0)
 	{
 		struct portal_t *p = portal_get_by_name(data + 12, arg, ld, true);
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		arg = ld->data;
 		arg->edit = p;
 		char buf[128];
@@ -76,7 +76,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	else if (strncasecmp(data, "portal delete ", 14) == 0)
 	{
 		struct portal_t *p = portal_get_by_name(data + 14, arg, ld, false);
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		memset(p, 0, sizeof *p);
 		client_notify(c, TAG_YELLOW "Portal deleted");
 		if (arg->edit == p) arg->edit = NULL;
@@ -85,7 +85,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	else if (strncasecmp(data, "portal rename ", 14) == 0)
 	{
 		struct portal_t *p = arg->edit;
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		snprintf(p->name, sizeof p->name, data + 14);
 		client_notify(c, TAG_YELLOW "Portal renamed");
 		l->changed = true;
@@ -93,7 +93,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	else if (strcasecmp(data, "portal place") == 0)
 	{
 		struct portal_t *p = arg->edit;
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		p->pos = c->player->pos;
 		client_notify(c, TAG_YELLOW "Portal position set");
 		l->changed = true;
@@ -101,7 +101,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	else if (strcasecmp(data, "portal no target") == 0)
 	{
 		struct portal_t *p = arg->edit;
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		memset(p->target, 0, sizeof p->target);
 		client_notify(c, TAG_YELLOW "Portal target cleared");
 		l->changed = true;
@@ -109,7 +109,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	else if (strncasecmp(data, "portal target ", 14) == 0)
 	{
 		struct portal_t *p = arg->edit;
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		snprintf(p->target, sizeof p->target, "%s", data + 14);
 		client_notify(c, TAG_YELLOW "Portal target set");
 		l->changed = true;
@@ -117,7 +117,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	else if (strcasecmp(data, "portal no target-level") == 0)
 	{
 		struct portal_t *p = arg->edit;
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		memset(p->target_level, 0, sizeof p->target_level);
 		client_notify(c, TAG_YELLOW "Portal target-level cleared");
 		l->changed = true;
@@ -125,7 +125,7 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 	else if (strncasecmp(data, "portal target-level ", 20) == 0)
 	{
 		struct portal_t *p = arg->edit;
-		if (p == NULL) return;
+		if (p == NULL) goto err;
 		snprintf(p->target_level, sizeof p->target_level, "%s", data + 20);
 		client_notify(c, TAG_YELLOW "Portal target-level set");
 		l->changed = true;
@@ -144,6 +144,16 @@ static void portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 			}
 		}
 	}
+	else
+	{
+		return false;
+	}
+
+	return true;
+
+err:
+	client_notify(c, TAG_YELLOW "No portal selected for editing");
+	return true;
 }
 
 static void portal_teleport(struct client_t *c, const char *target, struct portal_data_t *arg, bool instant)
@@ -228,11 +238,11 @@ static void portal_handle_spawn(struct level_t *l, struct client_t *c, char *dat
 	portal_teleport(c, data, arg, false);
 }
 
-static void portal_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
+static bool portal_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
 {
 	switch (event)
 	{
-		case EVENT_CHAT: portal_handle_chat(l, c, data, arg->data, arg); break;
+		case EVENT_CHAT: return portal_handle_chat(l, c, data, arg->data, arg);
 		case EVENT_MOVE: portal_handle_move(l, c, *(int *)data, arg->data); break;
 		case EVENT_SPAWN: portal_handle_spawn(l, c, data, arg->data); break;
 //		case EVENT_LOAD: portal->edit = NULL; break;
@@ -271,6 +281,8 @@ static void portal_level_hook(int event, struct level_t *l, struct client_t *c, 
 			break;
 		}
 	}
+
+	return false;
 }
 
 void module_init(void **data)

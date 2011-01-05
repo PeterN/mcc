@@ -41,7 +41,7 @@ enum
 	EVENT_DEINIT  = 1 << 9,
 };
 
-typedef void(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg);
+typedef bool(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg);
 
 struct level_hooks_t
 {
@@ -148,7 +148,7 @@ bool level_hook_attach(struct level_t *l, const char *name);
 bool level_hook_detach(struct level_t *l, const char *name);
 bool level_hook_delete(struct level_t *l, const char *name);
 
-void call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data);
+bool call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data);
 
 bool level_user_can_visit(const struct level_t *l, const struct player_t *p);
 bool level_user_can_build(const struct level_t *l, const struct player_t *p);

@@ -265,8 +265,10 @@ void client_process(struct client_t *c, char *message)
 		}
 
 		call_hook(HOOK_CHAT, buf);
-		call_level_hook(EVENT_CHAT, c->player->level, c, message);
-		level_notify_all(c->player->level, buf);
+		if (!call_level_hook(EVENT_CHAT, c->player->level, c, message))
+		{
+			level_notify_all(c->player->level, buf);
+		}
 	}
 }
 

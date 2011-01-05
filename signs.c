@@ -61,14 +61,14 @@ static struct message_t *message_get_by_name(const char *name, struct message_da
 	return &arg->message[i];
 }
 
-static void message_handle_chat(struct level_t *l, struct client_t *c, char *data, struct message_data_t *arg, struct level_hook_data_t *ld)
+static bool message_handle_chat(struct level_t *l, struct client_t *c, char *data, struct message_data_t *arg, struct level_hook_data_t *ld)
 {
-	if (!level_user_can_build(l, c->player)) return;
+	if (!level_user_can_build(l, c->player)) return false;
 
 	if (strncasecmp(data, "msg edit ", 9) == 0)
 	{
 		struct message_t *s = message_get_by_name(data + 9, arg, ld, true);
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		arg = ld->data;
 		arg->edit = s;
 		char buf[128];
@@ -78,7 +78,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strncasecmp(data, "msg delete ", 11) == 0)
 	{
 		struct message_t *s = message_get_by_name(data + 11, arg, ld, false);
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		memset(s, 0, sizeof *s);
 		client_notify(c, TAG_YELLOW "message deleted");
 		if (arg->edit == s) arg->edit = NULL;
@@ -87,7 +87,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strncasecmp(data, "msg rename ", 11) == 0)
 	{
 		struct message_t *s = arg->edit;
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		snprintf(s->name, sizeof s->name, data + 11);
 		client_notify(c, TAG_YELLOW "message renamed");
 		l->changed = true;
@@ -95,7 +95,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strcasecmp(data, "msg place") == 0)
 	{
 		struct message_t *s = arg->edit;
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		s->pos = c->player->pos;
 		client_notify(c, TAG_YELLOW "message position set");
 		l->changed = true;
@@ -103,7 +103,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strncasecmp(data, "msg radius ", 11) == 0)
 	{
 		struct message_t *s = arg->edit;
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		s->radius = strtol(data + 11, NULL, 10);
 		char buf[64];
 		snprintf(buf, sizeof buf, TAG_YELLOW "message radius set to %d", s->radius);
@@ -113,7 +113,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strncasecmp(data, "msg l1 ", 7) == 0)
 	{
 		struct message_t *s = arg->edit;
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		snprintf(s->line[0], sizeof s->line[0], "%s", data + 7);
 		client_notify(c, TAG_YELLOW "message line 1 set");
 		l->changed = true;
@@ -121,7 +121,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strncasecmp(data, "msg l2 ", 7) == 0)
 	{
 		struct message_t *s = arg->edit;
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		snprintf(s->line[1], sizeof s->line[1], "%s", data + 7);
 		client_notify(c, TAG_YELLOW "message line 2 set");
 		l->changed = true;
@@ -129,7 +129,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strncasecmp(data, "msg l3 ", 7) == 0)
 	{
 		struct message_t *s = arg->edit;
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		snprintf(s->line[2], sizeof s->line[2], "%s", data + 7);
 		client_notify(c, TAG_YELLOW "message line 3 set");
 		l->changed = true;
@@ -137,7 +137,7 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strncasecmp(data, "msg l4 ", 7) == 0)
 	{
 		struct message_t *s = arg->edit;
-		if (s == NULL) return;
+		if (s == NULL) goto err;
 		snprintf(s->line[3], sizeof s->line[3], "%s", data + 7);
 		client_notify(c, TAG_YELLOW "message line 4 set");
 		l->changed = true;
@@ -156,6 +156,16 @@ static void message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 			}
 		}
 	}
+	else
+	{
+		return false;
+	}
+
+	return true;
+
+err:
+	client_notify(c, TAG_YELLOW "No message selected for editing");
+	return true;
 }
 
 static void message_handle_move(struct level_t *l, struct client_t *c, int index, struct message_data_t *arg)
@@ -191,11 +201,11 @@ static void message_handle_move(struct level_t *l, struct client_t *c, int index
 	}
 }
 
-static void message_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
+static bool message_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
 {
 	switch (event)
 	{
-		case EVENT_CHAT: message_handle_chat(l, c, data, arg->data, arg); break;
+		case EVENT_CHAT: return message_handle_chat(l, c, data, arg->data, arg);
 		case EVENT_MOVE: message_handle_move(l, c, *(int *)data, arg->data); break;
 		case EVENT_INIT:
 		{
@@ -221,9 +231,10 @@ static void message_level_hook(int event, struct level_t *l, struct client_t *c,
 
 			arg->size = sizeof (struct message_data_t);
 			arg->data = calloc(1, arg->size);
-			break;
 		}
 	}
+
+	return false;
 }
 
 void module_init(void **data)

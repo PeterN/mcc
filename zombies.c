@@ -94,9 +94,9 @@ static void zombie_start(struct level_t *l, struct zombies_t *arg)
 	}
 }
 
-static void zombie_handle_chat(struct level_t *l, struct client_t *c, char *data, struct zombies_t *arg)
+static bool zombie_handle_chat(struct level_t *l, struct client_t *c, char *data, struct zombies_t *arg)
 {
-	if (c->player->rank < RANK_OP) return;
+	if (c->player->rank < RANK_OP) return false;
 
 	if (strcasecmp(data, "zombies start") == 0)
 	{
@@ -138,6 +138,12 @@ static void zombie_handle_chat(struct level_t *l, struct client_t *c, char *data
 
 		SetBit(c->player->flags, FLAG_GAMES);
 	}
+	else
+	{
+		return false;
+	}
+
+	return true;
 }
 
 static void zombie_handle_move(struct level_t *l, struct client_t *c, int index, struct zombies_t *arg)
@@ -405,12 +411,12 @@ static void zombie_handle_despawn(struct level_t *l, struct client_t *c, char *d
 	ClrBit(c->player->flags, FLAG_GAMES);
 }
 
-static void zombie_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
+static bool zombie_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
 {
 	switch (event)
 	{
 		case EVENT_TICK: zombie_handle_tick(l, c, data, arg->data); break;
-		case EVENT_CHAT: zombie_handle_chat(l, c, data, arg->data); break;
+		case EVENT_CHAT: return zombie_handle_chat(l, c, data, arg->data);
 		case EVENT_MOVE: zombie_handle_move(l, c, *(int *)data, arg->data); break;
 		case EVENT_SPAWN: zombie_handle_spawn(l, c, data, arg->data); break;
 		case EVENT_DESPAWN: zombie_handle_despawn(l, c, data, arg->data); break;
@@ -437,7 +443,7 @@ static void zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 		}
 		case EVENT_DEINIT:
 		{
-			if (l == NULL) return;
+			if (l == NULL) break;
 
 			int i;
 			for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -450,6 +456,8 @@ static void zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 			}
 		}
 	}
+
+	return false;
 }
 
 void module_init(void **data)
