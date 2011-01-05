@@ -131,6 +131,8 @@ bool level_load(const char *name, struct level_t **level);
 void level_save_all(void *arg);
 void level_unload_empty(void *arg);
 
+int level_get_new_npc_id(struct level_t *level, struct npc *npc);
+
 void level_notify_all(struct level_t *level, const char *message);
 
 void level_change_block(struct level_t *level, struct client_t *c, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click);
@@ -155,6 +157,7 @@ bool call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data
 
 bool level_user_can_visit(const struct level_t *l, const struct player_t *p);
 bool level_user_can_build(const struct level_t *l, const struct player_t *p);
+bool level_user_can_own(const struct level_t *l, const struct player_t *p);
 
 void level_user_undo(struct level_t *level, unsigned globalid);
 
