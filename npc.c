@@ -79,6 +79,12 @@ void npc_del(struct npc *npc)
 
 	npc_send_despawn(npc);
 
+	/* Remove npc from level's list */
+	if (npc->level != NULL)
+	{
+		npc->level->npcs[npc->levelid - MAX_CLIENTS_PER_LEVEL] = NULL;
+	}
+
 	npc_list_del_item(&s_npcs, npc);
 
 	free(npc);
