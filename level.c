@@ -1190,6 +1190,8 @@ void level_save(struct level_t *l)
 		pthread_join(l->thread, NULL);
 	}
 
+	call_level_hook(EVENT_SAVE, l, NULL, NULL);
+
 	LOG("Creating thread for saving %s (%p)\n", l->name, l);
 	int r = pthread_create(&l->thread, NULL, &level_save_thread, l);
 	l->thread_valid = (r == 0);
@@ -2012,19 +2014,13 @@ void deregister_level_hook_func(const char *name)
 	struct level_hook_t lh;
 	strncpy(lh.name, name, sizeof lh.name);
 
-	unsigned i, j;
+	unsigned i;
 	for (i = 0; i < s_levels.used; i++)
 	{
 		struct level_t *l = s_levels.items[i];
 		if (l == NULL) continue;
-		for (j = 0; j < MAX_HOOKS_PER_LEVEL; j++)
-		{
-			if (l->level_hook[j].func != NULL && strcasecmp(l->level_hook[j].name, name) == 0)
-			{
-				l->level_hook[j].func = NULL;
-				LOG("Detached level hook %s from %s\n", name, l->name);
-			}
-		}
+
+		level_hook_detach(l, name);
 	}
 
 	level_hook_list_del_item(&s_level_hooks, lh);
