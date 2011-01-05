@@ -7,8 +7,10 @@
 #include "physics.h"
 #include "position.h"
 #include "list.h"
+#include "npc.h"
 
 #define MAX_CLIENTS_PER_LEVEL 64
+#define MAX_NPCS_PER_LEVEL 32
 #define MAX_HOOKS_PER_LEVEL 4
 
 struct player_t;
@@ -82,6 +84,7 @@ struct level_t
 
 	/* Max players on a level */
 	struct client_t *clients[MAX_CLIENTS_PER_LEVEL];
+	struct npc *npcs[MAX_NPCS_PER_LEVEL];
 
 	struct undodb_t *undo;
 

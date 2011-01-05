@@ -116,6 +116,21 @@ int level_get_new_id(struct level_t *level, struct client_t *c)
 	return -1;
 }
 
+int level_get_new_npc_id(struct level_t *level, struct npc *npc)
+{
+	int i;
+	for (i = 0; i < MAX_NPCS_PER_LEVEL; i++)
+	{
+		if (level->npcs[i] == NULL)
+		{
+			level->npcs[i] = npc;
+			return i;
+		}
+	}
+
+	return -1;
+}
+
 bool level_user_can_visit(const struct level_t *l, const struct player_t *p)
 {
 	if (p->rank >= l->rankvisit) return true;
@@ -290,6 +305,14 @@ bool level_send(struct client_t *c)
 				client_add_packet(c, packet_send_despawn_player(i));
 			}
 		}
+
+		for (i = 0; i < MAX_NPCS_PER_LEVEL; i++)
+		{
+			if (oldlevel->npcs[i] != NULL)
+			{
+				client_add_packet(c, packet_send_despawn_player(MAX_CLIENTS_PER_LEVEL + i));
+			}
+		}
 	}
 
 	c->player->level = newlevel;
@@ -346,6 +369,14 @@ bool level_send(struct client_t *c)
 		if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden)
 		{
 			client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->alias, &newlevel->clients[i]->player->pos));
+		}
+	}
+
+	for (i = 0; i < MAX_NPCS_PER_LEVEL; i++)
+	{
+		if (newlevel->npcs[i] != NULL)
+		{
+			client_add_packet(c, packet_send_spawn_player(MAX_CLIENTS_PER_LEVEL + i, newlevel->npcs[i]->name, &newlevel->npcs[i]->current_pos));
 		}
 	}
 
