@@ -83,6 +83,10 @@ NOHACKSSRC := nohacks.c
 NOHACKSOBJ := $(NOHACKSSRC:.c=.o)
 NOHACKSO := nohacks.so
 
+NPCTESTSRC := npctest.c
+NPCTESTOBJ := $(NPCTESTSRC:.c=.o)
+NPCTESTO := npctest.so
+
 DOORSSRC := doors.c
 DOORSOBJ := $(DOORSSRC:.c=.o)
 DOORSO := doors.so
@@ -99,13 +103,13 @@ RENDER2SRC := render_chunked.c
 RENDER2OBJ := $(RENDER2SRC:.c=.o)
 RENDER2O := render2
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO) $(RENDERO) $(RENDER2O) $(ZOMBIEO) $(SIGNSO) $(NOHACKSO)
+all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO) $(RENDERO) $(RENDER2O) $(ZOMBIEO) $(SIGNSO) $(NOHACKSO) $(NPCTESTO)
 
 clean:
-	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO) $(RENDEROBJ) $(RENDERO) $(RENDER2OBJ) $(RENDER2O) $(ZOMBIEOBJ) $(ZOMBIEO) $(SIGNSO) $(SIGNSOBJ) $(NOHACKSO) $(NOHACKSOBJ)
+	rm $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO) $(RENDEROBJ) $(RENDERO) $(RENDER2OBJ) $(RENDER2O) $(ZOMBIEOBJ) $(ZOMBIEO) $(SIGNSO) $(SIGNSOBJ) $(NOHACKSO) $(NOHACKSOBJ) $(NPCTESTO) $(NPCTESTOBJ)
 
 depend:
-	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC) $(RENDERSRC) $(RENDER2SRC) $(ZOMBIESRC) $(SIGNSSRC)
+	makedepend $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC) $(RENDERSRC) $(RENDER2SRC) $(ZOMBIESRC) $(SIGNSSRC) $(NOHACKSRC) $(NPCTESTSRC)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
@@ -142,6 +146,9 @@ $(ZOMBIEO): $(ZOMBIEOBJ) $(LIBO)
 
 $(NOHACKSO): $(NOHACKSOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(NOHACKSO) $(NOHACKSOBJ) -o $@
+
+$(NPCTESTO): $(NPCTESTOBJ) $(LIBO)
+	$(CC) -shared -fPIC -Wl,-soname,$(NPCTESTO) $(NPCTESTOBJ) -o $@
 
 $(DOORSO): $(DOORSOBJ) $(LIBO)
 	$(CC) -shared -fPIC -Wl,-soname,$(DOORSO) $(DOORSOBJ) -o $@
@@ -1054,3 +1061,30 @@ signs.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h hook.h
 signs.o: packet.h position.h level.h /usr/include/pthread.h
 signs.o: /usr/include/sched.h /usr/include/bits/sched.h /usr/include/signal.h
 signs.o: /usr/include/bits/setjmp.h physics.h npc.h player.h
+npctest.o: /usr/include/stdio.h /usr/include/features.h
+npctest.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
+npctest.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
+npctest.o: /usr/include/gnu/stubs-64.h /usr/include/bits/types.h
+npctest.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+npctest.o: /usr/include/_G_config.h /usr/include/wchar.h
+npctest.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+npctest.o: client.h /usr/include/netinet/in.h /usr/include/stdint.h
+npctest.o: /usr/include/bits/wchar.h /usr/include/sys/socket.h
+npctest.o: /usr/include/sys/uio.h /usr/include/sys/types.h
+npctest.o: /usr/include/time.h /usr/include/bits/time.h
+npctest.o: /usr/include/xlocale.h /usr/include/endian.h
+npctest.o: /usr/include/bits/endian.h /usr/include/bits/byteswap.h
+npctest.o: /usr/include/sys/select.h /usr/include/bits/select.h
+npctest.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+npctest.o: /usr/include/bits/pthreadtypes.h /usr/include/bits/uio.h
+npctest.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
+npctest.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
+npctest.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
+npctest.o: /usr/include/bits/in.h hook.h list.h /usr/include/stdlib.h
+npctest.o: /usr/include/alloca.h mcc.h packet.h position.h player.h rank.h
+npctest.o: block.h /usr/include/limits.h /usr/include/bits/posix1_lim.h
+npctest.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
+npctest.o: /usr/include/bits/posix2_lim.h bitstuff.h colour.h level.h
+npctest.o: /usr/include/pthread.h /usr/include/sched.h
+npctest.o: /usr/include/bits/sched.h /usr/include/signal.h
+npctest.o: /usr/include/bits/setjmp.h /usr/include/string.h physics.h npc.h
