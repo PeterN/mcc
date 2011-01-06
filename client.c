@@ -37,10 +37,12 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
+	pthread_mutex_lock(&c->packet_send_mutex);
 	*c->packet_send_end = p;
 	c->packet_send_end = &p->next;
 
 	c->packet_send_count++;
+	pthread_mutex_unlock(&c->packet_send_mutex);
 }
 
 void client_notify(struct client_t *c, const char *message)
