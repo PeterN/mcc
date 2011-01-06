@@ -469,6 +469,7 @@ CMD(dellvl)
 			if (c->player->level == l)
 			{
 				c->player->new_level = l2;
+				level_send_queue(c);
 				client_notify(c, "Moving to main, level deleted.");
 			}
 			if (c->player->new_level == l)
@@ -554,6 +555,7 @@ CMD(filter)
 	}
 
 	c->waiting_for_level = true;
+	level_send_queue(c);
 
 	return false;
 }
@@ -961,6 +963,7 @@ CMD(instant)
 			if (l->clients[i] == NULL) continue;
 
 			l->clients[i]->waiting_for_level = true;
+			level_send_queue(l->clients[i]);
 			client_notify(l->clients[i], "Instant mode turned off");
 		}
 	}
@@ -1929,6 +1932,8 @@ CMD(resetlvl)
 		struct client_t *c = l->clients[i];
 		if (c == NULL) continue;
 		c->waiting_for_level = true;
+
+		level_send_queue(c);
 	}
 
 	cuboid_remove_for_level(l);

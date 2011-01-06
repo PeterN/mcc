@@ -117,6 +117,8 @@ bool player_change_level(struct player_t *player, struct level_t *level)
 	player->new_level = level;
 	player->client->waiting_for_level = true;
 
+	level_send_queue(player->client);
+
 	return true;
 }
 
