@@ -5,6 +5,7 @@
 #include "block.h"
 #include "mcc.h"
 #include "level.h"
+#include "level_send.h"
 #include "module.h"
 #include "network.h"
 #include "player.h"
@@ -41,6 +42,8 @@ void mcc_exit(void)
 		}
 	}
 
+	level_send_deinit();
+
 	modules_deinit();
 	level_list_free(&s_levels);
 	level_hooks_deinit();
@@ -74,6 +77,8 @@ int main(int argc, char **argv)
 
 	g_server.logfile = fopen("log.txt", "a");
 	LOG("Server starting...\n");
+
+	level_send_init();
 
 	if (!level_load("main", NULL))
 	{
@@ -169,6 +174,8 @@ int main(int argc, char **argv)
 
 			if ((tick % MS_TO_TICKS(240)) == 0)
 			{
+				level_send_run();
+				/*
 				for (i = 0; i < s_clients.used; i++)
 				{
 					struct client_t *c = s_clients.items[i];
@@ -177,10 +184,11 @@ int main(int argc, char **argv)
 						level_send(c);
 					}
 				}
+				*/
 			}
 		}
 
-		usleep(1000);
+		usleep(50);
 	}
 
 	mcc_exit();

@@ -10,7 +10,7 @@
 #include "npc.h"
 
 #define MAX_CLIENTS_PER_LEVEL 64
-#define MAX_NPCS_PER_LEVEL 32
+#define MAX_NPCS_PER_LEVEL 64
 #define MAX_HOOKS_PER_LEVEL 4
 
 struct player_t;

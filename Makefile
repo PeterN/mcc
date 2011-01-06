@@ -18,6 +18,7 @@ LIBSRC += hook.c
 LIBSRC += landscape.c
 LIBSRC += land2.c
 LIBSRC += level.c
+LIBSRC += level_send.c
 LIBSRC += module.c
 LIBSRC += network.c
 LIBSRC += npc.c
@@ -265,13 +266,12 @@ client.o: /usr/include/bits/pthreadtypes.h /usr/include/bits/uio.h
 client.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
 client.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
 client.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
-client.o: /usr/include/bits/in.h hook.h list.h /usr/include/stdlib.h
+client.o: /usr/include/bits/in.h /usr/include/pthread.h /usr/include/sched.h
+client.o: /usr/include/bits/sched.h /usr/include/signal.h
+client.o: /usr/include/bits/setjmp.h hook.h list.h /usr/include/stdlib.h
 client.o: /usr/include/alloca.h mcc.h packet.h position.h commands.h player.h
 client.o: rank.h block.h /usr/include/limits.h /usr/include/bits/posix2_lim.h
-client.o: bitstuff.h colour.h playerdb.h level.h /usr/include/pthread.h
-client.o: /usr/include/sched.h /usr/include/bits/sched.h
-client.o: /usr/include/signal.h /usr/include/bits/setjmp.h physics.h npc.h
-client.o: network.h
+client.o: bitstuff.h colour.h playerdb.h level.h physics.h npc.h network.h
 colour.o: /usr/include/strings.h colour.h
 commands.o: /usr/include/stdio.h /usr/include/features.h
 commands.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
@@ -299,13 +299,13 @@ commands.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
 commands.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
 commands.o: /usr/include/bits/sockaddr.h /usr/include/asm/socket.h
 commands.o: /usr/include/asm-generic/socket.h /usr/include/asm/sockios.h
-commands.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h hook.h
-commands.o: list.h /usr/include/stdlib.h /usr/include/alloca.h mcc.h packet.h
-commands.o: position.h level.h /usr/include/pthread.h /usr/include/sched.h
+commands.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h
+commands.o: /usr/include/pthread.h /usr/include/sched.h
 commands.o: /usr/include/bits/sched.h /usr/include/signal.h
-commands.o: /usr/include/bits/setjmp.h block.h bitstuff.h rank.h physics.h
-commands.o: npc.h player.h colour.h playerdb.h network.h module.h undodb.h
-commands.o: util.h
+commands.o: /usr/include/bits/setjmp.h hook.h list.h /usr/include/stdlib.h
+commands.o: /usr/include/alloca.h mcc.h packet.h position.h level.h block.h
+commands.o: bitstuff.h rank.h physics.h npc.h player.h colour.h playerdb.h
+commands.o: network.h module.h undodb.h util.h
 config.o: /usr/include/string.h /usr/include/features.h
 config.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 config.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -338,10 +338,10 @@ cuboid.o: /usr/include/sys/uio.h /usr/include/bits/uio.h
 cuboid.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
 cuboid.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
 cuboid.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
-cuboid.o: /usr/include/bits/in.h hook.h packet.h position.h level.h
-cuboid.o: /usr/include/pthread.h /usr/include/sched.h
+cuboid.o: /usr/include/bits/in.h /usr/include/pthread.h /usr/include/sched.h
 cuboid.o: /usr/include/bits/sched.h /usr/include/signal.h
-cuboid.o: /usr/include/bits/setjmp.h physics.h npc.h player.h colour.h
+cuboid.o: /usr/include/bits/setjmp.h hook.h packet.h position.h level.h
+cuboid.o: physics.h npc.h player.h colour.h
 faultgen.o: /usr/include/stdlib.h /usr/include/features.h
 faultgen.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 faultgen.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -472,6 +472,35 @@ level.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
 level.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
 level.o: /usr/include/bits/in.h hook.h packet.h cuboid.h faultgen.h perlin.h
 level.o: player.h colour.h playerdb.h network.h undodb.h util.h
+level_send.o: /usr/include/pthread.h /usr/include/features.h
+level_send.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
+level_send.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
+level_send.o: /usr/include/gnu/stubs-64.h /usr/include/endian.h
+level_send.o: /usr/include/bits/endian.h /usr/include/bits/byteswap.h
+level_send.o: /usr/include/sched.h /usr/include/bits/types.h
+level_send.o: /usr/include/bits/typesizes.h /usr/include/time.h
+level_send.o: /usr/include/bits/time.h /usr/include/xlocale.h
+level_send.o: /usr/include/bits/sched.h /usr/include/signal.h
+level_send.o: /usr/include/bits/sigset.h /usr/include/bits/pthreadtypes.h
+level_send.o: /usr/include/bits/setjmp.h client.h /usr/include/netinet/in.h
+level_send.o: /usr/include/stdint.h /usr/include/bits/wchar.h
+level_send.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
+level_send.o: /usr/include/sys/types.h /usr/include/sys/select.h
+level_send.o: /usr/include/bits/select.h /usr/include/sys/sysmacros.h
+level_send.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
+level_send.o: /usr/include/bits/sockaddr.h /usr/include/asm/socket.h
+level_send.o: /usr/include/asm-generic/socket.h /usr/include/asm/sockios.h
+level_send.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h
+level_send.o: hook.h list.h /usr/include/stdlib.h /usr/include/alloca.h mcc.h
+level_send.o: /usr/include/stdio.h /usr/include/libio.h
+level_send.o: /usr/include/_G_config.h /usr/include/wchar.h
+level_send.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+level_send.o: packet.h position.h player.h rank.h block.h
+level_send.o: /usr/include/limits.h /usr/include/bits/posix1_lim.h
+level_send.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
+level_send.o: /usr/include/bits/posix2_lim.h bitstuff.h colour.h level.h
+level_send.o: /usr/include/string.h physics.h npc.h level_send.h queue.h
+level_send.o: util.h
 module.o: /usr/include/dlfcn.h /usr/include/features.h
 module.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 module.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -516,15 +545,15 @@ network.o: /usr/include/fcntl.h /usr/include/bits/fcntl.h
 network.o: /usr/include/errno.h /usr/include/bits/errno.h
 network.o: /usr/include/linux/errno.h /usr/include/asm/errno.h
 network.o: /usr/include/asm-generic/errno.h
-network.o: /usr/include/asm-generic/errno-base.h client.h hook.h list.h
-network.o: /usr/include/stdlib.h /usr/include/alloca.h mcc.h packet.h
-network.o: position.h level.h /usr/include/pthread.h /usr/include/sched.h
+network.o: /usr/include/asm-generic/errno-base.h client.h
+network.o: /usr/include/pthread.h /usr/include/sched.h
 network.o: /usr/include/bits/sched.h /usr/include/signal.h
-network.o: /usr/include/bits/setjmp.h block.h /usr/include/limits.h
-network.o: /usr/include/bits/posix1_lim.h /usr/include/bits/local_lim.h
-network.o: /usr/include/linux/limits.h /usr/include/bits/posix2_lim.h
-network.o: bitstuff.h rank.h physics.h npc.h player.h colour.h network.h
-network.o: playerdb.h
+network.o: /usr/include/bits/setjmp.h hook.h list.h /usr/include/stdlib.h
+network.o: /usr/include/alloca.h mcc.h packet.h position.h level.h block.h
+network.o: /usr/include/limits.h /usr/include/bits/posix1_lim.h
+network.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
+network.o: /usr/include/bits/posix2_lim.h bitstuff.h rank.h physics.h npc.h
+network.o: player.h colour.h network.h playerdb.h
 npc.o: /usr/include/stdio.h /usr/include/features.h
 npc.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 npc.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -544,10 +573,10 @@ npc.o: /usr/include/bits/pthreadtypes.h /usr/include/bits/uio.h
 npc.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
 npc.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
 npc.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
-npc.o: /usr/include/bits/in.h hook.h list.h /usr/include/stdlib.h
-npc.o: /usr/include/alloca.h mcc.h packet.h position.h level.h
-npc.o: /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h
-npc.o: /usr/include/signal.h /usr/include/bits/setjmp.h block.h
+npc.o: /usr/include/bits/in.h /usr/include/pthread.h /usr/include/sched.h
+npc.o: /usr/include/bits/sched.h /usr/include/signal.h
+npc.o: /usr/include/bits/setjmp.h hook.h list.h /usr/include/stdlib.h
+npc.o: /usr/include/alloca.h mcc.h packet.h position.h level.h block.h
 npc.o: /usr/include/limits.h /usr/include/bits/posix1_lim.h
 npc.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
 npc.o: /usr/include/bits/posix2_lim.h rank.h physics.h npc.h player.h
@@ -572,14 +601,14 @@ packet.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
 packet.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
 packet.o: /usr/include/bits/sockaddr.h /usr/include/asm/socket.h
 packet.o: /usr/include/asm-generic/socket.h /usr/include/asm/sockios.h
-packet.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h hook.h
-packet.o: list.h mcc.h commands.h player.h rank.h block.h
-packet.o: /usr/include/limits.h /usr/include/bits/posix1_lim.h
-packet.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
-packet.o: /usr/include/bits/posix2_lim.h bitstuff.h colour.h level.h
+packet.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h
 packet.o: /usr/include/pthread.h /usr/include/sched.h
 packet.o: /usr/include/bits/sched.h /usr/include/signal.h
-packet.o: /usr/include/bits/setjmp.h physics.h npc.h
+packet.o: /usr/include/bits/setjmp.h hook.h list.h mcc.h commands.h player.h
+packet.o: rank.h block.h /usr/include/limits.h /usr/include/bits/posix1_lim.h
+packet.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
+packet.o: /usr/include/bits/posix2_lim.h bitstuff.h colour.h level.h
+packet.o: physics.h npc.h
 perlin.o: /usr/include/stdlib.h /usr/include/features.h
 perlin.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 perlin.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -616,14 +645,14 @@ player.o: /usr/include/bits/pthreadtypes.h /usr/include/bits/uio.h
 player.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
 player.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
 player.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
-player.o: /usr/include/bits/in.h hook.h list.h /usr/include/stdlib.h
-player.o: /usr/include/alloca.h mcc.h packet.h position.h level.h
-player.o: /usr/include/pthread.h /usr/include/sched.h
+player.o: /usr/include/bits/in.h /usr/include/pthread.h /usr/include/sched.h
 player.o: /usr/include/bits/sched.h /usr/include/signal.h
-player.o: /usr/include/bits/setjmp.h block.h /usr/include/limits.h
-player.o: /usr/include/bits/posix1_lim.h /usr/include/bits/local_lim.h
-player.o: /usr/include/linux/limits.h /usr/include/bits/posix2_lim.h rank.h
-player.o: physics.h npc.h player.h colour.h playerdb.h network.h util.h
+player.o: /usr/include/bits/setjmp.h hook.h list.h /usr/include/stdlib.h
+player.o: /usr/include/alloca.h mcc.h packet.h position.h level.h block.h
+player.o: /usr/include/limits.h /usr/include/bits/posix1_lim.h
+player.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
+player.o: /usr/include/bits/posix2_lim.h rank.h physics.h npc.h player.h
+player.o: colour.h playerdb.h network.h util.h
 playerdb.o: /usr/include/stdio.h /usr/include/features.h
 playerdb.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 playerdb.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -708,14 +737,14 @@ mcc.o: /usr/include/bits/select.h /usr/include/sys/sysmacros.h
 mcc.o: /usr/include/bits/pthreadtypes.h /usr/include/alloca.h mcc.h rank.h
 mcc.o: level.h /usr/include/pthread.h /usr/include/sched.h
 mcc.o: /usr/include/bits/sched.h /usr/include/bits/setjmp.h
-mcc.o: /usr/include/string.h physics.h position.h npc.h module.h network.h
-mcc.o: player.h colour.h playerdb.h client.h /usr/include/netinet/in.h
-mcc.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
-mcc.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
-mcc.o: /usr/include/bits/sockaddr.h /usr/include/asm/socket.h
-mcc.o: /usr/include/asm-generic/socket.h /usr/include/asm/sockios.h
-mcc.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h hook.h
-mcc.o: packet.h timer.h
+mcc.o: /usr/include/string.h physics.h position.h npc.h level_send.h module.h
+mcc.o: network.h player.h colour.h playerdb.h client.h
+mcc.o: /usr/include/netinet/in.h /usr/include/sys/socket.h
+mcc.o: /usr/include/sys/uio.h /usr/include/bits/uio.h
+mcc.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
+mcc.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
+mcc.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
+mcc.o: /usr/include/bits/in.h hook.h packet.h timer.h
 spleef.o: block.h /usr/include/stdint.h /usr/include/features.h
 spleef.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 spleef.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -928,11 +957,11 @@ portal.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
 portal.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
 portal.o: /usr/include/bits/sockaddr.h /usr/include/asm/socket.h
 portal.o: /usr/include/asm-generic/socket.h /usr/include/asm/sockios.h
-portal.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h hook.h
-portal.o: packet.h position.h level.h /usr/include/pthread.h
-portal.o: /usr/include/sched.h /usr/include/bits/sched.h
-portal.o: /usr/include/signal.h /usr/include/bits/setjmp.h physics.h npc.h
-portal.o: player.h
+portal.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h
+portal.o: /usr/include/pthread.h /usr/include/sched.h
+portal.o: /usr/include/bits/sched.h /usr/include/signal.h
+portal.o: /usr/include/bits/setjmp.h hook.h packet.h position.h level.h
+portal.o: physics.h npc.h player.h
 doors.o: block.h /usr/include/stdint.h /usr/include/features.h
 doors.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 doors.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -1029,11 +1058,11 @@ zombies.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
 zombies.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
 zombies.o: /usr/include/bits/sockaddr.h /usr/include/asm/socket.h
 zombies.o: /usr/include/asm-generic/socket.h /usr/include/asm/sockios.h
-zombies.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h hook.h
-zombies.o: packet.h position.h level.h /usr/include/pthread.h
-zombies.o: /usr/include/sched.h /usr/include/bits/sched.h
-zombies.o: /usr/include/signal.h /usr/include/bits/setjmp.h physics.h npc.h
-zombies.o: player.h network.h
+zombies.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h
+zombies.o: /usr/include/pthread.h /usr/include/sched.h
+zombies.o: /usr/include/bits/sched.h /usr/include/signal.h
+zombies.o: /usr/include/bits/setjmp.h hook.h packet.h position.h level.h
+zombies.o: physics.h npc.h player.h network.h
 signs.o: /usr/include/stdio.h /usr/include/features.h
 signs.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 signs.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -1057,10 +1086,11 @@ signs.o: /usr/include/sys/socket.h /usr/include/sys/uio.h
 signs.o: /usr/include/bits/uio.h /usr/include/bits/socket.h
 signs.o: /usr/include/bits/sockaddr.h /usr/include/asm/socket.h
 signs.o: /usr/include/asm-generic/socket.h /usr/include/asm/sockios.h
-signs.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h hook.h
-signs.o: packet.h position.h level.h /usr/include/pthread.h
-signs.o: /usr/include/sched.h /usr/include/bits/sched.h /usr/include/signal.h
-signs.o: /usr/include/bits/setjmp.h physics.h npc.h player.h
+signs.o: /usr/include/asm-generic/sockios.h /usr/include/bits/in.h
+signs.o: /usr/include/pthread.h /usr/include/sched.h
+signs.o: /usr/include/bits/sched.h /usr/include/signal.h
+signs.o: /usr/include/bits/setjmp.h hook.h packet.h position.h level.h
+signs.o: physics.h npc.h player.h
 npctest.o: /usr/include/stdio.h /usr/include/features.h
 npctest.o: /usr/include/bits/predefs.h /usr/include/sys/cdefs.h
 npctest.o: /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h
@@ -1080,11 +1110,11 @@ npctest.o: /usr/include/bits/pthreadtypes.h /usr/include/bits/uio.h
 npctest.o: /usr/include/bits/socket.h /usr/include/bits/sockaddr.h
 npctest.o: /usr/include/asm/socket.h /usr/include/asm-generic/socket.h
 npctest.o: /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h
-npctest.o: /usr/include/bits/in.h hook.h list.h /usr/include/stdlib.h
+npctest.o: /usr/include/bits/in.h /usr/include/pthread.h /usr/include/sched.h
+npctest.o: /usr/include/bits/sched.h /usr/include/signal.h
+npctest.o: /usr/include/bits/setjmp.h hook.h list.h /usr/include/stdlib.h
 npctest.o: /usr/include/alloca.h mcc.h packet.h position.h player.h rank.h
 npctest.o: block.h /usr/include/limits.h /usr/include/bits/posix1_lim.h
 npctest.o: /usr/include/bits/local_lim.h /usr/include/linux/limits.h
 npctest.o: /usr/include/bits/posix2_lim.h bitstuff.h colour.h level.h
-npctest.o: /usr/include/pthread.h /usr/include/sched.h
-npctest.o: /usr/include/bits/sched.h /usr/include/signal.h
-npctest.o: /usr/include/bits/setjmp.h /usr/include/string.h physics.h npc.h
+npctest.o: /usr/include/string.h physics.h npc.h

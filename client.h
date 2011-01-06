@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include "hook.h"
 #include "list.h"
 #include "packet.h"
@@ -26,6 +27,8 @@ struct client_t
 	struct packet_t *packet_send;
 	struct packet_t **packet_send_end;
 	struct player_t *player;
+
+	pthread_mutex_t packet_send_mutex;
 
 	int packet_send_count;
 };

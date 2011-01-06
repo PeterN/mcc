@@ -276,6 +276,7 @@ static void net_packetsend(struct client_t *c)
 		c->packet_send = p->next;
 		free(p);
 
+		pthread_mutex_lock(&c->packet_send_mutex);
 		c->packet_send_count--;
 
 		if (c->packet_send == NULL)
@@ -287,8 +288,8 @@ static void net_packetsend(struct client_t *c)
 			}
 
 			c->packet_send_end = &c->packet_send;
-			break;
 		}
+		pthread_mutex_unlock(&c->packet_send_mutex);
 
 		break;
 	}
@@ -440,6 +441,8 @@ void net_run(void)
 
 				getip((struct sockaddr *)&sin, sin_len, c->ip, sizeof c->ip);
 				LOG("[network] accepted connection from %s\n", c->ip);
+
+				pthread_mutex_init(&c->packet_send_mutex, NULL);
 
 				c->packet_send_end = &c->packet_send;
 
