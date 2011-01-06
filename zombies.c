@@ -348,7 +348,7 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 		}
 	}
 
-	if (arg->ticksremaining > 0 && alive == 0)
+	if (arg->ticksremaining > 0 && (alive == 0 || dead == 0))
 	{
 		arg->ticksremaining = 1;
 		return;
