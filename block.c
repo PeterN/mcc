@@ -569,7 +569,7 @@ void blocktype_init(void)
 
 	register_blocktype(AIR, "air", RANK_GUEST, NULL, NULL, &delete_air, &physics_air, true);
 	register_blocktype(ROCK, "stone", RANK_GUEST, NULL, NULL, NULL, NULL, false);
-	register_blocktype(GRASS, "grass", RANK_GUEST, NULL, NULL, NULL, &physics_grass, false);
+	register_blocktype(GRASS, "grass", RANK_BUILDER, NULL, NULL, NULL, &physics_grass, false);
 	register_blocktype(DIRT, "dirt", RANK_GUEST, NULL, NULL, NULL, &physics_dirt, false);
 	register_blocktype(STONE, "cobblestone", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 	register_blocktype(WOOD, "wood", RANK_GUEST, NULL, NULL, NULL, NULL, false);
@@ -586,7 +586,7 @@ void blocktype_init(void)
 	register_blocktype(COAL, "coal", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 	register_blocktype(TRUNK, "tree", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 	register_blocktype(LEAF, "leaves", RANK_GUEST, NULL, NULL, NULL, NULL, true);
-	register_blocktype(SPONGE, "sponge", RANK_GUEST, NULL, NULL, &delete_sponge, &physics_sponge, false);
+	register_blocktype(SPONGE, "sponge", RANK_BUILDER, NULL, NULL, &delete_sponge, &physics_sponge, false);
 	register_blocktype(GLASS, "glass", RANK_GUEST, NULL, NULL, NULL, NULL, true);
 	register_blocktype(RED, "red", RANK_GUEST, NULL, NULL, NULL, NULL, false);
 	register_blocktype(ORANGE, "orange", RANK_GUEST, NULL, NULL, NULL, NULL, false);
