@@ -71,7 +71,6 @@ static void sighandler(int sig)
 int main(int argc, char **argv)
 {
 	int tick = 0;
-	unsigned i;
 
 	//config_read(&g_server);
 
@@ -123,12 +122,12 @@ int main(int argc, char **argv)
 
 	playerdb_init();
 
-	net_init(g_server.port);
-
 	modules_init();
 
 	register_timer("save levels", 120000, &level_save_all, NULL);
 	register_timer("unload levels", 20000, &level_unload_empty, NULL);
+
+	net_init(g_server.port);
 
 	unsigned cur_ticks = gettime();
 	unsigned next_tick = cur_ticks + TICK_INTERVAL;

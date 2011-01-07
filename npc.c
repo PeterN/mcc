@@ -28,10 +28,10 @@ static void npc_send_spawn(struct npc *npc)
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (level->clients[i] != NULL)
-		{
-			client_add_packet(level->clients[i], packet_send_spawn_player(npc->levelid, npc->name, &npc->pos));
-		}
+		struct client_t *c = level->clients[i];
+		if (c == NULL || c->sending_level) continue;
+
+		client_add_packet(c, packet_send_spawn_player(npc->levelid, npc->name, &npc->pos));
 	}
 }
 
@@ -42,10 +42,10 @@ static void npc_send_despawn(struct npc *npc)
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (level->clients[i] != NULL)
-		{
-			client_add_packet(level->clients[i], packet_send_despawn_player(npc->levelid));
-		}
+		struct client_t *c = level->clients[i];
+		if (c == NULL || c->sending_level) continue;
+
+		client_add_packet(c, packet_send_despawn_player(npc->levelid));
 	}
 }
 
@@ -120,26 +120,25 @@ void npc_send_position(struct npc *npc)
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
 		struct client_t *c = npc->level->clients[i];
-		if (c != NULL)
+		if (c == NULL || c->sending_level) continue;
+
+		switch (changed)
 		{
-			switch (changed)
-			{
-				case 1:
-					client_add_packet(c, packet_send_position_update(npc->levelid, dx, dy, dz));
-					break;
+			case 1:
+				client_add_packet(c, packet_send_position_update(npc->levelid, dx, dy, dz));
+				break;
 
-				case 2:
-					client_add_packet(c, packet_send_orientation_update(npc->levelid, &npc->pos));
-					break;
+			case 2:
+				client_add_packet(c, packet_send_orientation_update(npc->levelid, &npc->pos));
+				break;
 
-				case 3:
-					client_add_packet(c, packet_send_full_position_update(npc->levelid, dx, dy, dz, &npc->pos));
-					break;
+			case 3:
+				client_add_packet(c, packet_send_full_position_update(npc->levelid, dx, dy, dz, &npc->pos));
+				break;
 
-				default:
-					client_add_packet(c, packet_send_teleport_player(npc->levelid, &npc->pos));
-					break;
-			}
+			default:
+				client_add_packet(c, packet_send_teleport_player(npc->levelid, &npc->pos));
+				break;
 		}
 	}
 }

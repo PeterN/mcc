@@ -282,7 +282,7 @@ void client_send_spawn(struct client_t *c, bool hiding)
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (level->clients[i] != NULL && level->clients[i] != c)
+		if (level->clients[i] != NULL && level->clients[i] != c && !level->clients[i]->sending_level)
 		{
 			client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->alias, &c->player->pos));
 			//printf("Told %s (%d) about %s joining %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
@@ -298,7 +298,7 @@ void client_send_despawn(struct client_t *c, bool hiding)
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (level->clients[i] != NULL && level->clients[i] != c)
+		if (level->clients[i] != NULL && level->clients[i] != c && !level->clients[i]->sending_level)
 		{
 			client_add_packet(level->clients[i], packet_send_despawn_player(c->player->levelid));
 			//printf("Told %s (%d) about %s leaving %s\n", level->clients[i]->player->username, i, c->player->username, level->name);

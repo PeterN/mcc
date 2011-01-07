@@ -17,6 +17,7 @@ struct client_t
 	bool writable;
 	bool close;
 	bool waiting_for_level;
+	bool sending_level;
 	bool hidden;
 
 	struct sockaddr_storage sin;

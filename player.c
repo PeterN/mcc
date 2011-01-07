@@ -237,32 +237,31 @@ void player_send_position(struct player_t *player)
 	player->oldpos = player->pos;
 
 	if (player->client->hidden) return;
-	
+
 	unsigned i;
-	for (i = 0; i < s_clients.used; i++)
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		struct client_t *c = s_clients.items[i];
-		if (c->player != NULL && c->player != player && c->player->level == player->level)
+		struct client_t *c = player->level->clients[i];
+		if (c == NULL || c->sending_level || c->player == player) continue;
+
+		switch (changed)
 		{
-			switch (changed)
-			{
-				case 1:
-					client_add_packet(c, packet_send_position_update(player->levelid, dx, dy, dz));
-					break;
+			case 1:
+				client_add_packet(c, packet_send_position_update(player->levelid, dx, dy, dz));
+				break;
 
-				case 2:
-					client_add_packet(c, packet_send_orientation_update(player->levelid, &player->pos));
-					break;
+			case 2:
+				client_add_packet(c, packet_send_orientation_update(player->levelid, &player->pos));
+				break;
 
-				case 3:
-					client_add_packet(c, packet_send_full_position_update(player->levelid, dx, dy, dz, &player->pos));
-					break;
+			case 3:
+				client_add_packet(c, packet_send_full_position_update(player->levelid, dx, dy, dz, &player->pos));
+				break;
 
-				default:
-					client_add_packet(c, packet_send_teleport_player(player->levelid, &player->pos));
-					break;
+			default:
+				client_add_packet(c, packet_send_teleport_player(player->levelid, &player->pos));
+				break;
 			}
-		}
 	}
 }
 

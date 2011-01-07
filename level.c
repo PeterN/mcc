@@ -254,6 +254,8 @@ bool level_send(struct client_t *c)
 		return false;
 	}
 
+	c->sending_level = true;
+
 	uint8_t *bufp = buffer;
 	*bufp++ = (length >> 24) & 0xFF;
 	*bufp++ = (length >> 16) & 0xFF;
@@ -300,7 +302,7 @@ bool level_send(struct client_t *c)
 		/* Despawn users for this user */
 		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 		{
-			if (oldlevel->clients[i] != NULL && !oldlevel->clients[i]->hidden)
+			if (oldlevel->clients[i] != NULL && !oldlevel->clients[i]->hidden && !oldlevel->clients[i]->sending_level)
 			{
 				client_add_packet(c, packet_send_despawn_player(i));
 			}
@@ -366,7 +368,7 @@ bool level_send(struct client_t *c)
 
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden)
+		if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden && !newlevel->clients[i]->sending_level)
 		{
 			client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->alias, &newlevel->clients[i]->player->pos));
 		}
@@ -389,6 +391,7 @@ bool level_send(struct client_t *c)
 	}
 
 	c->waiting_for_level = false;
+	c->sending_level = false;
 
 	return true;
 }
@@ -1656,11 +1659,12 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		enum blocktype_t pt = convert(level, index, b);
 
 		unsigned i;
-		for (i = 0; i < s_clients.used; i++)
+		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 		{
-			struct client_t *c = s_clients.items[i];
-			if (c->player == NULL) continue;
-			if ((client != c || pt != t || !click) && c->player->level == level)
+			struct client_t *c = level->clients[i];
+			if (c == NULL || c->sending_level) continue;
+
+			if (client != c || pt != t || !click)
 			{
 				client_add_packet(c, packet_send_set_block(x, y, z, pt));
 			}
