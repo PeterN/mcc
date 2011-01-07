@@ -1146,7 +1146,11 @@ CMD(lava)
 
 static int level_filename_filter(const struct dirent *d)
 {
-	return strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL;
+	if (strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL)
+	{
+		return strstr(d->d_name, "_home") == NULL;
+	}
+	return 0;
 }
 
 static const char help_levels[] =
@@ -1176,7 +1180,7 @@ CMD(levels)
 		char *ext = strrchr(namelist[i]->d_name, '.');
 		if (ext != NULL) *ext = '\0';
 
-		if (i > 0 && strcmp(namelist[i - 1]->d_name, namelist[i]->d_name) != 0 && strstr(namelist[i]->d_name, "_home") == NULL)
+		if (i == 0 || strcmp(namelist[i - 1]->d_name, namelist[i]->d_name) != 0)
 		{
 			bool loaded = level_is_loaded(namelist[i]->d_name);
 
