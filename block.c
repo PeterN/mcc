@@ -78,7 +78,7 @@ int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_
 
 void deregister_blocktype(enum blocktype_t type)
 {
-	if (type == BLOCK_INVALID) return;
+	if (type == BLOCK_INVALID || type >= s_blocks.used) return;
 
 	struct blocktype_desc_t *descp = &s_blocks.items[type];
 	descp->loaded = false;
@@ -91,6 +91,8 @@ void deregister_blocktype(enum blocktype_t type)
 
 enum blocktype_t convert(struct level_t *level, unsigned index, const struct block_t *block)
 {
+	if (block->type >= s_blocks.used) return RED;
+
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->convert_func != NULL)
 	{
@@ -105,6 +107,8 @@ enum blocktype_t convert(struct level_t *level, unsigned index, const struct blo
 
 int trigger(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
+	if (block->type >= s_blocks.used) return TRIG_NONE;
+
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->trigger_func != NULL)
 	{
@@ -115,6 +119,8 @@ int trigger(struct level_t *l, unsigned index, const struct block_t *block, stru
 
 void delete(struct level_t *l, unsigned index, const struct block_t *block)
 {
+	if (block->type >= s_blocks.used) return;
+
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->delete_func != NULL)
 	{
@@ -124,6 +130,8 @@ void delete(struct level_t *l, unsigned index, const struct block_t *block)
 
 void physics(struct level_t *level, unsigned index, const struct block_t *block)
 {
+	if (block->type >= s_blocks.used) return;
+
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 
 	if (btd->physics_func != NULL)
@@ -142,6 +150,7 @@ bool light_check(struct level_t *level, unsigned index)
 	for (; y < level->y; y++)
 	{
 		enum blocktype_t type = level->blocks[level_get_index(level, x, y, z)].type;
+		if (type >= s_blocks.used) return false;
 		const struct blocktype_desc_t *btd = &s_blocks.items[type];
 		if (!btd->clear) return false;
 	}
