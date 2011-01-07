@@ -284,7 +284,9 @@ static void net_packetsend(struct client_t *c)
 			/* Send queue is empty, reset packet_send_end */
 			if (c->packet_send_count != 0)
 			{
-				LOG("[network] Reached end of send queue by packet send count is %d\n", c->packet_send_count);
+				LOG("[network] Reached end of send queue but packet send count is %d for %s\n",
+					c->packet_send_count, c->player == NULL ? c->ip : c->player->username);
+				c->packet_send_count = 0;
 			}
 
 			c->packet_send_end = &c->packet_send;
