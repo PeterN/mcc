@@ -273,10 +273,11 @@ static void net_packetsend(struct client_t *c)
 			break;
 		}
 
+		pthread_mutex_lock(&c->packet_send_mutex);
+
 		c->packet_send = p->next;
 		free(p);
 
-		pthread_mutex_lock(&c->packet_send_mutex);
 		c->packet_send_count--;
 
 		if (c->packet_send == NULL)
