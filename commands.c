@@ -490,6 +490,58 @@ CMD(dellvl)
 	return false;
 }
 
+static int dir_filename_filter(const struct dirent *d)
+{
+	return d->d_type == DT_DIR && d->d_name[0] != '.' && strstr(d->d_name, "backups") == NULL;
+}
+
+static const char help_dirs[] =
+"/dirs\n"
+"List all level directories known by the server.";
+
+CMD(dirs)
+{
+	char buf[64];
+	char *bufp;
+	struct dirent **namelist;
+	int n, i;
+
+	strcpy(buf, "Directories: ");
+	bufp = buf + strlen(buf);
+
+	n = scandir("levels", &namelist, &dir_filename_filter, alphasort);
+	if (n < 0)
+	{
+		client_notify(c, "Unable to get list of directories");
+		return false;
+	}
+
+	for (i = 0; i < n; i++)
+	{
+		char buf2[64];
+		snprintf(buf2, sizeof buf2, "%s%s", namelist[i]->d_name, (i < n - 1) ? ", " : "");
+
+		size_t len = strlen(buf2);
+		if (len >= sizeof buf - (bufp - buf))
+		{
+			client_notify(c, buf);
+			memset(buf, 0, sizeof buf);
+			bufp = buf;
+		}
+
+		strcpy(bufp, buf2);
+		bufp += len;
+
+		free(namelist[i]);
+	}
+
+	free(namelist);
+
+	client_notify(c, buf);
+
+	return false;
+}
+
 static const char help_disown[] =
 "/disown\n"
 "Toggle disown mode. When enabled, any blocks placed will have their owner reset to none. "
@@ -1206,6 +1258,7 @@ CMD(levels)
 	}
 
 	free(namelist[i - 1]);
+	free(namelist);
 
 	client_notify(c, buf);
 
@@ -2614,6 +2667,7 @@ struct command_t s_commands[] = {
 	{ "cuboid", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ "disown", RANK_OP, &cmd_disown, help_disown },
 	{ "dellvl", RANK_OP, &cmd_dellvl, help_dellvl },
+	{ "dirs", RANK_MOD, &cmd_dirs, help_dirs },
 	{ "exit", RANK_ADMIN, &cmd_exit, help_exit },
 	{ "fixed", RANK_MOD, &cmd_fixed, help_fixed },
 	{ "filter", RANK_MOD, &cmd_filter, help_filter },
