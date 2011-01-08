@@ -18,6 +18,7 @@
 #include "module.h"
 #include "undodb.h"
 #include "util.h"
+#include "level_send.h"
 
 static const char s_on[] = TAG_RED "on";
 static const char s_off[] = TAG_GREEN "off";
