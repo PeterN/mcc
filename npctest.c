@@ -3,6 +3,18 @@
 #include "player.h"
 #include "level.h"
 
+#define NPC 64
+
+struct npctesto
+{
+	int i;
+	struct {
+		char name[64];
+		struct position_t pos;
+		struct npc *npc;
+	} n[32];
+};
+
 struct npctest
 {
 	int i;
@@ -10,7 +22,11 @@ struct npctest
 		char name[64];
 		struct position_t pos;
 		struct npc *npc;
-	} n[4];
+	} n[NPC];
+	struct {
+		int8_t followid;
+		int8_t stareid;
+	} f[NPC];
 };
 
 void npctest_save(struct level_t *l, struct npctest *arg)
@@ -31,8 +47,17 @@ void npctest_init(struct level_t *l, struct npctest *arg)
 	}
 }
 
+void npctest_init_old(struct level_t *l, struct npctest *arg)
+{
+	memset(arg->f, 0, sizeof arg->f);
+
+	npctest_init(l, arg);
+}
+
 void npctest_deinit(struct level_t *l, struct npctest *arg)
 {
+	npctest_save(l, arg);
+
 	int i;
 	for (i = 0; i < arg->i; i++)
 	{
@@ -46,7 +71,7 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 
 	if (strncasecmp(data, "npc add ", 8) == 0)
 	{
-		if (arg->i < 3)
+		if (arg->i < NPC)
 		{
 			snprintf(arg->n[arg->i].name, sizeof arg->n[arg->i].name, data + 8);
 
@@ -60,6 +85,18 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		{
 			arg->i--;
 			npc_del(arg->n[arg->i].npc);
+		}
+	}
+	else if (strncasecmp(data, "npc get ", 8) == 0)
+	{
+		int i;
+		for (i = 0; i < arg->i; i++)
+		{
+			if (strcasecmp(data + 8, arg->n[i].name) == 0)
+			{
+				arg->n[i].npc->pos = c->player->pos;
+				break;
+			}
 		}
 	}
 	else
@@ -95,6 +132,13 @@ static bool npctest_level_hook(int event, struct level_t *l, struct client_t *c,
 				if (arg->size == sizeof (struct npctest))
 				{
 					npctest_init(l, arg->data);
+					break;
+				}
+				else if (arg->size == sizeof (struct npctesto))
+				{
+					arg->size = sizeof (struct npctest);
+					arg->data = realloc(arg->data, arg->size);
+					npctest_init_old(l, arg->data);
 					break;
 				}
 
