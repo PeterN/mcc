@@ -1931,21 +1931,20 @@ CMD(resetlvl)
 		return false;
 	}
 
-	unsigned i;
-	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-	{
-		struct client_t *c = l->clients[i];
-		if (c == NULL) continue;
-		c->waiting_for_level = true;
-
-		level_send_queue(c);
-	}
-
 	cuboid_remove_for_level(l);
 
 //	physics_list_free(&l->physics);
 //	physics_list_free(&l->physics2);
 //	block_update_list_free(&l->updates);
+
+	/* Reset physics for level */
+	l->physics.used = 0;
+	l->physics2.used = 0;
+	l->updates.used = 0;
+	l->physics_iter = 0;
+	l->updates_iter = 0;
+	l->physics_done = 0;
+
 
 	undodb_close(l->undo);
 	l->undo = NULL;
@@ -1956,6 +1955,17 @@ CMD(resetlvl)
 	unlink(filename);
 
 	level_gen(l, t, 0, 0);
+
+	unsigned i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		struct client_t *c = l->clients[i];
+		if (c == NULL) continue;
+		c->waiting_for_level = true;
+
+		level_send_queue(c);
+	}
+
 	return false;
 }
 
