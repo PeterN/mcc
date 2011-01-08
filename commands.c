@@ -1253,7 +1253,18 @@ CMD(levels)
 
 		if (i == 0 || strcmp(namelist[i - 1]->d_name, namelist[i]->d_name) != 0)
 		{
-			bool loaded = level_is_loaded(namelist[i]->d_name);
+			bool loaded;
+
+			if (params == 2)
+			{
+				char fullname[192];
+				snprintf(fullname, sizeof fullname, "%s/%s", param[1], namelist[i]->d_name);
+				loaded = level_is_loaded(fullname);
+			}
+			else
+			{
+				loaded = level_is_loaded(namelist[i]->d_name);
+			}
 
 			char buf2[64];
 			snprintf(buf2, sizeof buf2, "%s%s%s%s", loaded ? TAG_GREEN : "", namelist[i]->d_name, (loaded && i < n - 1) ? TAG_WHITE : "", (i < n - 1) ? ", " : "");
