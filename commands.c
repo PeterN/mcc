@@ -510,7 +510,7 @@ CMD(dirs)
 	bufp = buf + strlen(buf);
 
 	n = scandir("levels", &namelist, &dir_filename_filter, alphasort);
-	if (n < 0)
+	if (n <= 0)
 	{
 		client_notify(c, "Unable to get list of directories");
 		return false;
@@ -1207,7 +1207,7 @@ static int level_filename_filter(const struct dirent *d)
 }
 
 static const char help_levels[] =
-"/levels\n"
+"/levels [<dir>]\n"
 "List all levels known by the server.";
 
 CMD(levels)
@@ -1217,11 +1217,29 @@ CMD(levels)
 	struct dirent **namelist;
 	int n, i;
 
+	if (params > 2) return true;
+
 	strcpy(buf, "Levels: ");
 	bufp = buf + strlen(buf);
 
-	n = scandir("levels", &namelist, &level_filename_filter, alphasort);
-	if (n < 0)
+	char path[128];
+	if (params == 2)
+	{
+		if (strchr(param[1], '/') != NULL)
+		{
+			return true;
+		}
+
+		snprintf(path, sizeof path, "levels/%s", param[1]);
+		lcase(path);
+	}
+	else
+	{
+		strcpy(path, "levels");
+	}
+
+	n = scandir(path, &namelist, &level_filename_filter, alphasort);
+	if (n <= 0)
 	{
 		client_notify(c, "Unable to get list of levels");
 		return false;
