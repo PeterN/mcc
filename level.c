@@ -748,6 +748,12 @@ level_error:
 
 void level_gen(struct level_t *level, const char *type, int height_range, int sea_height)
 {
+	if (type == NULL || strlen(type) == 0)
+	{
+		LOG("Invalid level type specified\n");
+		return;
+	}
+
 	level->type = strdup(type);
 	level->height_range = height_range;
 	level->sea_height = sea_height;
