@@ -373,7 +373,7 @@ void net_run(void)
 		{
 			net_close(c, "Excessive send queue");
 		}
-		if (c->close)
+		if (c->close && !c->sending_level)
 		{
 			net_close_real(c);
 			client_list_del_index(&s_clients, i);
