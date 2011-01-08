@@ -240,6 +240,8 @@ void packet_recv_set_block(struct client_t *c, struct packet_t *p)
 		return;
 	}
 
+	if (c->sending_level) return;
+
 	if (c->player->rank < RANK_ADV_BUILDER)
 	{
 		if (c->player->speed > 500)
@@ -284,6 +286,8 @@ void packet_recv_position(struct client_t *c, struct packet_t *p)
 		net_close(c, "Invalid position data");
 		return;
 	}
+
+	if (c->sending_level) return;
 
 	player_move(c->player, &pos);
 }
