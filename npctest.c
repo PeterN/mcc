@@ -217,9 +217,12 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		if (i >= 0)
 		{
 			arg->f[i].stareid = !arg->f[i].stareid;
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sstaring", arg->n[i].name, arg->f[i].stareid ? "" : "not ");
 		}
-
-		snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sstaring", arg->n[i].name, arg->f[i].stareid ? "" : "not ");
+		else
+		{
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 10);
+		}
 	}
 	else if (strcasecmp(data, "npc wipe") == 0)
 	{
