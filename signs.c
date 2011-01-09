@@ -151,7 +151,7 @@ static bool message_handle_chat(struct level_t *l, struct client_t *c, char *dat
 			if (*s->name != '\0')
 			{
 				char buf[128];
-				snprintf(buf, sizeof buf, TAG_YELLOW "message %s at %dx%dx%d", s->name, s->pos.x, s->pos.y, s->pos.z);
+				snprintf(buf, sizeof buf, TAG_YELLOW "message %s at %.1fx%.1fx%.1f", s->name, s->pos.x / 32.0f, s->pos.y / 32.0f, s->pos.z / 32.0f);
 				client_notify(c, buf);
 			}
 		}

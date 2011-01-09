@@ -139,7 +139,7 @@ static bool portal_handle_chat(struct level_t *l, struct client_t *c, char *data
 			if (*p->name != '\0')
 			{
 				char buf[128];
-				snprintf(buf, sizeof buf, TAG_YELLOW "Portal %s at %dx%dx%d goes to %s on %s", p->name, p->pos.x, p->pos.y, p->pos.z, p->target, p->target_level);
+				snprintf(buf, sizeof buf, TAG_YELLOW "Portal %s at %.1fx%.1fx%.1f goes to %s on %s", p->name, p->pos.x / 32.0f, p->pos.y / 32.0f, p->pos.z / 32.0f, p->target, p->target_level);
 				client_notify(c, buf);
 			}
 		}
