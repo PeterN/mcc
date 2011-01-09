@@ -85,7 +85,7 @@ static int npctest_get_by_name(struct npctest *arg, const char *name)
 
 	char *ep;
 	i = strtol(name, &ep, 10);
-	if (*ep == '\0') return i;
+	if (*ep == '\0' && i >= 0 && i < NPC && arg->n[i].name[0] != '\0') return i;
 
 	for (i = 0; i < NPC; i++)
 	{
@@ -165,7 +165,7 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 
 static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *data, struct npctest *arg)
 {
-	char buf[128];
+	char buf[65];
 
 	if (c->player->rank < RANK_OP) return false;
 
@@ -213,6 +213,19 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		else
 		{
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 8);
+		}
+	}
+	else if (strncasecmp(data, "npc tp ", 7) == 0)
+	{
+		int i = npctest_get_by_name(arg, data + 7);
+		if (i >= 0)
+		{
+			player_teleport(c->player, &arg->n[i].npc->pos, true);
+			return true;
+		}
+		else
+		{
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 7);
 		}
 	}
 	else if (strncasecmp(data, "npc stare ", 10) == 0)
