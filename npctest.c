@@ -82,6 +82,11 @@ void npctest_deinit(struct level_t *l, struct npctest *arg)
 static int npctest_get_by_name(struct npctest *arg, const char *name)
 {
 	int i;
+
+	char *ep;
+	i = strtol(name, &ep, 10);
+	if (*ep == '\0') return i;
+
 	for (i = 0; i < NPC; i++)
 	{
 		if (strcasecmp(arg->n[i].name, name) == 0)
@@ -237,6 +242,34 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		}
 		memset(arg, 0, sizeof (struct npctest));
 		snprintf(buf, sizeof buf, TAG_YELLOW "NPCs wiped");
+	}
+	else if (strcasecmp(data, "npc list") == 0)
+	{
+		char *bufp;
+
+		strcpy(buf, TAG_YELLOW "NPCs:");
+		bufp = buf + strlen(buf);
+
+		int i;
+		for (i = 0; i < NPC; i++)
+		{
+			if (arg->n[i].name[0] == '\0') continue;
+
+			char buf2[64];
+			snprintf(buf2, sizeof buf2, " %d:%s", i, arg->n[i].name);
+
+			size_t len = strlen(buf2);
+			if (len >= sizeof buf - (bufp - buf))
+			{
+				client_notify(c, buf);
+
+				strcpy(buf, TAG_YELLOW);
+				bufp = buf + strlen(buf);
+			}
+
+			strcpy(bufp, buf2);
+			bufp += len;
+		}
 	}
 	else
 	{
