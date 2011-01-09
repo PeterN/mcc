@@ -180,9 +180,9 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		}
 		if (i == NPC) snprintf(buf, sizeof buf, TAG_YELLOW "No free NPC slots");
 	}
-	else if (strncasecmp(data, "npc del ", 7) == 0)
+	else if (strncasecmp(data, "npc del ", 8) == 0)
 	{
-		int i = npctest_get_by_name(arg, data + 7);
+		int i = npctest_get_by_name(arg, data + 8);
 
 		if (i >= 0)
 		{
@@ -220,6 +220,20 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		}
 
 		snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sstaring", arg->n[i].name, arg->f[i].stareid ? "" : "not ");
+	}
+	else if (strcasecmp(data, "npc wipe") == 0)
+	{
+		int i;
+		for (i = 0; i < NPC; i++)
+		{
+			if (arg->n[i].name[0] != '\0')
+			{
+				npc_del(arg->n[i].npc);
+				arg->n[i].name[0] = '\0';
+			}
+		}
+		memset(arg, 0, sizeof (struct npctest));
+		snprintf(buf, sizeof buf, TAG_YELLOW "NPCs wiped");
 	}
 	else
 	{
