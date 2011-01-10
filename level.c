@@ -2135,13 +2135,16 @@ bool level_hook_delete(struct level_t *l, const char *name)
 				l->level_hook[i].func(EVENT_DEINIT, l, NULL, NULL, &l->level_hook[i].data);
 
 				char buf[128];
-				snprintf(buf, sizeof buf, TAG_YELLOW "Detached level hook %s (%d)", l->level_hook[i].name, i + 1);
+				snprintf(buf, sizeof buf, TAG_YELLOW "Deleted level hook %s (%d)", l->level_hook[i].name, i + 1);
 				level_notify_all(l, buf);
 
 				l->level_hook[i].func = NULL;
 			}
 
 			*l->level_hook[i].name = '\0';
+			free(l->level_hook[i].data.data);
+			l->level_hook[i].data.data = NULL;
+			l->level_hook[i].data.size = 0;
 			return true;
 		}
 	}
