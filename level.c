@@ -1432,6 +1432,12 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		return;
 	}
 
+	if (t >= BLOCK_END)
+	{
+		net_close(client, "Anti-grief: tried to place invalid block");
+		return;
+	}
+
 	if (click)
 	{
 		/* Check block distcance */
@@ -1619,6 +1625,19 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		if (client->player->rank < blocktype_min_rank(nt))
 		{
 			LOG("[%s] %s tried to place %s (%d)\n", level->name, client->player->username, blocktype_get_name(nt), nt);
+			if (client->player->rank <= RANK_GUEST)
+			{
+				switch (t)
+				{
+					case ADMINIUM:
+					case WATER:
+					case WATERSTILL:
+					case LAVA:
+					case LAVASTILL:
+						net_close(client, "Anti-grief: tried to place special block");
+						return;
+				}
+			}
 			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
 		}
