@@ -95,6 +95,15 @@ static int npctest_get_by_name(struct npctest *arg, const char *name)
 		}
 	}
 
+	int n = strlen(name);
+	for (i = 0; i < NPC; i++)
+	{
+		if (strncasecmp(arg->n[i].name, name, n) == 0)
+		{
+			return i;
+		}
+	}
+
 	return -1;
 }
 
@@ -178,6 +187,8 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 			{
 				snprintf(arg->n[i].name, sizeof arg->n[i].name, data + 8);
 				arg->n[i].npc = npc_add(l, arg->n[i].name, c->player->pos);
+				arg->f[i].followid = 0;
+				arg->f[i].stareid = 0;
 
 				snprintf(buf, sizeof buf, TAG_YELLOW "%s created", data + 8);
 				break;
@@ -195,6 +206,7 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 
 			npc_del(arg->n[i].npc);
 			arg->n[i].name[0] = '\0';
+			arg->n[i].npc = NULL;
 		}
 		else
 		{
