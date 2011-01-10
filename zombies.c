@@ -69,7 +69,7 @@ static void zombie_start(struct level_t *l, struct zombies_t *arg)
 	int players = 0;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (l->clients[i] != NULL && !is_mod(l->clients[i]->player)) players++;
+		if (l->clients[i] != NULL && !l->clients[i]->sending_level && !is_mod(l->clients[i]->player)) players++;
 	}
 
 	if (players < 2)
@@ -82,7 +82,7 @@ static void zombie_start(struct level_t *l, struct zombies_t *arg)
 
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (l->clients[i] != NULL && !is_mod(l->clients[i]->player))
+		if (l->clients[i] != NULL && !l->clients[i]->sending_level && !is_mod(l->clients[i]->player))
 		{
 			if (i != zombie)
 			{
@@ -180,7 +180,7 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 		}
 
 		/* Don't check for teleporting directly after respawn */
-		if (arg->ticksremaining > 7300)
+		if (arg->ticksremaining < 7300)
 		{
 			struct player_t *player = c->player;
 			int dx = player->pos.x - player->lastpos.x;
@@ -244,7 +244,7 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 	{
 		struct client_t *cl = l->clients[i];
 		/* cl is self, or already a zombie? */
-		if (cl == NULL || cl == c) continue;
+		if (cl == NULL || cl->sending_level || cl == c) continue;
 		if (is_zombie(cl->player) || is_mod(cl->player)) continue;
 
 		if (position_match(&c->player->pos, &cl->player->pos, 40))
@@ -285,7 +285,7 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 				for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 				{
 					struct client_t *cl = l->clients[i];
-					if (cl == NULL) continue;
+					if (cl == NULL || cl->sending_level) continue;
 
 					if (!is_mod(cl->player)) players++;
 				}
@@ -361,7 +361,7 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 		{
 			struct client_t *cl = l->clients[i];
-			if (cl == NULL) continue;
+			if (cl == NULL || cl->sending_level) continue;
 
 			int j = rand() % 3;
 			if (is_zombie(cl->player))
@@ -388,25 +388,28 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
 		struct client_t *cl = l->clients[i];
-		if (cl == NULL) continue;
+		if (cl == NULL || cl->sending_level || is_mod(cl->player)) continue;
 
 		if (is_zombie(cl->player))
 		{
 			dead++;
 		}
-		else if (!is_mod(cl->player))
+		else
 		{
 			alive++;
+		}
 
-			/* Check painful stuff every 200ms */
-			if (arg->ticksremaining % 5 == 0)
+		/* Check painful stuff every 200ms */
+		if (arg->ticksremaining % 5 == 0)
+		{
+			int bx = cl->player->pos.x / 32;
+			int by = cl->player->pos.y / 32;
+			int bz = cl->player->pos.z / 32;
+			enum blocktype_t b1 = level_get_blocktype(l, bx, by, bz);
+			enum blocktype_t b2 = level_get_blocktype(l, bx, by - 1, bz);
+
+			if (!is_zombie(cl->player))
 			{
-				int bx = cl->player->pos.x / 32;
-				int by = cl->player->pos.y / 32;
-				int bz = cl->player->pos.z / 32;
-				enum blocktype_t b1 = level_get_blocktype(l, bx, by, bz);
-				enum blocktype_t b2 = level_get_blocktype(l, bx, by - 1, bz);
-
 				if (b1 == WATER || b1 == WATERSTILL)
 				{
 					/* 10 seconds to drown */
@@ -443,32 +446,41 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 							arg->temp->air[i] = 100;
 						}
 					}
-
-					if (b1 == LAVA || b1 == LAVASTILL || b2 == LAVA || b2 == LAVASTILL)
-					{
-						arg->temp->life[i] -= 10;
-						if (arg->temp->life[i] < 50 && (arg->temp->life[i] % 10) == 0)
-						{
-							char buf[64];
-							snprintf(buf, sizeof buf, TAG_YELLOW "Running out of life... %d%%", arg->temp->life[i]);
-							client_notify(cl, buf);
-						}
-					}
 				}
+			}
 
-				if (arg->temp->life[i] <= 0)
+			if (b1 == LAVA || b1 == LAVASTILL || b2 == LAVA || b2 == LAVASTILL)
+			{
+				arg->temp->life[i] -= 10;
+				if (arg->temp->life[i] < 50 && (arg->temp->life[i] % 10) == 0)
 				{
-					/* DEAD */
-					char buf[128];
-					snprintf(buf, sizeof buf, TAG_RED "%s has died, and will respawn as zombie", cl->player->username);
-					level_notify_all(l, buf);
-
-					player_teleport(cl->player, &l->spawn, true);
-					player_set_alias(cl->player, s_zombie_name, true);
-
-					arg->temp->timer[i] = s_zombie_ticks;
-					alive--;
+					char buf[64];
+					snprintf(buf, sizeof buf, TAG_YELLOW "Running out of %s... %d%%", is_zombie(cl->player) ? "undead" : "life", arg->temp->life[i]);
+					client_notify(cl, buf);
 				}
+			}
+
+			if (arg->temp->life[i] <= 0)
+			{
+				/* DEAD */
+				char buf[128];
+				if (!is_zombie(cl->player))
+				{
+					snprintf(buf, sizeof buf, TAG_RED "%s has died, and will respawn as zombie", cl->player->username);
+					arg->temp->timer[i] = s_zombie_ticks;
+				}
+				else
+				{
+					snprintf(buf, sizeof buf, TAG_RED "%s has disintegrated, but will return...", cl->player->username);
+				}
+				level_notify_all(l, buf);
+
+				player_teleport(cl->player, &l->spawn, true);
+				player_set_alias(cl->player, s_zombie_name, true);
+
+				arg->temp->air[i] = 100;
+				arg->temp->life[i] = 100;
+				arg->temp->timer[i] = s_zombie_ticks;
 			}
 		}
 	}
@@ -526,6 +538,8 @@ static void zombie_handle_spawn(struct level_t *l, struct client_t *c, char *dat
 		client_notify(c, TAG_RED "Game in progress! You will start as a zombie!");
 		player_set_alias(c->player, s_zombie_name, false);
 
+		arg->temp->air[c->player->levelid] = 100;
+		arg->temp->life[c->player->levelid] = 100;
 		arg->temp->timer[c->player->levelid] = s_zombie_ticks;
 	}
 
@@ -581,7 +595,7 @@ static bool zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 			for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 			{
 				struct client_t *cl = l->clients[i];
-				if (cl == NULL) continue;
+				if (cl == NULL || cl->sending_level) continue;
 
 				player_set_alias(cl->player, NULL, true);
 				ClrBit(cl->player->flags, FLAG_GAMES);
