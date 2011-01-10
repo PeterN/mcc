@@ -192,6 +192,34 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 		}
 	}
 
+	{
+		int bx = c->player->pos.x / 32;
+		int by = c->player->pos.y / 32;
+		int bz = c->player->pos.z / 32;
+		if (level_get_blocktype(l, bx, by, bz) == ADMINIUM ||
+			level_get_blocktype(l, bx, by - 1, bz) == ADMINIUM)
+		{
+			if (is_zombie(c->player))
+			{
+				char buf[128];
+				snprintf(buf, sizeof buf, TAG_RED "Glitching by %s detected, returning to spawn", c->player->username);
+				level_notify_all(l, buf);
+
+				player_teleport(c->player, &l->spawn, true);
+			}
+			else
+			{
+				char buf[128];
+				snprintf(buf, sizeof buf, TAG_RED "Glitching by %s detected, turning to zombie", c->player->username);
+				level_notify_all(l, buf);
+
+				player_teleport(c->player, &l->spawn, true);
+				player_set_alias(c->player, s_zombie_name, true);
+				return;
+			}
+		}
+	}
+
 	if (arg->zombieticks > 0) return;
 
 	/* Player isn't a zombie */
