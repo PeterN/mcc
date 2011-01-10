@@ -124,7 +124,7 @@ void setpixel(uint32_t *map, int w, int x, int y, struct col_t c)
 	}
 }
 
-enum blocktype_t level_get_blocktype(const struct level_t *level, int16_t x, int16_t y, int16_t z)
+enum blocktype_t level_get_blocktype2(const struct level_t *level, int16_t x, int16_t y, int16_t z)
 {
 	if (x < 0 || y < 0 || z < 0 || x >= level->x || y >= level->y || z >= level->z) return AIR;
 	unsigned index = level_get_index(level, x, y, z);
@@ -188,7 +188,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 		{
 			for (y = level->y - 1; y >= 0; y--)
 			{
-				if (level_get_blocktype(level, x, y, z) != AIR)
+				if (level_get_blocktype2(level, x, y, z) != AIR)
 				{
 					shadowmap[x + z * level->x] = y;
 					break;
@@ -212,7 +212,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 
 			for (y = 0; y < level->y; y++)
 			{
-				enum blocktype_t b = level_get_blocktype(level, x, y, z);
+				enum blocktype_t b = level_get_blocktype2(level, x, y, z);
 				struct col_t c = blocktype_get_colour(b);
 
 				if (b == AIR) continue;
@@ -223,7 +223,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 				mx = (x - z) * 2 - ox;
 				my = (z + x) * 1 - y * 2 + oy;
 
-				if (!trans || level_get_blocktype(level, x, y + 1, z) != b)
+				if (!trans || level_get_blocktype2(level, x, y + 1, z) != b)
 				{
 					if (y < cy)
 					{
@@ -255,7 +255,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 					c2 = darken(c2);
 				}
 				
-				if (!trans || level_get_blocktype(level, x, y, z + 1) != b)
+				if (!trans || level_get_blocktype2(level, x, y, z + 1) != b)
 				{
 					setpixel(map, *w, mx + 0, my + 1, c1);
 					setpixel(map, *w, mx + 1, my + 1, c1);
@@ -264,7 +264,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 					if (!trans) setpixel(map, *w, mx + 1, my + 3, c1);
 				}
 
-				if (!trans || level_get_blocktype(level, x + 1, y, z) != b)
+				if (!trans || level_get_blocktype2(level, x + 1, y, z) != b)
 				{
 					setpixel(map, *w, mx + 2, my + 1, c2);
 					setpixel(map, *w, mx + 3, my + 1, c2);
