@@ -183,7 +183,7 @@ CMD(ban)
 	}
 
 	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
-	p = player_get_by_name(param[1]);
+	p = player_get_by_name(param[1], true);
 	if (p != NULL)
 	{
 		p->rank = RANK_BANNED;
@@ -669,7 +669,7 @@ CMD(follow)
 		return false;
 	}
 
-	struct player_t *p = player_get_by_name(param[1]);
+	struct player_t *p = player_get_by_name(param[1], true);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
@@ -1059,7 +1059,7 @@ CMD(kbu)
 	int globalid;
 
 	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
-	p = player_get_by_name(param[1]);
+	p = player_get_by_name(param[1], true);
 	if (p != NULL)
 	{
 		l = c->player->level;
@@ -1111,7 +1111,7 @@ CMD(kick)
 
 	char buf[128];
 
-	struct player_t *p = player_get_by_name(param[1]);
+	struct player_t *p = player_get_by_name(param[1], true);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
@@ -1153,7 +1153,7 @@ CMD(kickban)
 	}
 
 	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
-	p = player_get_by_name(param[1]);
+	p = player_get_by_name(param[1], true);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
@@ -2089,7 +2089,7 @@ CMD(setalias)
 {
 	if (params != 2 && params != 3) return true;
 
-	struct player_t *p = player_get_by_name(param[1]);
+	struct player_t *p = player_get_by_name(param[1], true);
 	if (p == NULL)
 	{
 		client_notify(c, "Player is offline.");
@@ -2229,7 +2229,7 @@ CMD(setrank)
 	}
 
 	playerdb_set_rank(param[1], newrank, c->player->username);
-	p = player_get_by_name(param[1]);
+	p = player_get_by_name(param[1], true);
 	if (p != NULL)
 	{
 		bool setalias = strcmp(p->colourusername, p->alias) == 0;
@@ -2336,7 +2336,7 @@ CMD(summon)
 
 	if (params != 2) return true;
 
-	struct player_t *p = player_get_by_name(param[1]);
+	struct player_t *p = player_get_by_name(param[1], true);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
@@ -2395,7 +2395,7 @@ CMD(tp)
 
 	if (params != 2) return true;
 
-	const struct player_t *p = player_get_by_name(param[1]);
+	const struct player_t *p = player_get_by_name(param[1], true);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, TAG_YELLOW "%s is offline", param[1]);
@@ -2642,7 +2642,7 @@ CMD(whois)
 		return false;
 	}
 
-	struct player_t *p = player_get_by_name(param[1]);
+	struct player_t *p = player_get_by_name(param[1], true);
 	if (p == NULL || p->client->hidden)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);

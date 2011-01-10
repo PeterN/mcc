@@ -78,7 +78,7 @@ LIST(player, struct player_t *, player_t_compare);
 
 struct player_t *player_add(const char *username, struct client_t *c, bool *newuser, int *identified);
 void player_del(struct player_t *player);
-struct player_t *player_get_by_name(const char *username);
+struct player_t *player_get_by_name(const char *username, bool partial);
 
 bool player_change_level(struct player_t *player, struct level_t *level);
 void player_move(struct player_t *player, struct position_t *pos);

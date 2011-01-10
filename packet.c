@@ -153,7 +153,7 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	const char *type;
 
-	struct player_t *player = player_get_by_name(username);
+	struct player_t *player = player_get_by_name(username, false);
 	if (player == NULL)
 	{
 		type = "connected";

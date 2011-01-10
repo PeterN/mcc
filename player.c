@@ -19,7 +19,7 @@ bool player_t_compare(struct player_t **a, struct player_t **b)
 	return *a == *b;
 }
 
-struct player_t *player_get_by_name(const char *username)
+struct player_t *player_get_by_name(const char *username, bool partial)
 {
 	unsigned i;
 	for (i = 0; i < s_players.used; i++)
@@ -27,6 +27,18 @@ struct player_t *player_get_by_name(const char *username)
 		if (strcasecmp(s_players.items[i]->username, username) == 0)
 		{
 			return s_players.items[i];
+		}
+	}
+
+	if (partial)
+	{
+		int n = strlen(username);
+		for (i = 0; i < s_players.used; i++)
+		{
+			if (strncasecmp(s_players.items[i]->username, username, n) == 0)
+			{
+				return s_players.items[i];
+			}
 		}
 	}
 
