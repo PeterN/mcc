@@ -14,13 +14,22 @@ static const char s_zombie_name[] = TAG_RED "Undead_zombie";
 static const char s_mod_name[] = TAG_YELLOW "Moderator";
 static const int s_interval = 25 * 30;
 
+static const int s_zombie_ticks = 250;
+
+struct zombietempdata
+{
+	int8_t air[MAX_CLIENTS_PER_LEVEL];
+	int8_t life[MAX_CLIENTS_PER_LEVEL];
+	int16_t timer[MAX_CLIENTS_PER_LEVEL];
+};
+
 struct zombies_t
 {
 	int ticksremaining;
 	int intervalticks;
-	int zombieticks;
 	int zombiewins;
 	int humanwins;
+	struct zombietempdata *temp;
 };
 
 static bool is_zombie(const struct player_t *p)
@@ -37,7 +46,6 @@ static void zombie_start(struct level_t *l, struct zombies_t *arg)
 {
 	arg->ticksremaining = 7500;
 	arg->intervalticks = 0;
-	arg->zombieticks = 250;
 
 	level_notify_all(l, TAG_GREEN "Game started!");
 
@@ -80,6 +88,8 @@ static void zombie_start(struct level_t *l, struct zombies_t *arg)
 			{
 				player_teleport(l->clients[i]->player, &l->spawn, true);
 				player_set_alias(l->clients[i]->player, NULL, true);
+
+				arg->temp->timer[i] = 0;
 			}
 			else
 			{
@@ -89,7 +99,12 @@ static void zombie_start(struct level_t *l, struct zombies_t *arg)
 
 				player_teleport(l->clients[i]->player, &l->spawn, true);
 				player_set_alias(l->clients[i]->player, s_zombie_name, true);
+
+				arg->temp->timer[i] = s_zombie_ticks;
 			}
+
+			arg->temp->air[i] = 100;
+			arg->temp->life[i] = 100;
 		}
 	}
 }
@@ -157,7 +172,7 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 
 	if (!c->player->teleport)
 	{
-		if (arg->zombieticks > 0 && is_zombie(c->player))
+		if (arg->temp->timer[c->player->levelid] > 0 && is_zombie(c->player))
 		{
 			/* Zombie can't move yet */
 			player_teleport(c->player, &c->player->oldpos, true);
@@ -165,7 +180,7 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 		}
 
 		/* Don't check for teleporting directly after respawn */
-		if (arg->zombieticks < 200)
+		if (arg->ticksremaining > 7300)
 		{
 			struct player_t *player = c->player;
 			int dx = player->pos.x - player->lastpos.x;
@@ -199,31 +214,30 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 		if (level_get_blocktype(l, bx, by, bz) == ADMINIUM ||
 			level_get_blocktype(l, bx, by - 1, bz) == ADMINIUM)
 		{
+			char buf[128];
+
 			if (is_zombie(c->player))
 			{
-				char buf[128];
 				snprintf(buf, sizeof buf, TAG_RED "Glitching by %s detected, returning to spawn", c->player->username);
-				level_notify_all(l, buf);
-
-				player_teleport(c->player, &l->spawn, true);
 			}
 			else
 			{
-				char buf[128];
 				snprintf(buf, sizeof buf, TAG_RED "Glitching by %s detected, turning to zombie", c->player->username);
-				level_notify_all(l, buf);
-
-				player_teleport(c->player, &l->spawn, true);
 				player_set_alias(c->player, s_zombie_name, true);
-				return;
 			}
+
+			level_notify_all(l, buf);
+
+			arg->temp->timer[c->player->levelid] = s_zombie_ticks;
+			player_teleport(c->player, &l->spawn, true);
+			return;
 		}
 	}
 
-	if (arg->zombieticks > 0) return;
-
 	/* Player isn't a zombie */
 	if (!is_zombie(c->player)) return;
+
+	if (arg->temp->timer[c->player->levelid] > 0) return;
 
 	int i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -233,15 +247,19 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 		if (cl == NULL || cl == c) continue;
 		if (is_zombie(cl->player) || is_mod(cl->player)) continue;
 
-		if (position_match(&c->player->pos, &cl->player->pos, 32))
+		if (position_match(&c->player->pos, &cl->player->pos, 40))
 		{
-			char buf[128];
-			snprintf(buf, sizeof buf, TAG_RED "%s has infected %s!", c->player->username, cl->player->username);
-			level_notify_all(l, buf);
+			arg->temp->life[cl->player->levelid] -= 25;
+			if (arg->temp->life[cl->player->levelid] <= 0)
+			{
+				char buf[128];
+				snprintf(buf, sizeof buf, TAG_RED "%s has infected %s!", c->player->username, cl->player->username);
+				level_notify_all(l, buf);
 
-			client_notify(cl, TAG_RED "You have been infected!");
+				client_notify(cl, TAG_RED "You have been infected!");
 
-			player_set_alias(cl->player, s_zombie_name, true);
+				player_set_alias(cl->player, s_zombie_name, true);
+			}
 		}
 	}
 }
@@ -294,12 +312,18 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 		return;
 	}
 
-	if (arg->zombieticks > 0)
 	{
-		arg->zombieticks--;
-		if (arg->zombieticks == 0)
+		int i;
+		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 		{
-			level_notify_all(l, TAG_RED "The zombie is on the move!");
+			if (arg->temp->timer[i] > 0)
+			{
+				arg->temp->timer[i]--;
+				if (arg->temp->timer[i] == 0)
+				{
+					level_notify_all(l, TAG_RED "The zombie is on the move!");
+				}
+			}
 		}
 	}
 
@@ -373,6 +397,79 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 		else if (!is_mod(cl->player))
 		{
 			alive++;
+
+			/* Check painful stuff every 200ms */
+			if (arg->ticksremaining % 5 == 0)
+			{
+				int bx = cl->player->pos.x / 32;
+				int by = cl->player->pos.y / 32;
+				int bz = cl->player->pos.z / 32;
+				enum blocktype_t b1 = level_get_blocktype(l, bx, by, bz);
+				enum blocktype_t b2 = level_get_blocktype(l, bx, by - 1, bz);
+
+				if (b1 == WATER || b1 == WATERSTILL)
+				{
+					/* 10 seconds to drown */
+					if (arg->temp->air[i] > 0)
+					{
+						arg->temp->air[i] -= 2;
+						if (arg->temp->air[i] < 50 && (arg->temp->air[i] % 10) == 0)
+						{
+							char buf[64];
+							snprintf(buf, sizeof buf, TAG_YELLOW "Running out of air... %d%%", arg->temp->air[i]);
+							client_notify(cl, buf);
+						}
+					}
+					else
+					{
+						arg->temp->life[i] -= 10;
+						if (arg->temp->life[i] < 50 && (arg->temp->life[i] % 10) == 0)
+						{
+							char buf[64];
+							snprintf(buf, sizeof buf, TAG_YELLOW "Running out of life... %d%%", arg->temp->life[i]);
+							client_notify(cl, buf);
+						}
+					}
+				}
+				else
+				{
+					/* Not in water, breath again */
+					if (arg->temp->air[i] < 100)
+					{
+						/* Fully recover from drowning in 2 seconds */
+						arg->temp->air[i] += 10;
+						if (arg->temp->air[i] > 100)
+						{
+							arg->temp->air[i] = 100;
+						}
+					}
+
+					if (b1 == LAVA || b1 == LAVASTILL || b2 == LAVA || b2 == LAVASTILL)
+					{
+						arg->temp->life[i] -= 10;
+						if (arg->temp->life[i] < 50 && (arg->temp->life[i] % 10) == 0)
+						{
+							char buf[64];
+							snprintf(buf, sizeof buf, TAG_YELLOW "Running out of life... %d%%", arg->temp->life[i]);
+							client_notify(cl, buf);
+						}
+					}
+				}
+
+				if (arg->temp->life[i] <= 0)
+				{
+					/* DEAD */
+					char buf[128];
+					snprintf(buf, sizeof buf, TAG_RED "%s has died, and will respawn as zombie", cl->player->username);
+					level_notify_all(l, buf);
+
+					player_teleport(cl->player, &l->spawn, true);
+					player_set_alias(cl->player, s_zombie_name, true);
+
+					arg->temp->timer[i] = s_zombie_ticks;
+					alive--;
+				}
+			}
 		}
 	}
 
@@ -428,6 +525,8 @@ static void zombie_handle_spawn(struct level_t *l, struct client_t *c, char *dat
 	{
 		client_notify(c, TAG_RED "Game in progress! You will start as a zombie!");
 		player_set_alias(c->player, s_zombie_name, false);
+
+		arg->temp->timer[c->player->levelid] = s_zombie_ticks;
 	}
 
 	SetBit(c->player->flags, FLAG_GAMES);
@@ -458,6 +557,8 @@ static bool zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 			{
 				if (arg->size == sizeof (struct zombies_t))
 				{
+					struct zombies_t *z = arg->data;
+					z->temp = calloc(1, sizeof *z->temp);
 					break;
 				}
 
@@ -467,6 +568,9 @@ static bool zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 
 			arg->size = sizeof (struct zombies_t);
 			arg->data = calloc(1, arg->size);
+
+			struct zombies_t *z = arg->data;
+			z->temp = calloc(1, sizeof *z->temp);
 			break;
 		}
 		case EVENT_DEINIT:
@@ -482,6 +586,9 @@ static bool zombie_level_hook(int event, struct level_t *l, struct client_t *c, 
 				player_set_alias(cl->player, NULL, true);
 				ClrBit(cl->player->flags, FLAG_GAMES);
 			}
+
+			struct zombies_t *z = arg->data;
+			free(z->temp);
 		}
 	}
 
