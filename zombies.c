@@ -256,6 +256,9 @@ static void zombie_handle_move(struct level_t *l, struct client_t *c, int index,
 				snprintf(buf, sizeof buf, TAG_RED "%s has infected %s!", c->player->username, cl->player->username);
 				level_notify_all(l, buf);
 
+				arg->temp->life[cl->player->levelid] = 100;
+				arg->temp->air[cl->player->levelid] = 100;
+
 				client_notify(cl, TAG_RED "You have been infected!");
 
 				player_set_alias(cl->player, s_zombie_name, true);
