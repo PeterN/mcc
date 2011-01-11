@@ -175,15 +175,17 @@ CMD(ban)
 
 	if (params < 2) return true;
 
-	oldrank = playerdb_get_rank(param[1]);
+	p = player_get_by_name(param[1], true);
+	const char *name = (p != NULL) ? p->username : param[1];
+
+	oldrank = playerdb_get_rank(name);
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
 		client_notify(c, "Can't ban op or admin");
 		return false;
 	}
 
-	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
-	p = player_get_by_name(param[1], true);
+	playerdb_set_rank(name, RANK_BANNED, c->player->username);
 	if (p != NULL)
 	{
 		p->rank = RANK_BANNED;
@@ -192,11 +194,11 @@ CMD(ban)
 
 	if (params == 2)
 	{
-		snprintf(buf, sizeof buf, "%s banned by %s", param[1], c->player->username);
+		snprintf(buf, sizeof buf, "%s banned by %s", name, c->player->username);
 	}
 	else
 	{
-		snprintf(buf, sizeof buf, "%s banned (", param[1]);
+		snprintf(buf, sizeof buf, "%s banned (", name);
 		reconstruct(buf, sizeof buf, params - 2, param + 2);
 		strcat(buf, ")");
 	}
@@ -1048,7 +1050,10 @@ CMD(kbu)
 	char buf[128];
 	struct player_t *p;
 
-	enum rank_t oldrank = playerdb_get_rank(param[1]);
+	p = player_get_by_name(param[1], true);
+	const char *name = (p != NULL) ? p->username : param[1];
+
+	enum rank_t oldrank = playerdb_get_rank(name);
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
 		client_notify(c, "Can't ban op or admin");
@@ -1058,8 +1063,7 @@ CMD(kbu)
 	struct level_t *l;
 	int globalid;
 
-	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
-	p = player_get_by_name(param[1], true);
+	playerdb_set_rank(name, RANK_BANNED, c->player->username);
 	if (p != NULL)
 	{
 		l = c->player->level;
@@ -1080,7 +1084,7 @@ CMD(kbu)
 	else
 	{
 		l = c->player->level;
-		globalid = playerdb_get_globalid(param[1], false, NULL);
+		globalid = playerdb_get_globalid(name, false, NULL);
 		if (globalid == -1)
 		{
 			client_notify(c, "Unknown username.");
@@ -1145,15 +1149,17 @@ CMD(kickban)
 	char buf[128];
 	struct player_t *p;
 
-	enum rank_t oldrank = playerdb_get_rank(param[1]);
+	p = player_get_by_name(param[1], true);
+	const char *name = (p != NULL) ? p->username : param[1];
+
+	enum rank_t oldrank = playerdb_get_rank(name);
 	if (c->player->rank != RANK_ADMIN && oldrank >= RANK_OP)
 	{
 		client_notify(c, "Can't ban op or admin");
 		return false;
 	}
 
-	playerdb_set_rank(param[1], RANK_BANNED, c->player->username);
-	p = player_get_by_name(param[1], true);
+	playerdb_set_rank(name, RANK_BANNED, c->player->username);
 	if (p == NULL)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
@@ -2097,7 +2103,7 @@ CMD(setalias)
 	}
 
 	player_set_alias(p, params == 2 ? NULL : param[2], true);
-	client_notify(c, "Alias set.");
+	client_notify(c, params == 2 ? "Alias cleared" : "Alias set");
 	return false;
 }
 
@@ -2216,7 +2222,10 @@ CMD(setrank)
 		return false;
 	}
 
-	oldrank = playerdb_get_rank(param[1]);
+	p = player_get_by_name(param[1], true);
+	const char *name = (p != NULL) ? p->username : param[1];
+
+	oldrank = playerdb_get_rank(name);
 	if (oldrank == newrank)
 	{
 		client_notify(c, "User already at rank");
@@ -2228,8 +2237,7 @@ CMD(setrank)
 		return false;
 	}
 
-	playerdb_set_rank(param[1], newrank, c->player->username);
-	p = player_get_by_name(param[1], true);
+	playerdb_set_rank(name, newrank, c->player->username);
 	if (p != NULL)
 	{
 		bool setalias = strcmp(p->colourusername, p->alias) == 0;
@@ -2256,7 +2264,7 @@ CMD(setrank)
 	}
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), param[1]);
+	snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), name);
 	net_notify_all(buf);
 
 	return false;
@@ -2345,7 +2353,7 @@ CMD(summon)
 	}
 	if (p->level != c->player->level)
 	{
-		snprintf(buf, sizeof buf, "%s is on '%s'", param[1], p->level->name);
+		snprintf(buf, sizeof buf, "%s is on '%s'", p->username, p->level->name);
 		client_notify(c, buf);
 		return false;
 	}
@@ -2403,12 +2411,12 @@ CMD(tp)
 	}
 	else if (p->level != c->player->level)
 	{
-		snprintf(buf, sizeof buf, TAG_YELLOW "%s is on '%s'", param[1], p->level->name);
+		snprintf(buf, sizeof buf, TAG_YELLOW "%s is on '%s'", p->username, p->level->name);
 		client_notify(c, buf);
 	}
 	else if (p->client->hidden && c->player->rank < RANK_ADMIN)
 	{
-		snprintf(buf, sizeof buf, TAG_YELLOW "%s is %s", param[1], c->player->rank == RANK_OP ? "hidden" : "offline");
+		snprintf(buf, sizeof buf, TAG_YELLOW "%s is %s", p->username, c->player->rank == RANK_OP ? "hidden" : "offline");
 		client_notify(c, buf);
 	}
 	else if (c->player->rank < RANK_OP && !level_user_can_own(c->player->level, c->player))
@@ -2634,15 +2642,17 @@ CMD(whois)
 
 	if (params != 2) return true;
 
-	unsigned globalid = playerdb_get_globalid(param[1], false, NULL);
+	struct player_t *p = player_get_by_name(param[1], true);
+	const char *name = (p != NULL) ? p->username : param[1];
+
+	unsigned globalid = playerdb_get_globalid(name, false, NULL);
 	if (globalid == -1)
 	{
-		snprintf(buf, sizeof buf, "%s is not known here.", param[1]);
+		snprintf(buf, sizeof buf, "%s is not known here.", name);
 		client_notify(c, buf);
 		return false;
 	}
 
-	struct player_t *p = player_get_by_name(param[1], true);
 	if (p == NULL || p->client->hidden)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
@@ -2660,12 +2670,12 @@ CMD(whois)
 	{
 		snprintf(buf, sizeof buf, "%s" TAG_WHITE " is online, on level %s", p->colourusername, p->level->name);
 		client_notify(c, buf);
-		snprintf(buf, sizeof buf, "%s's rank is %s", param[1], rank_get_name(p->rank));
+		snprintf(buf, sizeof buf, "%s's rank is %s", p->username, rank_get_name(p->rank));
 		client_notify(c, buf);
 
 		if (p->afk[0] != '\0')
 		{
-			snprintf(buf, sizeof buf, "%s is away: %s\n", param[1], p->afk);
+			snprintf(buf, sizeof buf, "%s is away: %s\n", p->username, p->afk);
 			client_notify(c, buf);
 		}
 
