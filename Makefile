@@ -5,6 +5,7 @@ PNGCFLAGS := `pkg-config libpng12 --cflags`
 PNGLDFLAGS := `pkg-config libpng12 --libs`
 
 LIBSRC := astar.c
+LIBSRC += astar_thread.c
 LIBSRC += block.c
 LIBSRC += chunk.c
 LIBSRC += chunked_level.c
