@@ -4,6 +4,7 @@
 #include "player.h"
 #include "level.h"
 #include "astar.h"
+#include "astar_thread.h"
 
 #define NPC 64
 
@@ -12,6 +13,9 @@ struct npctemp
 	struct npc *npc[NPC];
 	struct point *path[NPC];
 	int step[NPC];
+	float sx[NPC];
+	float sy[NPC];
+	float sz[NPC];
 };
 
 struct npctest
@@ -24,6 +28,12 @@ struct npctest
 		int8_t stareid;
 	} n[NPC];
 	struct npctemp *temp;
+};
+
+struct pftemp
+{
+	struct npctest *arg;
+	int i;
 };
 
 void npctest_save(struct level_t *l, struct npctest *arg)
@@ -49,6 +59,9 @@ void npctest_init(struct level_t *l, struct npctest *arg)
 		if (arg->n[i].name[0] != '\0')
 		{
 			arg->temp->npc[i] = npc_add(l, arg->n[i].name, arg->n[i].pos);
+			arg->temp->sx[i] = arg->n[i].pos.x / 32.0f;
+			arg->temp->sy[i] = arg->n[i].pos.y / 32.0f;
+			arg->temp->sz[i] = arg->n[i].pos.z / 32.0f;
 		}
 		else
 		{
@@ -134,6 +147,15 @@ static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, 
 	}
 }
 
+static void npctest_astar_cb(struct level_t *l, struct point *path, void *data)
+{
+	printf("Got PF response\n");
+	struct pftemp *temp = data;
+	temp->arg->temp->path[temp->i] = path;
+	temp->arg->temp->step[temp->i] = 0;
+	free(temp);
+}
+
 static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 {
 	free(arg->temp->path[i]);
@@ -142,15 +164,15 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 	int nearest = arg->n[i].followid - 1;
 	if (l->clients[nearest] == NULL) return;
 
-	const struct position_t us = arg->temp->npc[i]->pos;
+	//const struct position_t us = arg->temp->npc[i]->pos;
 	const struct position_t them = l->clients[nearest]->player->pos;
 
 	struct point a;
 	struct point b;
 
-	a.x = us.x / 32;
-	a.y = us.z / 32;
-	a.z = us.y / 32;
+	a.x = arg->temp->sx[i];
+	a.y = arg->temp->sz[i];
+	a.z = arg->temp->sy[i];
 
 	b.x = them.x / 32;
 	b.y = them.z / 32;
@@ -164,12 +186,22 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 
 	printf("Pathfinding from %d %d %d to %d %d %d\n", a.x, a.y, a.z, b.x, b.y, b.z);
 
-	arg->temp->path[i] = as_find(l, &a, &b);
-	arg->temp->step[i] = 0;
+	struct pftemp *temp = malloc(sizeof *temp);
+	temp->arg = arg;
+	temp->i = i;
+
+	astar_queue(l, a, b, &npctest_astar_cb, temp);
+
+//	arg->temp->path[i] = as_find(l, &a, &b);
+	arg->temp->step[i] = -1;
 }
 
-static inline int min(int a, int b)
+static inline float min(float a, float b)
 {
+	if (a < 0)
+	{
+		return a < b ? b : a;
+	}
 	return a < b ? a : b;
 }
 
@@ -195,6 +227,8 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 		struct position_t *us = &arg->temp->npc[i]->pos;
 
 		if (arg->n[i].followid == 0) continue;
+		/* Waiting for path */
+		if (arg->temp->step[i] == -1) continue;
 		if (arg->temp->path[i] == NULL)
 		{
 			npctest_replacepath(l, arg, i);
@@ -208,18 +242,32 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 			}
 			else
 			{
-				int dx = (p->x * 32 + 16) - us->x;
-				int dy = (p->z * 32 + 48) - us->y;
-				int dz = (p->y * 32 + 16) - us->z;
+				float dx = (p->x + 0.5f) - arg->temp->sx[i];
+				float dy = (p->z + 1.5f) - arg->temp->sy[i];
+				float dz = (p->y + 0.5f) - arg->temp->sz[i];
 
-				int sp = 5;
+				float azimuth = atan2(dz, dx);
 
-				if (dx < 0) us->x -= min(abs(dx), sp);
-				else if (dx > 0) us->x += min(dx, sp);
-				if (dy < 0) us->y -= min(abs(dy), sp);
-				else if (dy > 0) us->y += min(dy, sp);
-				if (dz < 0) us->z -= min(abs(dz), sp);
-				else if (dz > 0) us->z += min(dz, sp);
+				float sp = 0.25f;
+				float ddx = cos(azimuth) * sp;
+				float ddz = sin(azimuth) * sp;
+
+				printf("Delta %f %f - %f %f (%f %f)\n", dx, dz, ddx, ddz, cos(azimuth) * sp, sin(azimuth) * sp);
+
+				arg->temp->sx[i] += min(dx, ddx);
+				arg->temp->sz[i] += min(dz, ddz);
+
+				us->x = arg->temp->sx[i] * 32.0f;
+				us->z = arg->temp->sz[i] * 32.0f;
+
+//				if (dx < 0) us->x -= min(abs(dx), sp);
+//				else if (dx > 0) us->x += min(dx, sp);
+				if (dy < 0) arg->temp->sy[i] -= min(abs(dy), sp);
+				else if (dy > 0) arg->temp->sy[i] += min(dy, sp);
+//				if (dz < 0) us->z -= min(abs(dz), sp);
+//				else if (dz > 0) us->z += min(dz, sp);
+
+				us->y = arg->temp->sy[i] * 32.0f;
 
 				int bx = us->x / 32;
 				int by = us->y / 32 - 1;
@@ -278,6 +326,10 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 			{
 				snprintf(arg->n[i].name, sizeof arg->n[i].name, data + 8);
 				arg->temp->npc[i] = npc_add(l, arg->n[i].name, c->player->pos);
+				arg->temp->sx[i] = c->player->pos.x / 32.0f;
+				arg->temp->sy[i] = c->player->pos.y / 32.0f;
+				arg->temp->sz[i] = c->player->pos.z / 32.0f;
+
 				arg->n[i].followid = 0;
 				arg->n[i].stareid = 0;
 
@@ -298,6 +350,8 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 			npc_del(arg->temp->npc[i]);
 			free(arg->temp->path[i]);
 			arg->n[i].name[0] = '\0';
+			arg->n[i].followid = 0;
+			arg->n[i].stareid = 0;
 			arg->temp->npc[i] = NULL;
 			arg->temp->path[i] = NULL;
 		}
