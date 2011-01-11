@@ -50,6 +50,8 @@ void queue_delete(struct queue_t *queue)
 
     pthread_mutex_destroy(&queue->produce_mutex);
     pthread_mutex_destroy(&queue->consume_mutex);
+
+    free(queue);
 }
 
 int queue_produce(struct queue_t *queue, void *data)
