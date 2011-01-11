@@ -4,7 +4,8 @@ LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 PNGCFLAGS := `pkg-config libpng12 --cflags`
 PNGLDFLAGS := `pkg-config libpng12 --libs`
 
-LIBSRC := block.c
+LIBSRC := astar.c
+LIBSRC += block.c
 LIBSRC += chunk.c
 LIBSRC += chunked_level.c
 LIBSRC += client.c
@@ -14,6 +15,7 @@ LIBSRC += config.c
 LIBSRC += cuboid.c
 LIBSRC += faultgen.c
 LIBSRC += filter.c
+LIBSRC += hash.c
 LIBSRC += hook.c
 LIBSRC += landscape.c
 LIBSRC += land2.c
