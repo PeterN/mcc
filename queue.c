@@ -29,6 +29,9 @@ struct queue_t *queue_new(void)
     queue->tail = qo;
     queue->divider = qo;
 
+    pthread_mutex_init(&queue->produce_mutex, NULL);
+    pthread_mutex_init(&queue->consume_mutex, NULL);
+
     return queue;
 }
 
@@ -44,6 +47,9 @@ void queue_delete(struct queue_t *queue)
         free(qo);
         n++;
     }
+
+    pthread_mutex_destroy(&queue->produce_mutex);
+    pthread_mutex_destroy(&queue->consume_mutex);
 }
 
 int queue_produce(struct queue_t *queue, void *data)
