@@ -151,6 +151,21 @@ static void openlist_del(struct node **headref, struct node *node)
 	free(node);
 }
 
+static void openlist_wipe(struct node **headref)
+{
+	struct node *prev;
+	struct node *curr = *headref;
+
+	while (curr != NULL)
+	{
+		prev = curr;
+		curr = curr->next;
+		free(prev);
+	}
+
+	*headref = NULL;
+}
+
 static struct node *as_isinlist(struct node **headref, struct node *node)
 {
 	struct node *curr = *headref;
@@ -161,13 +176,6 @@ static struct node *as_isinlist(struct node **headref, struct node *node)
 	}
 
 	return curr;
-}
-
-static void closedlist_add(struct node **headref, struct node *node)
-{
-	node->prev = NULL;
-	node->next = *headref;
-	*headref = node;
 }
 
 static void as_maybe(struct as *as, struct node *curr, const struct node *end, struct point n)
@@ -232,13 +240,14 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 	memset(start, 0, sizeof *start);
 	start->point = *a;
 
-	struct node *end = malloc(sizeof *end);
-	memset(end, 0, sizeof *end);
-	end->point = *b;
+	struct node end;
+	end.point = *b;
+
+	printf("Pathfinding from %d %d %d to %d %d %d\n", a->x, a->y, a->z, b->x, b->y, b->z);
 
 	hash_init(&as.closedhash, &as_hash, HASH_SIZE);
 
-	start->h = point_dist(&start->point, &end->point, true);
+	start->h = point_dist(&start->point, &end.point, true);
 	start->f = start->h;
 
 	openlist_add(&as.openlist, start);
@@ -246,7 +255,7 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 	while (as.openlist != NULL)
 	{
 		struct node *curr = openlist_pop(&as.openlist);
-		if (node_match(curr, end))
+		if (node_match(curr, &end))
 		{
 			struct node *n;
 
@@ -255,6 +264,8 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 			{
 				steps++;
 			}
+
+			printf("Found path, %d steps\n", steps - 1);
 
 			struct point *s = malloc(sizeof *s * steps);
 			struct point *ps = s + steps - 1;
@@ -272,6 +283,7 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 			}
 
 			hash_delete(&as.closedhash, true);
+			openlist_wipe(&as.openlist);
 
 			return s;
 		}
@@ -285,7 +297,7 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 		{
 			c[i] = point_add(as.level, &curr->point, i, &p[i]);
 
-			if (c[i] > 0) as_maybe(&as, curr, end, p[i]);
+			if (c[i] > 0) as_maybe(&as, curr, &end, p[i]);
 		}
 
 		for (i = 1; i < 8; i += 2)
@@ -293,12 +305,15 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 			if (c[i - 1] == 1 && c[(i + 1) % 8] == 1)
 			{
 				c[i] = point_add(as.level, &curr->point, i, &p[i]);
-				if (c[i] > 0) as_maybe(&as, curr, end, p[i]);
+				if (c[i] > 0) as_maybe(&as, curr, &end, p[i]);
 			}
 		}
 	}
 
 	hash_delete(&as.closedhash, true);
+	openlist_wipe(&as.openlist);
+
+	printf("Path not found\n");
 
 	return NULL;
 }
