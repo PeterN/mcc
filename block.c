@@ -460,6 +460,7 @@ enum blocktype_t convert_active_sponge(struct level_t *level, unsigned index, co
 	return AIR;
 }
 
+#if 0
 void physics_active_sponge_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
 {
 	// Test x,y,z are valid!
@@ -506,6 +507,7 @@ void physics_active_sponge(struct level_t *l, unsigned index, const struct block
 		}
 	}
 }
+#endif
 
 enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, const struct block_t *block)
 {
@@ -623,7 +625,7 @@ void blocktype_init(void)
 	register_blocktype(BLOCK_INVALID, "single_stair", RANK_GUEST, &convert_single_stair, NULL, NULL, NULL, false, false, false);
 	register_blocktype(BLOCK_INVALID, "parquet", RANK_GUEST, &convert_parquet, NULL, NULL, NULL, false, false, false);
 
-	register_blocktype(BLOCK_INVALID, "active_sponge", RANK_ADV_BUILDER, &convert_active_sponge, NULL, NULL, &physics_active_sponge, false, false, false);
+	register_blocktype(BLOCK_INVALID, "active_sponge", RANK_ADMIN, &convert_active_sponge, NULL, NULL, NULL, false, false, false);
 }
 
 void blocktype_deinit(void)
