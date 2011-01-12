@@ -10,6 +10,7 @@
 #include <math.h>
 #include "filter.h"
 #include "level.h"
+#include "level_worker.h"
 #include "block.h"
 #include "client.h"
 #include "cuboid.h"
@@ -759,29 +760,14 @@ void level_gen(struct level_t *level, const char *type, int height_range, int se
 	level->sea_height = sea_height;
 
 	pthread_mutex_lock(&level->mutex);
-	if (level->thread_valid)
-	{
-		pthread_join(level->thread, NULL);
-	}
-
-	LOG("Creating thread for generating %s (%p)\n", level->name, level);
-	int r = pthread_create(&level->thread, NULL, &level_gen_thread, level);
-	level->thread_valid = (r == 0);
-	if (r != 0)
-	{
-		LOG("Unable to create thread for level generation, server may pause\n");
-		level_gen_thread(level);
-	}
+	level_make_queue(level);
 }
 
 void level_unload(struct level_t *level)
 {
 	LOG("Level '%s' unloaded\n", level->name);
 
-	if (level->thread_valid)
-	{
-		pthread_join(level->thread, NULL);
-	}
+	pthread_mutex_lock(&level->mutex);
 
 	user_list_free(&level->userbuild);
 	user_list_free(&level->uservisit);
@@ -812,6 +798,9 @@ void level_unload(struct level_t *level)
 	}
 
 	free(level->blocks);
+
+	pthread_mutex_unlock(&level->mutex);
+
 	free(level);
 }
 
@@ -841,7 +830,7 @@ static void *level_load_thread_abort(struct level_t *level, const char *reason)
 	return NULL;
 }
 
-static void *level_load_thread(void *arg)
+void *level_load_thread(void *arg)
 {
 	int i;
 	struct level_t *l = arg;
@@ -1082,19 +1071,7 @@ bool level_load(const char *name, struct level_t **levelp)
 	level->convert = convert;
 
 	pthread_mutex_lock(&level->mutex);
-	if (level->thread_valid)
-	{
-		pthread_join(level->thread, NULL);
-	}
-
-	LOG("Creating thread for loading %s (%p)\n", level->name, level);
-	int r = pthread_create(&level->thread, NULL, &level_load_thread, level);
-	level->thread_valid = (r == 0);
-	if (r != 0)
-	{
-		LOG("Unable to create thread for level loading, server may pause\n");
-		level_load_thread(level);
-	}
+	level_load_queue(level);
 
 	return true;
 }
@@ -1194,21 +1171,8 @@ void *level_save_thread(void *arg)
 void level_save(struct level_t *l)
 {
 	if (pthread_mutex_trylock(&l->mutex) != 0) return;
-	if (l->thread_valid)
-	{
-		pthread_join(l->thread, NULL);
-	}
-
 	call_level_hook(EVENT_SAVE, l, NULL, NULL);
-
-	LOG("Creating thread for saving %s (%p)\n", l->name, l);
-	int r = pthread_create(&l->thread, NULL, &level_save_thread, l);
-	l->thread_valid = (r == 0);
-	if (r != 0)
-	{
-		LOG("Unable to create thread for level saving, server may pause\n");
-		level_save_thread(l);
-	}
+	level_save_queue(l);
 }
 
 bool level_is_loaded(const char *name)

@@ -28,23 +28,19 @@ void mcc_exit(void)
 {
 	level_save_all(NULL);
 
-	/* Wait for threads to finish */
+	level_worker_deinit();
+	astar_worker_deinit();
+
 	unsigned i;
 	for (i = 0; i < s_levels.used; i++)
 	{
 		struct level_t *l = s_levels.items[i];
-		if (l != NULL && l->thread_valid)
+		if (l != NULL)
 		{
-			pthread_join(l->thread, NULL);
-			l->thread_valid = false;
-
 			level_unload(l);
 			s_levels.items[i] = NULL;
 		}
 	}
-
-	level_worker_deinit();
-	astar_worker_deinit();
 
 	modules_deinit();
 	level_list_free(&s_levels);

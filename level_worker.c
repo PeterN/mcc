@@ -12,14 +12,17 @@ struct {
 
 void save_worker(void *data)
 {
+	level_save_thread(data);
 }
 
 void load_worker(void *data)
 {
+	level_load_thread(data);
 }
 
 void make_worker(void *data)
 {
+	level_gen_thread(data);
 }
 
 void send_worker(void *data)
@@ -44,6 +47,21 @@ void level_worker_deinit(void)
 	worker_deinit(&s_level_workers.load);
 	worker_deinit(&s_level_workers.make);
 	worker_deinit(&s_level_workers.send);
+}
+
+void level_save_queue(struct level_t *level)
+{
+	worker_queue(&s_level_workers.save, level);
+}
+
+void level_load_queue(struct level_t *level)
+{
+	worker_queue(&s_level_workers.load, level);
+}
+
+void level_make_queue(struct level_t *level)
+{
+	worker_queue(&s_level_workers.make, level);
 }
 
 void level_send_queue(struct client_t *client)

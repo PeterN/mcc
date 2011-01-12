@@ -97,10 +97,8 @@ struct level_t
 	uint8_t physics_pause:1;
 	uint8_t convert:1;
 	uint8_t delete:1;
-	uint8_t thread_valid:1;
 	uint8_t no_changes:1;
 
-	pthread_t thread;
 	pthread_mutex_t mutex;
 };
 
