@@ -10,6 +10,7 @@
 #include <errno.h>
 #include "colour.h"
 #include "commands.h"
+#include "config.h"
 #include "hook.h"
 #include "mcc.h"
 #include "network.h"
@@ -23,6 +24,14 @@ struct irc_packet_t
 
 struct irc_t
 {
+	struct {
+		char *hostname;
+		int port;
+		char *name;
+		char *channel;
+		char *pass;
+	} settings;
+
 	int fd;
 	struct timer_t *timer;
 
@@ -184,7 +193,7 @@ void irc_message(int hook, void *data, void *arg)
 	if (d[0] != '!') return;
 
 	char buf[512];
-	snprintf(buf, sizeof buf, "PRIVMSG %s :%s\r\n", g_server.irc.channel, (char *)data);
+	snprintf(buf, sizeof buf, "PRIVMSG %s :%s\r\n", s->settings.channel, (char *)data);
 
 	unsigned i;
 	size_t len = strlen(buf);
@@ -247,14 +256,14 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 	switch (s->irc_stage)
 	{
 		case 0:
-			if (g_server.irc.pass != NULL)
+			if (s->settings.pass != NULL)
 			{
-				snprintf(buf, sizeof buf, "PASS %s\r\n", g_server.irc.pass);
+				snprintf(buf, sizeof buf, "PASS %s\r\n", s->settings.pass);
 				irc_queue(s, buf);
 			}
-			snprintf(buf, sizeof buf, "NICK %s\r\n", g_server.irc.name);
+			snprintf(buf, sizeof buf, "NICK %s\r\n", s->settings.name);
 			irc_queue(s, buf);
-			snprintf(buf, sizeof buf, "USER %s 8 * :%s\r\n", g_server.irc.name, g_server.irc.name);
+			snprintf(buf, sizeof buf, "USER %s 8 * :%s\r\n", s->settings.name, s->settings.name);
 			irc_queue(s, buf);
 
 			s->irc_stage = 1;
@@ -264,7 +273,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 			break;
 
 		case 2:
-			snprintf(buf, sizeof buf, "JOIN %s\r\n", g_server.irc.channel);
+			snprintf(buf, sizeof buf, "JOIN %s\r\n", s->settings.channel);
 			irc_queue(s, buf);
 
 			s->irc_stage = 3;
@@ -348,7 +357,7 @@ void irc_start(void *arg)
 
 	if (!s->irc_resolved)
 	{
-		if (!resolve(g_server.irc.hostname, g_server.irc.port, &s->irc_addr))
+		if (!resolve(s->settings.hostname, s->settings.port, &s->irc_addr))
 		{
 			LOG("[irc] Unable to resolve IRC server\n");
 			return;
@@ -396,6 +405,17 @@ void module_init(void **arg)
 	memset(s, 0, sizeof *s);
 	*arg = s;
 
+	if (!config_get_string("irc.hostname", &s->settings.hostname) ||
+		!config_get_int("irc.port", &s->settings.port) ||
+		!config_get_string("irc.name", &s->settings.name) ||
+		!config_get_string("irc.channel", &s->settings.channel))
+	{
+		free(s);
+		return;
+	}
+
+	config_get_string("irc.pass", &s->settings.pass);
+
 	s->fd = -1;
 	s->timer = register_timer("irc", 60000, &irc_start, s);
 }
@@ -403,6 +423,8 @@ void module_init(void **arg)
 void module_deinit(void *arg)
 {
 	struct irc_t *s = arg;
+
+	if (s == NULL) return;
 
 	irc_end(s);
 	deregister_timer(s->timer);

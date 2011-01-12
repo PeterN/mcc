@@ -12,7 +12,7 @@ struct server_t
 	int max_players;
 	int players;
 	int port;
-	bool public;
+	int public;
 	bool exit;
 	time_t start_time;
 	clock_t cpu_start;
@@ -21,15 +21,6 @@ struct server_t
 	int cuboid_max;
 
 	FILE *logfile;
-
-	struct
-	{
-		char *hostname;
-		int port;
-		char *name;
-		char *channel;
-		char *pass;
-	} irc;
 };
 
 extern struct server_t g_server;

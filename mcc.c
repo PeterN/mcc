@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include "block.h"
+#include "config.h"
 #include "mcc.h"
 #include "level.h"
 #include "level_worker.h"
@@ -51,6 +52,8 @@ void mcc_exit(void)
 
 	playerdb_close();
 
+	config_deinit();
+
 	LOG("Server exiting...\n");
 
 	fclose(g_server.logfile);
@@ -75,6 +78,18 @@ int main(int argc, char **argv)
 	g_server.logfile = fopen("log.txt", "a");
 	LOG("Server starting...\n");
 
+	config_init("config.txt");
+
+	if (!config_get_string("name", &g_server.name) ||
+		!config_get_string("motd", &g_server.motd) ||
+		!config_get_int("max_players", &g_server.max_players) ||
+		!config_get_int("port", &g_server.port) ||
+		!config_get_int("public", &g_server.public))
+	{
+		LOG("Couldn't read required config parameters\n");
+		return 0;
+	}
+
 	level_worker_init();
 	astar_worker_init();
 
@@ -97,23 +112,12 @@ int main(int argc, char **argv)
 		level_list_add(&s_levels, l);
 	}
 
-	g_server.name = "Just another Minecraft Server";
-	g_server.motd = "Welcome to my Minecraft Server!";
-	g_server.max_players = 30;
 	g_server.players = 0;
-	g_server.port = 25565;
-	g_server.public = false;
 	g_server.exit = false;
 	g_server.start_time = time(NULL);
 	g_server.cpu_start = clock();
 	g_server.pos_interval = 40;
 	g_server.cuboid_max = 100;
-
-	g_server.irc.hostname = "fuzzle.org";
-	g_server.irc.port = 6667;
-	g_server.irc.name = "jams";
-	g_server.irc.channel = "#jams";
-	g_server.irc.pass = NULL;
 
 	signal(SIGINT, &sighandler);
 
