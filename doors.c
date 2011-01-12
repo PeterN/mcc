@@ -9,13 +9,13 @@
 	}
 
 #define DOOR2(n) \
-	register_blocktype(BLOCK_INVALID, "door_" #n, RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false)
+	register_blocktype(BLOCK_INVALID, "door_" #n, RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true)
 
 #define DOOR3(n, r) \
-	register_blocktype(BLOCK_INVALID, "door_" #n, r, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false)
+	register_blocktype(BLOCK_INVALID, "door_" #n, r, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true)
 
 #define DOOR4(n) \
-	register_blocktype(BLOCK_INVALID, "door", RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false)
+	register_blocktype(BLOCK_INVALID, "door", RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true)
 
 DOOR1(stone, ROCK)
 DOOR1(grass, GRASS)
