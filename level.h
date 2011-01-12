@@ -100,6 +100,9 @@ struct level_t
 	uint8_t no_changes:1;
 
 	pthread_mutex_t mutex;
+
+	int inuse;
+	pthread_mutex_t inuse_mutex;
 };
 
 bool level_t_compare(struct level_t **a, struct level_t **b);
@@ -165,5 +168,7 @@ bool level_user_can_build(const struct level_t *l, const struct player_t *p);
 bool level_user_can_own(const struct level_t *l, const struct player_t *p);
 
 void level_user_undo(struct level_t *level, unsigned globalid);
+
+bool level_inuse(struct level_t *level, bool inuse);
 
 #endif /* LEVEL_H */

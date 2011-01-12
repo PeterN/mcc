@@ -22,6 +22,8 @@ static void astar_worker(void *arg)
 
 	struct point *path = as_find(job->level, &job->a, &job->b);
 	job->callback(job->level, path, job->data);
+	level_inuse(job->level, false);
+
 	free(job);
 }
 
@@ -41,6 +43,8 @@ void astar_queue(struct level_t *level, const struct point *a, const struct poin
 	assert(a != NULL);
 	assert(b != NULL);
 	assert(callback != NULL);
+
+	if (!level_inuse(level, true)) return;
 
 	struct astar_job *job = malloc(sizeof *job);
 	job->level = level;

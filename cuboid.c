@@ -110,8 +110,10 @@ void cuboid_process(void)
 							c->level->no_changes = 0;
 							c->level->spawn = c->srclevel->spawn;
 							level_notify_all(c->level, TAG_YELLOW "Level finished loading");
+							level_inuse(c->srclevel, false);
 						}
 						printf("ok: %d blocks changed\n", c->count);
+						level_inuse(c->level, false);
 						cuboid_list_del_index(&s_cuboids, i);
 						return;
 					}
@@ -128,6 +130,7 @@ void cuboid_remove_for_level(struct level_t *l)
 	{
 		if (s_cuboids.items[i].level == l)
 		{
+			level_inuse(l, false);
 			cuboid_list_del_index(&s_cuboids, i);
 			/* Need to restart list */
 			i = -1;

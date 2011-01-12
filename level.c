@@ -37,6 +37,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 	{
 		memset(level, 0, sizeof *level);
 		pthread_mutex_init(&level->mutex, NULL);
+		pthread_mutex_init(&level->inuse_mutex, NULL);
 	}
 
 	if (name != NULL)
@@ -1063,6 +1064,7 @@ bool level_load(const char *name, struct level_t **levelp)
 	struct level_t *level = malloc(sizeof *level);
 	memset(level, 0, sizeof *level);
 	pthread_mutex_init(&level->mutex, NULL);
+	pthread_mutex_init(&level->inuse_mutex, NULL);
 
 	level_list_add(&s_levels, level);
 	if (levelp != NULL) *levelp = level;
@@ -1245,7 +1247,7 @@ static bool level_is_empty(const struct level_t *l)
 
 void level_unload_empty(void *arg)
 {
-	unsigned i, j;
+	unsigned i;
 
 	for (i = 0; i < s_levels.used; i++)
 	{
@@ -1259,18 +1261,15 @@ void level_unload_empty(void *arg)
 
 		if (!level_is_empty(l)) continue;
 
-		bool cuboid = false;
-		for (j = 0; j < s_cuboids.used; j++)
+		pthread_mutex_lock(&l->inuse_mutex);
+		if (l->inuse > 0)
 		{
-			const struct cuboid_t *c = &s_cuboids.items[j];
-			if (c->level == l || c->srclevel == l)
-			{
-				cuboid = true;
-				break;
-			}
+			LOG("Level %s use count %d\n", l->name, l->inuse);
+			pthread_mutex_unlock(&l->inuse_mutex);
+			continue;
 		}
-
-		if (cuboid) continue;
+		l->inuse = -1;
+		pthread_mutex_unlock(&l->inuse_mutex);
 
 		level_unload(l);
 		//level_list_del(&s_levels, l);
@@ -1292,6 +1291,13 @@ bool level_get_xyz(const struct level_t *level, unsigned index, int16_t *x, int1
 
 void level_copy(struct level_t *src, struct level_t *dst)
 {
+	if (!level_inuse(src, true)) return;
+	if (!level_inuse(dst, true))
+	{
+		level_inuse(src, false);
+		return;
+	}
+
 	struct cuboid_t c;
 
 	c.sx = c.ex = c.cx = 0;
@@ -1319,6 +1325,8 @@ void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum bloc
 	if (!level_get_xyz(level, start, &c.sx, &c.sy, &c.sz)) return;
 	if (!level_get_xyz(level, end, &c.ex, &c.ey, &c.ez)) return;
 
+	if (!level_inuse(level, true)) return;
+
 	int16_t t;
 	if (c.ex < c.sx) { t = c.sx; c.sx = c.ex; c.ex = t; }
 	if (c.ey < c.sy) { t = c.sy; c.sy = c.ey; c.ey = t; }
@@ -1342,6 +1350,8 @@ void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum bloc
 
 void level_user_undo(struct level_t *level, unsigned globalid)
 {
+	if (!level_inuse(level, true)) return;
+
 	struct cuboid_t c;
 
 	c.sx = 0;
@@ -2150,4 +2160,22 @@ bool call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data
 	}
 
 	return false;
+}
+
+bool level_inuse(struct level_t *level, bool inuse)
+{
+	pthread_mutex_lock(&level->inuse_mutex);
+
+	if (level->inuse < 0) {
+		pthread_mutex_unlock(&level->inuse_mutex);
+		return false;
+	}
+
+	level->inuse += inuse ? 1 : -1;
+
+//	LOG("Level %s in use %d (%s)\n", level->name, level->inuse, inuse ? "add" : "del");
+
+	pthread_mutex_unlock(&level->inuse_mutex);
+
+	return true;
 }
