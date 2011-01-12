@@ -411,6 +411,7 @@ void module_init(void **arg)
 		!config_get_string("irc.channel", &s->settings.channel))
 	{
 		free(s);
+		*arg = NULL;
 		return;
 	}
 
