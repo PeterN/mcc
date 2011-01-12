@@ -6,7 +6,7 @@
 #include "mcc.h"
 #include "level.h"
 #include "level_worker.h"
-#include "astar_thread.h"
+#include "astar_worker.h"
 #include "module.h"
 #include "network.h"
 #include "player.h"
@@ -44,7 +44,7 @@ void mcc_exit(void)
 	}
 
 	level_worker_deinit();
-	astar_thread_deinit();
+	astar_worker_deinit();
 
 	modules_deinit();
 	level_list_free(&s_levels);
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 	LOG("Server starting...\n");
 
 	level_worker_init();
-	astar_thread_init();
+	astar_worker_init();
 
 	if (!level_load("main", NULL))
 	{
