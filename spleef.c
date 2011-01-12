@@ -145,9 +145,9 @@ void module_init(void **data)
 	s.floor2 = blocktype_get_by_name("gold");
 	s.green = blocktype_get_by_name("green");
 
-	s.spleef1 = register_blocktype(BLOCK_INVALID, "spleef1", RANK_BUILDER, &convert_spleef1, &trigger_spleef, NULL, &physics_spleef, false, false);
-	s.spleef2 = register_blocktype(BLOCK_INVALID, "spleef2", RANK_BUILDER, &convert_spleef2, &trigger_spleef, NULL, &physics_spleef, false, false);
-	s.spleeft = register_blocktype(BLOCK_INVALID, "spleeft", RANK_BUILDER, &convert_spleeft, &trigger_spleeft, NULL, NULL, false, false);
+	s.spleef1 = register_blocktype(BLOCK_INVALID, "spleef1", RANK_BUILDER, &convert_spleef1, &trigger_spleef, NULL, &physics_spleef, false, false, false);
+	s.spleef2 = register_blocktype(BLOCK_INVALID, "spleef2", RANK_BUILDER, &convert_spleef2, &trigger_spleef, NULL, &physics_spleef, false, false, false);
+	s.spleeft = register_blocktype(BLOCK_INVALID, "spleeft", RANK_BUILDER, &convert_spleeft, &trigger_spleeft, NULL, NULL, false, false, false);
 
 	register_level_hook_func("spleef", &spleef_level_hook);
 }

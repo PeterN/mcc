@@ -20,7 +20,7 @@ void preregister_blocktype(const char *name)
 	blocktype_desc_list_add(&s_blocks, desc);
 }
 
-int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_rank, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear, bool passable)
+int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_rank, convert_func_t convert_func, trigger_func_t trigger_func, delete_func_t delete_func, physics_func_t physics_func, bool clear, bool passable, bool swim)
 {
 	struct blocktype_desc_t desc;
 	memset(&desc, 0, sizeof desc);
@@ -67,6 +67,7 @@ int register_blocktype(enum blocktype_t type, const char *name, enum rank_t min_
 	descp->loaded = true;
 	descp->clear = clear;
 	descp->passable = passable;
+	descp->swim = swim;
 	descp->min_rank = min_rank;
 	descp->convert_func = convert_func;
 	descp->trigger_func = trigger_func;
@@ -568,61 +569,61 @@ void blocktype_init(void)
 		fclose(f);
 	}
 
-	register_blocktype(AIR, "air", RANK_GUEST, NULL, NULL, &delete_air, &physics_air, true, true);
-	register_blocktype(ROCK, "stone", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(GRASS, "grass", RANK_BUILDER, NULL, NULL, NULL, &physics_grass, false, false);
-	register_blocktype(DIRT, "dirt", RANK_GUEST, NULL, NULL, NULL, &physics_dirt, false, false);
-	register_blocktype(STONE, "cobblestone", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(WOOD, "wood", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(SHRUB, "plant", RANK_GUEST, NULL, NULL, NULL, NULL, true, true);
-	register_blocktype(ADMINIUM, "adminium", RANK_OP, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(WATER, "active_water", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_water, false, true);
-	register_blocktype(WATERSTILL, "water", RANK_BUILDER, NULL, NULL, NULL, NULL, false, true);
-	register_blocktype(LAVA, "active_lava", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_lava, false, true);
-	register_blocktype(LAVASTILL, "lava", RANK_BUILDER, NULL, NULL, NULL, NULL, false, true);
-	register_blocktype(SAND, "sand", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false, false);
-	register_blocktype(GRAVEL, "gravel", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false, false);
-	register_blocktype(GOLDROCK, "gold_ore", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(IRONROCK, "iron_ore", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(COAL, "coal", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(TRUNK, "tree", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(LEAF, "leaves", RANK_GUEST, NULL, NULL, NULL, NULL, true, false);
-	register_blocktype(SPONGE, "sponge", RANK_BUILDER, NULL, NULL, &delete_sponge, &physics_sponge, false, false);
-	register_blocktype(GLASS, "glass", RANK_GUEST, NULL, NULL, NULL, NULL, true, false);
-	register_blocktype(RED, "red", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(ORANGE, "orange", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(YELLOW, "yellow", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(LIGHTGREEN, "greenyellow", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(GREEN, "green", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(AQUAGREEN, "springgreen", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(CYAN, "cyan", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(LIGHTBLUE, "blue", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(BLUE, "blueviolet", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(PURPLE, "indigo", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(LIGHTPURPLE, "purple", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(PINK, "magenta", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(DARKPINK, "pink", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(DARKGREY, "black", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(LIGHTGREY, "grey", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(WHITE, "white", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(YELLOWFLOWER, "yellow_flower", RANK_GUEST, NULL, NULL, NULL, NULL, true, true);
-	register_blocktype(REDFLOWER, "red_flower", RANK_GUEST, NULL, NULL, NULL, NULL, true, true);
-	register_blocktype(MUSHROOM, "brown_shroom", RANK_GUEST, NULL, NULL, NULL, NULL, true, true);
-	register_blocktype(REDMUSHROOM, "red_shroom", RANK_GUEST, NULL, NULL, NULL, NULL, true, true);
-	register_blocktype(GOLDSOLID, "gold", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(IRON, "iron", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(STAIRCASEFULL, "double_stair", RANK_GUEST, NULL, &trigger_stair, NULL, NULL, false, false);
-	register_blocktype(STAIRCASESTEP, "stair", RANK_GUEST, NULL, NULL, NULL, &physics_stair, false, false);
-	register_blocktype(BRICK, "brick", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(TNT, "tnt", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(BOOKCASE, "bookcase", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(STONEVINE, "mossy_cobblestone", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
-	register_blocktype(OBSIDIAN, "obsidian", RANK_GUEST, NULL, NULL, NULL, NULL, false, false);
+	register_blocktype(AIR, "air", RANK_GUEST, NULL, NULL, &delete_air, &physics_air, true, true, false);
+	register_blocktype(ROCK, "stone", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(GRASS, "grass", RANK_BUILDER, NULL, NULL, NULL, &physics_grass, false, false, false);
+	register_blocktype(DIRT, "dirt", RANK_GUEST, NULL, NULL, NULL, &physics_dirt, false, false, false);
+	register_blocktype(STONE, "cobblestone", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(WOOD, "wood", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(SHRUB, "plant", RANK_GUEST, NULL, NULL, NULL, NULL, true, true, false);
+	register_blocktype(ADMINIUM, "adminium", RANK_OP, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(WATER, "active_water", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_water, false, true, true);
+	register_blocktype(WATERSTILL, "water", RANK_BUILDER, NULL, NULL, NULL, NULL, false, true, true);
+	register_blocktype(LAVA, "active_lava", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_lava, false, true, true);
+	register_blocktype(LAVASTILL, "lava", RANK_BUILDER, NULL, NULL, NULL, NULL, false, true, true);
+	register_blocktype(SAND, "sand", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false, false, false);
+	register_blocktype(GRAVEL, "gravel", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false, false, false);
+	register_blocktype(GOLDROCK, "gold_ore", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(IRONROCK, "iron_ore", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(COAL, "coal", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(TRUNK, "tree", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(LEAF, "leaves", RANK_GUEST, NULL, NULL, NULL, NULL, true, false, false);
+	register_blocktype(SPONGE, "sponge", RANK_BUILDER, NULL, NULL, &delete_sponge, &physics_sponge, false, false, false);
+	register_blocktype(GLASS, "glass", RANK_GUEST, NULL, NULL, NULL, NULL, true, false, false);
+	register_blocktype(RED, "red", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(ORANGE, "orange", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(YELLOW, "yellow", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(LIGHTGREEN, "greenyellow", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(GREEN, "green", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(AQUAGREEN, "springgreen", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(CYAN, "cyan", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(LIGHTBLUE, "blue", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(BLUE, "blueviolet", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(PURPLE, "indigo", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(LIGHTPURPLE, "purple", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(PINK, "magenta", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(DARKPINK, "pink", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(DARKGREY, "black", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(LIGHTGREY, "grey", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(WHITE, "white", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(YELLOWFLOWER, "yellow_flower", RANK_GUEST, NULL, NULL, NULL, NULL, true, true, false);
+	register_blocktype(REDFLOWER, "red_flower", RANK_GUEST, NULL, NULL, NULL, NULL, true, true, false);
+	register_blocktype(MUSHROOM, "brown_shroom", RANK_GUEST, NULL, NULL, NULL, NULL, true, true, false);
+	register_blocktype(REDMUSHROOM, "red_shroom", RANK_GUEST, NULL, NULL, NULL, NULL, true, true, false);
+	register_blocktype(GOLDSOLID, "gold", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(IRON, "iron", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(STAIRCASEFULL, "double_stair", RANK_GUEST, NULL, &trigger_stair, NULL, NULL, false, false, false);
+	register_blocktype(STAIRCASESTEP, "stair", RANK_GUEST, NULL, NULL, NULL, &physics_stair, false, false, false);
+	register_blocktype(BRICK, "brick", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(TNT, "tnt", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(BOOKCASE, "bookcase", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(STONEVINE, "mossy_cobblestone", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
+	register_blocktype(OBSIDIAN, "obsidian", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
 
-	register_blocktype(BLOCK_INVALID, "single_stair", RANK_GUEST, &convert_single_stair, NULL, NULL, NULL, false, false);
-	register_blocktype(BLOCK_INVALID, "parquet", RANK_GUEST, &convert_parquet, NULL, NULL, NULL, false, false);
+	register_blocktype(BLOCK_INVALID, "single_stair", RANK_GUEST, &convert_single_stair, NULL, NULL, NULL, false, false, false);
+	register_blocktype(BLOCK_INVALID, "parquet", RANK_GUEST, &convert_parquet, NULL, NULL, NULL, false, false, false);
 
-	register_blocktype(BLOCK_INVALID, "active_sponge", RANK_ADV_BUILDER, &convert_active_sponge, NULL, NULL, &physics_active_sponge, false, false);
+	register_blocktype(BLOCK_INVALID, "active_sponge", RANK_ADV_BUILDER, &convert_active_sponge, NULL, NULL, &physics_active_sponge, false, false, false);
 }
 
 void blocktype_deinit(void)
@@ -696,6 +697,11 @@ bool blocktype_has_physics(enum blocktype_t type)
 bool blocktype_passable(enum blocktype_t type)
 {
 	return s_blocks.items[type].passable;
+}
+
+bool blocktype_swim(enum blocktype_t type)
+{
+	return s_blocks.items[type].swim;
 }
 
 enum rank_t blocktype_min_rank(enum blocktype_t type)
