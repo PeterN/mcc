@@ -27,19 +27,19 @@ int point_add(const struct level_t *l, const struct point *p, int d, struct poin
 	}
 
 	/* Blocked at head-height? */
-	if (level_get_blocktype(l, n.x, n.z + 1, n.y) != AIR)
+	if (!blocktype_passable(level_get_blocktype(l, n.x, n.z + 1, n.y)))
 	{
 		*q = n;
 		return 0;
 	}
-	if (level_get_blocktype(l, n.x, n.z, n.y) == AIR)
+	if (blocktype_passable(level_get_blocktype(l, n.x, n.z, n.y)))
 	{
 		/* Check diagonals for height */
 		do
 		{
 			n.z--;
 		}
-		while (level_get_blocktype(l, n.x, n.z, n.y) == AIR);
+		while (blocktype_passable(level_get_blocktype(l, n.x, n.z, n.y)));
 
 		n.z++;
 		/* else stay at same height */
@@ -47,7 +47,7 @@ int point_add(const struct level_t *l, const struct point *p, int d, struct poin
 	else
 	{
 		/* Can jump? */
-		if (level_get_blocktype(l, n.x, n.z + 2, n.y) == AIR)
+		if (blocktype_passable(level_get_blocktype(l, n.x, n.z + 2, n.y)))
 		{
 			/* Check diagonals for jump height */
 			n.z++;
