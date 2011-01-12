@@ -9,6 +9,7 @@ struct worker
 {
 	char name[16];
 	int thread_valid;
+	int thread_timeout;
 	unsigned timeout;
 
 	struct queue_t *queue;

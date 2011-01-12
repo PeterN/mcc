@@ -43,7 +43,7 @@ void *worker_thread(void *arg)
 			if (gettime() - last > worker->timeout)
 			{
 				timeout = true;
-				worker->thread_valid = false;
+				worker->thread_timeout = true;
 				break;
 			}
 		}
@@ -70,6 +70,7 @@ void worker_init(struct worker *worker, const char *name, unsigned timeout, work
 
 	strncpy(worker->name, name, sizeof worker->name);
 	worker->thread_valid = false;
+	worker->thread_timeout = false;
 	worker->timeout = timeout;
 
 	worker->queue = queue_new();
@@ -82,7 +83,7 @@ void worker_deinit(struct worker *worker)
 {
 	if (worker->thread_valid)
 	{
-		queue_produce(worker->queue, NULL);
+		if (!worker->thread_timeout) queue_produce(worker->queue, NULL);
 		pthread_join(worker->thread, NULL);
 	}
 
@@ -93,6 +94,13 @@ void worker_deinit(struct worker *worker)
 
 void worker_queue(struct worker *worker, void *data)
 {
+	if (worker->thread_timeout)
+	{
+		pthread_join(worker->thread, NULL);
+		worker->thread_timeout = false;
+		worker->thread_valid = false;
+	}
+
 	if (!worker->thread_valid)
 	{
 		worker->thread_valid = (pthread_create(&worker->thread, NULL, &worker_thread, worker) == 0);
