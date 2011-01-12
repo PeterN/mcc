@@ -4,9 +4,18 @@
 #include "player.h"
 #include "level.h"
 #include "astar.h"
-#include "astar_thread.h"
+#include "astar_worker.h"
 
 #define NPC 64
+
+#define RADIUS (7.0f / 32.0f)
+#define HEIGHT (51.0f / 32.0f)
+#define HEADROOM RADIUS
+#define GRAVITY (1.0f / 32.0f)
+#define MAXSPEED 0.20f
+#define ACCEL 0.05f
+
+static enum blocktype_t s_door;
 
 struct npctemp
 {
@@ -16,6 +25,9 @@ struct npctemp
 	float sx[NPC];
 	float sy[NPC];
 	float sz[NPC];
+	float hs[NPC];
+	float vs[NPC];
+	bool iw[NPC];
 };
 
 struct npctest
@@ -149,7 +161,6 @@ static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, 
 
 static void npctest_astar_cb(struct level_t *l, struct point *path, void *data)
 {
-	printf("Got PF response\n");
 	struct pftemp *temp = data;
 	temp->arg->temp->path[temp->i] = path;
 	temp->arg->temp->step[temp->i] = 0;
@@ -158,6 +169,9 @@ static void npctest_astar_cb(struct level_t *l, struct point *path, void *data)
 
 static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 {
+	/* Already getting a path... */
+	if (arg->temp->step[i] == -1) return;
+
 	free(arg->temp->path[i]);
 	arg->temp->path[i] = NULL;
 
@@ -172,25 +186,24 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 
 	a.x = arg->temp->sx[i];
 	a.y = arg->temp->sz[i];
-	a.z = arg->temp->sy[i];
+	a.z = arg->temp->sy[i] - HEIGHT;
 
 	b.x = them.x / 32;
 	b.y = them.z / 32;
 	b.z = them.y / 32;
 
-	for (; a.z > 0 && level_get_blocktype(l, a.x, a.z, a.y) == AIR; a.z--);
-	for (; b.z > 0 && level_get_blocktype(l, b.x, b.z, b.y) == AIR; b.z--);
+	//for (; a.z > 0 && blocktype_passable(level_get_blocktype(l, a.x, a.z, a.y)); a.z--);
+	for (; b.z > 0 && blocktype_passable(level_get_blocktype(l, b.x, b.z, b.y)); b.z--);
 
-	a.z++;
 	b.z++;
 
-	printf("Pathfinding from %d %d %d to %d %d %d\n", a.x, a.y, a.z, b.x, b.y, b.z);
+	//printf("Pathfinding from %d %d %d to %d %d %d\n", a.x, a.y, a.z, b.x, b.y, b.z);
 
 	struct pftemp *temp = malloc(sizeof *temp);
 	temp->arg = arg;
 	temp->i = i;
 
-	astar_queue(l, a, b, &npctest_astar_cb, temp);
+	astar_queue(l, &a, &b, &npctest_astar_cb, temp);
 
 //	arg->temp->path[i] = as_find(l, &a, &b);
 	arg->temp->step[i] = -1;
@@ -203,6 +216,47 @@ static inline float min(float a, float b)
 		return a < b ? b : a;
 	}
 	return a < b ? a : b;
+}
+
+static bool npctest_4point(struct level_t *l, float x, float y, float z)
+{
+	int bx = x - RADIUS;
+	int bz = z - RADIUS;
+	int bx2 = x + RADIUS;
+	int bz2 = z + RADIUS;
+	int by = y;
+
+	if (!blocktype_passable(level_get_blocktype(l, bx, by, bz))) return false;
+	if (bx != bx2)
+	{
+		if (bz != bz2 && !blocktype_passable(level_get_blocktype(l, bx2, by, bz2))) return false;
+		if (!blocktype_passable(level_get_blocktype(l, bx2, by, bz))) return false;
+	}
+	if (bz != bz2 && !blocktype_passable(level_get_blocktype(l, bx, by, bz2))) return false;
+
+	return true;
+}
+
+static bool npctest_canmoveto(struct level_t *l, float x, float y, float z, float dx, float dz)
+{
+	if (!npctest_4point(l, x + dx, y - HEIGHT, z + dz)) return false;
+	if (!npctest_4point(l, x + dx, y - HEIGHT + 1.0f, z + dz)) return false;
+	return true;
+
+	int bx = x;
+	int bz = z;
+	float fx = x - bx;
+	float fz = z - bz;
+
+	if (dx < 0 && fx + dx - RADIUS < 0) bx--;
+	else if (dx > 0 && fx + dx + RADIUS > 32) bx++;
+	if (dz < 0 && fz + dz - RADIUS < 0) bz--;
+	else if (dz > 0 && fz + dz + RADIUS > 32) bz++;
+
+	if (level_get_blocktype(l, bx, y - HEIGHT, bz) != AIR) return false;
+	if (level_get_blocktype(l, bx, y - HEIGHT + 1.0f, bz) != AIR) return false;
+
+	return true;
 }
 
 static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
@@ -242,44 +296,122 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 			}
 			else
 			{
+//				if ((arg->i % 10) != 0) continue;
 				float dx = (p->x + 0.5f) - arg->temp->sx[i];
-				float dy = (p->z + 1.5f) - arg->temp->sy[i];
+				float dy = (p->z + HEIGHT) - arg->temp->sy[i];
 				float dz = (p->y + 0.5f) - arg->temp->sz[i];
 
 				float azimuth = atan2(dz, dx);
 
-				float sp = 0.25f;
-				float ddx = cos(azimuth) * sp;
-				float ddz = sin(azimuth) * sp;
+				float ms = arg->temp->iw[i] ? MAXSPEED / 2.0f : MAXSPEED;
+				if (arg->temp->hs[i] < ms)
+				{
+					arg->temp->hs[i] += ACCEL;
+					if (arg->temp->hs[i] > ms)
+					{
+						arg->temp->hs[i] = ms;
+					}
+				}
 
-				printf("Delta %f %f - %f %f (%f %f)\n", dx, dz, ddx, ddz, cos(azimuth) * sp, sin(azimuth) * sp);
+				float sp = arg->temp->hs[i];
+				float ddx = min(dx, cos(azimuth) * sp);
+				float ddz = min(dz, sin(azimuth) * sp);
 
-				arg->temp->sx[i] += min(dx, ddx);
-				arg->temp->sz[i] += min(dz, ddz);
+				//printf("Delta %f %f - %f %f (%f %f)\n", dx, dz, ddx, ddz, cos(azimuth) * sp, sin(azimuth) * sp);
 
-				us->x = arg->temp->sx[i] * 32.0f;
-				us->z = arg->temp->sz[i] * 32.0f;
+				if (npctest_canmoveto(l, arg->temp->sx[i], arg->temp->sy[i], arg->temp->sz[i], ddx, ddz))
+				{
+					arg->temp->sx[i] += ddx;
+					arg->temp->sz[i] += ddz;
+
+					us->x = arg->temp->sx[i] * 32.0f;
+					us->z = arg->temp->sz[i] * 32.0f;
+
+					enum blocktype_t bt1 = level_get_blocktype(l, arg->temp->sx[i], arg->temp->sy[i] - 1.0f, arg->temp->sz[i]);
+					enum blocktype_t bt2 = level_get_blocktype(l, arg->temp->sx[i], arg->temp->sy[i], arg->temp->sz[i]);
+					arg->temp->iw[i] = blocktype_swim(bt1) | blocktype_swim(bt2);
+				}
+				else
+				{
+					arg->temp->hs[i] = 0.0f;
+				}
 
 //				if (dx < 0) us->x -= min(abs(dx), sp);
 //				else if (dx > 0) us->x += min(dx, sp);
-				if (dy < 0) arg->temp->sy[i] -= min(abs(dy), sp);
-				else if (dy > 0) arg->temp->sy[i] += min(dy, sp);
+
+				//printf("Current height %f, target %f\n", arg->temp->sy[i], (p->z + 51.0f / 32.0f));
+
+				if (arg->temp->iw[i])
+				{
+					arg->temp->vs[i] = dy < 0 ? -GRAVITY : GRAVITY;
+				}
+				else
+				{
+					arg->temp->vs[i] -= GRAVITY; //1.0f / 32.0f;
+				}
+				arg->temp->sy[i] += arg->temp->vs[i];
+				if (arg->temp->vs[i] > 0.0f)
+				{
+					if (!npctest_4point(l, arg->temp->sx[i], arg->temp->sy[i] + HEADROOM, arg->temp->sz[i]))
+					{
+						arg->temp->sy[i] = ((int)(arg->temp->sy[i] - HEIGHT)) + HEIGHT + HEADROOM;
+						arg->temp->vs[i] = 0.0f;
+					}
+				}
+				if (arg->temp->vs[i] < 0.0f) // && arg->temp->sy[i] < (p->z + HEIGHT))
+				{
+					if (!npctest_4point(l, arg->temp->sx[i], arg->temp->sy[i] - HEIGHT, arg->temp->sz[i]))
+					{
+						arg->temp->sy[i] = ((int)(arg->temp->sy[i] - HEIGHT)) + HEIGHT + 1.0f;
+						arg->temp->vs[i] = 0.0f;
+						printf("Can't fall\n");
+
+						if (dy > 0.0f)
+						{
+							arg->temp->vs[i] = 0.25f + GRAVITY;
+							printf("Jumped\n");
+						}
+					}
+					//printf("Landed\n");
+				}
+
+//				if (level_get_blocktype(l, arg->temp->sx[i], arg->temp->sy[i] - 51.0f / 32.0f, arg->temp->sz[i]) != AIR)
+//				{
+
+//					arg->temp->vs[i] = 0.0f;
+//					printf("Landed\n");
+//				}
+
+//				printf("dy %f, vs %f\n", dy, arg->temp->vs[i]);
+
+//				arg->temp->sy[i] += arg->temp->vs[i];
+				us->y = arg->temp->sy[i] * 32.0f;
+
+				//printf("Height %f\n", dy);
+
+//				if (dy < 0) arg->temp->sy[i] -= min(abs(dy), sp);
+//				else if (dy > 0) arg->temp->sy[i] += min(dy, sp);
 //				if (dz < 0) us->z -= min(abs(dz), sp);
 //				else if (dz > 0) us->z += min(dz, sp);
 
-				us->y = arg->temp->sy[i] * 32.0f;
+//				us->y = arg->temp->sy[i] * 32.0f;
 
 				int bx = us->x / 32;
 				int by = us->y / 32 - 1;
 				int bz = us->z / 32;
 
+				//printf("At %f %f %f (%d %d %d : %d %d %d)\n", arg->temp->sx[i], arg->temp->sy[i], arg->temp->sz[i], us->x, us->y, us->z, bx, by, bz);
+
 				if (p->x == bx && p->z == by && p->y == bz)
 				{
 					arg->temp->step[i]++;
-					printf("Moved to step %d\n", arg->temp->step[i]);
+					//printf("Moved to step %d\n", arg->temp->step[i]);
 				}
 			}
 		}
+
+		if ((arg->i % 25) == 0)
+			npctest_replacepath(l, arg, i);
 	}
 
 	const int step = 8;
@@ -292,19 +424,13 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 		int nearest = arg->n[i].stareid - 1;
 		if (l->clients[nearest] == NULL) continue;
 
-		//const struct position_t us = arg->temp->npc[i]->pos;
 		const struct position_t *them = &l->clients[nearest]->player->pos;
 		int dx = us->x - them->x;
 		int dy = us->y - them->y;
 		int dz = us->z - them->z;
 
-		//float r = sqrtf(dx * dx + dy * dy + dz * dz);
 		float azimuth = atan2(dz, dx);
 		float zenith = atan2(dy, sqrtf(dx * dx + dz * dz));
-
-		//LOG("For %s, nearest is %s distance %f azimuth %f zenith %f\n",
-		//	arg->n[i].name, l->clients[nearest]->player->username,
-		//	r, azimuth * 360 / (2 * M_PI), zenith * 360 / (2 * M_PI));
 
 		us->h = azimuth * 256 / (2 * M_PI) - 64;
 		us->p = zenith * 256 / (2 * M_PI);
@@ -367,6 +493,14 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		if (i >= 0)
 		{
 			arg->temp->npc[i]->pos = c->player->pos;
+			arg->temp->sx[i] = c->player->pos.x / 32.0f;
+			arg->temp->sy[i] = c->player->pos.y / 32.0f;
+			arg->temp->sz[i] = c->player->pos.z / 32.0f;
+			if (arg->n[i].followid != 0)
+			{
+				npctest_replacepath(l, arg, i);
+			}
+
 			snprintf(buf, sizeof buf, TAG_YELLOW "Summoned %s", arg->n[i].name);
 		}
 		else
@@ -525,6 +659,7 @@ static bool npctest_level_hook(int event, struct level_t *l, struct client_t *c,
 void module_init(void **data)
 {
 	register_level_hook_func("npctest", &npctest_level_hook);
+	s_door = blocktype_get_by_name("door");
 }
 
 void module_deinit(void *data)
