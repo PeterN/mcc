@@ -15,6 +15,14 @@
 #define MAXSPEED 0.20f
 #define ACCEL 0.05f
 
+enum {
+	FM_RANDOM_PLAYER,
+	FM_RANDOM_NPC,
+	FM_RANDOM_ANY,
+	FM_FIXED_PLAYER,
+	FM_FIXED_NPC,
+};
+
 static enum blocktype_t s_door;
 
 struct npctemp
@@ -28,6 +36,7 @@ struct npctemp
 	float hs[NPC];
 	float vs[NPC];
 	bool iw[NPC];
+	bool pf[NPC];
 };
 
 struct npctest
@@ -38,6 +47,7 @@ struct npctest
 		struct position_t pos;
 		int8_t followid;
 		int8_t stareid;
+		int8_t fm;
 	} n[NPC];
 	struct npctemp *temp;
 };
@@ -128,30 +138,57 @@ static int npctest_get_by_name(struct npctest *arg, const char *name)
 	return -1;
 }
 
-static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, int8_t *out)
+static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, int fm, int8_t *out)
 {
 	long mindist = INT_MAX;
 	int nearest = -1;
 	int j;
 
+	if (fm == FM_FIXED_PLAYER || fm == FM_FIXED_NPC) return;
+
 	const struct position_t us = arg->temp->npc[i]->pos;
 
-	for (j = 0; j < MAX_CLIENTS_PER_LEVEL; j++)
+	if (fm == FM_RANDOM_PLAYER || fm == FM_RANDOM_ANY)
 	{
-		if (l->clients[j] != NULL)
+		for (j = 0; j < MAX_CLIENTS_PER_LEVEL; j++)
 		{
-			const struct position_t them = l->clients[j]->player->pos;
-			int dx = us.x - them.x;
-			int dy = us.y - them.y;
-			int dz = us.z - them.z;
-			long dist = dx * dx + dy * dy + dz * dz;
-			if (dist < mindist)
+			if (l->clients[j] != NULL)
 			{
-				mindist = dist;
-				nearest = j;
+				const struct position_t them = l->clients[j]->player->pos;
+				int dx = us.x - them.x;
+				int dy = us.y - them.y;
+				int dz = us.z - them.z;
+				long dist = dx * dx + dy * dy + dz * dz;
+				if (dist < mindist)
+				{
+					mindist = dist;
+					nearest = j;
+				}
 			}
 		}
 	}
+
+	if (fm == FM_RANDOM_NPC || fm == FM_RANDOM_ANY)
+	{
+		for (j = 0; j < MAX_NPCS_PER_LEVEL; j++)
+		{
+			if (l->npcs[j] != NULL && l->npcs[j] != arg->temp->npc[i])
+			{
+				const struct position_t them = l->npcs[j]->pos;
+				int dx = us.x - them.x;
+				int dy = us.y - them.y;
+				int dz = us.z - them.z;
+				long dist = dx * dx + dy * dy + dz * dz;
+				if (dist < mindist)
+				{
+					mindist = dist;
+					nearest = j + MAX_CLIENTS_PER_LEVEL;
+				}
+			}
+		}
+	}
+
+//	printf("Nearest is %d (%ld)\n", nearest, mindist);
 
 	if (nearest != -1)
 	{
@@ -162,24 +199,45 @@ static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, 
 static void npctest_astar_cb(struct level_t *l, struct point *path, void *data)
 {
 	struct pftemp *temp = data;
+
+	void *oldpath = temp->arg->temp->path[temp->i];
+
 	temp->arg->temp->path[temp->i] = path;
 	temp->arg->temp->step[temp->i] = 0;
+	temp->arg->temp->pf[temp->i] = false;
+
 	free(temp);
+	free(oldpath);
+}
+
+static const struct position_t *npctest_getpos(struct level_t *l, int nearest)
+{
+	nearest -= 1;
+
+	if (nearest < MAX_CLIENTS_PER_LEVEL)
+	{
+		/* Following player */
+		if (l->clients[nearest] == NULL) return NULL;
+		return &l->clients[nearest]->player->pos;
+	}
+
+	/* Following NPC */
+	nearest -= MAX_CLIENTS_PER_LEVEL;
+	if (l->npcs[nearest] == NULL) return NULL;
+	return &l->npcs[nearest]->pos;
 }
 
 static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 {
 	/* Already getting a path... */
-	if (arg->temp->step[i] == -1) return;
+	if (arg->temp->pf[i]) return;
 
-	free(arg->temp->path[i]);
-	arg->temp->path[i] = NULL;
+	const struct position_t *them = npctest_getpos(l, arg->n[i].followid);
 
-	int nearest = arg->n[i].followid - 1;
-	if (l->clients[nearest] == NULL) return;
-
-	//const struct position_t us = arg->temp->npc[i]->pos;
-	const struct position_t them = l->clients[nearest]->player->pos;
+	if (them == NULL || position_match(&arg->temp->npc[i]->pos, them, 48)) {
+		/* Already there, no need to pf */
+		return;
+	}
 
 	struct point a;
 	struct point b;
@@ -188,9 +246,9 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 	a.y = arg->temp->sz[i];
 	a.z = arg->temp->sy[i] - HEIGHT;
 
-	b.x = them.x / 32;
-	b.y = them.z / 32;
-	b.z = them.y / 32;
+	b.x = them->x / 32;
+	b.y = them->z / 32;
+	b.z = them->y / 32;
 
 	//for (; a.z > 0 && blocktype_passable(level_get_blocktype(l, a.x, a.z, a.y)); a.z--);
 	for (; b.z > 0 && blocktype_passable(level_get_blocktype(l, b.x, b.z, b.y)); b.z--);
@@ -206,7 +264,7 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 	astar_queue(l, &a, &b, &npctest_astar_cb, temp);
 
 //	arg->temp->path[i] = as_find(l, &a, &b);
-	arg->temp->step[i] = -1;
+	arg->temp->pf[i] = true;
 }
 
 static inline float min(float a, float b)
@@ -264,16 +322,19 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 	arg->i++;
 
 	int i = arg->i % 64;
-	if (arg->n[i].stareid != 0) npctest_find_nearest(l, i, arg, &arg->n[i].stareid);
 	if (arg->n[i].followid != 0)
 	{
 		int8_t followid = arg->n[i].followid;
-		npctest_find_nearest(l, i, arg, &arg->n[i].followid);
+		npctest_find_nearest(l, i, arg, arg->n[i].fm, &arg->n[i].followid);
 		if (followid != arg->n[i].followid)
 		{
 			npctest_replacepath(l, arg, i);
 		}
 		arg->n[i].stareid = arg->n[i].followid;
+	}
+	else if (arg->n[i].stareid != 0)
+	{
+		npctest_find_nearest(l, i, arg, FM_RANDOM_PLAYER, &arg->n[i].stareid);
 	}
 
 	for (i = 0; i < NPC; i++)
@@ -282,13 +343,15 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 
 		if (arg->n[i].followid == 0) continue;
 		/* Waiting for path */
-		if (arg->temp->step[i] == -1) continue;
 		if (arg->temp->path[i] == NULL)
 		{
 			npctest_replacepath(l, arg, i);
 		}
 		else
 		{
+			const struct position_t *them = npctest_getpos(l, arg->n[i].followid);
+			if (them != NULL && position_match(&arg->temp->npc[i]->pos, them, 48)) continue;
+
 			const struct point *p = arg->temp->path[i] + arg->temp->step[i];
 			if (p->x == -1)
 			{
@@ -421,10 +484,9 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 
 		if (arg->n[i].stareid == 0) continue;
 
-		int nearest = arg->n[i].stareid - 1;
-		if (l->clients[nearest] == NULL) continue;
+		const struct position_t *them = npctest_getpos(l, arg->n[i].stareid);
+		if (them == NULL) continue;
 
-		const struct position_t *them = &l->clients[nearest]->player->pos;
 		int dx = us->x - them->x;
 		int dy = us->y - them->y;
 		int dz = us->z - them->z;
@@ -523,17 +585,57 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	}
 	else if (strncasecmp(data, "npc follow ", 11) == 0)
 	{
-		int i = npctest_get_by_name(arg, data + 11);
+		char *buf2 = strdup(data + 11);
+		char *name = strchr(buf2, ' ');
+		if (name == NULL)
+		{
+			client_notify(c, TAG_YELLOW "Missing name/id");
+			free(buf2);
+			return true;
+		}
+
+		*name++ = '\0';
+
+		int i = npctest_get_by_name(arg, name);
 
 		if (i >= 0)
 		{
-			arg->n[i].followid = !arg->n[i].followid;
+			arg->n[i].followid = c->player->levelid + 1;
+
+			if (strcasecmp(buf2, "off") == 0)
+			{
+				arg->n[i].followid = 0;
+			}
+			else if (strcasecmp(buf2, "player") == 0)
+			{
+				arg->n[i].fm = FM_RANDOM_PLAYER;
+			}
+			else if (strcasecmp(buf2, "npc") == 0)
+			{
+				arg->n[i].fm = FM_RANDOM_NPC;
+			}
+			else if (strcasecmp(buf2, "any") == 0)
+			{
+				arg->n[i].fm = FM_RANDOM_ANY;
+			}
+			else if (strcasecmp(buf2, "me") == 0)
+			{
+				arg->n[i].fm = FM_FIXED_PLAYER;
+			}
+			else
+			{
+				arg->n[i].followid = npctest_get_by_name(arg, buf2) + MAX_CLIENTS_PER_LEVEL + 1;
+				arg->n[i].fm = FM_FIXED_NPC;
+			}
+
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sfollowing", arg->n[i].name, arg->n[i].followid ? "" : "not ");
 		}
 		else
 		{
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 10);
 		}
+
+		free(buf2);
 	}
 	else if (strncasecmp(data, "npc stare ", 10) == 0)
 	{
@@ -541,7 +643,14 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 
 		if (i >= 0)
 		{
-			arg->n[i].stareid = !arg->n[i].stareid;
+			if (arg->n[i].stareid == 0)
+			{
+				arg->n[i].stareid = c->player->levelid + 1;
+			}
+			else
+			{
+				arg->n[i].stareid = 0;
+			}
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sstaring", arg->n[i].name, arg->n[i].stareid ? "" : "not ");
 		}
 		else
