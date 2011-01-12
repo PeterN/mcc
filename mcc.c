@@ -5,7 +5,7 @@
 #include "block.h"
 #include "mcc.h"
 #include "level.h"
-#include "level_send.h"
+#include "level_worker.h"
 #include "astar_thread.h"
 #include "module.h"
 #include "network.h"
@@ -43,7 +43,7 @@ void mcc_exit(void)
 		}
 	}
 
-	level_send_deinit();
+	level_worker_deinit();
 	astar_thread_deinit();
 
 	modules_deinit();
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 	g_server.logfile = fopen("log.txt", "a");
 	LOG("Server starting...\n");
 
-	level_send_init();
+	level_worker_init();
 	astar_thread_init();
 
 	if (!level_load("main", NULL))
@@ -172,21 +172,6 @@ int main(int argc, char **argv)
 			{
 				player_send_positions();
 				npc_send_positions();
-			}
-
-			if ((tick % MS_TO_TICKS(240)) == 0)
-			{
-				level_send_run();
-				/*
-				for (i = 0; i < s_clients.used; i++)
-				{
-					struct client_t *c = s_clients.items[i];
-					if (c->player != NULL && (c->player->new_level != c->player->level || c->waiting_for_level))
-					{
-						level_send(c);
-					}
-				}
-				*/
 			}
 		}
 

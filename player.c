@@ -10,7 +10,7 @@
 #include "mcc.h"
 #include "network.h"
 #include "util.h"
-#include "level_send.h"
+#include "level_worker.h"
 
 static struct player_list_t s_players;
 
