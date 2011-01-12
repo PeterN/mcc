@@ -32,6 +32,7 @@ LIBSRC += playerdb.c
 LIBSRC += queue.c
 LIBSRC += timer.c
 LIBSRC += undodb.c
+LIBSRC += worker.c
 LIBOBJ := $(LIBSRC:.c=.o)
 LIBO := libmcc.so
 
