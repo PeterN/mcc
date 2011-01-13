@@ -80,8 +80,8 @@ static void add_tree(struct level_t *level, int x, int y, int z)
 				unsigned index = level_get_index(level, x + xx, y + yy + h, z + zz);
 				if (level->blocks[index].type == AIR)
 				{
-					int dist = xx * xx + yy * yy + zz * zz;
-					if (dist < (t + 1) * (t + 1))
+					int dist = sqrtf(xx * xx + yy * yy + zz * zz);
+					if (dist <= t)
 					{
 						level_set_block(level, &block, index);
 					}
