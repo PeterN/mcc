@@ -405,6 +405,9 @@ void *level_gen_thread(void *arg)
 {
 	int i;
 	struct level_t *level = arg;
+
+	pthread_mutex_lock(&level->mutex);
+
 	struct block_t block;
 	int x, y, z;
 	int mx = level->x;
@@ -756,11 +759,12 @@ void level_gen(struct level_t *level, const char *type, int height_range, int se
 		return;
 	}
 
+	if (!level_inuse(level, true)) return;
+
 	level->type = strdup(type);
 	level->height_range = height_range;
 	level->sea_height = sea_height;
 
-	pthread_mutex_lock(&level->mutex);
 	level_make_queue(level);
 }
 
@@ -1082,7 +1086,11 @@ void *level_save_thread(void *arg)
 {
 	struct level_t *l = arg;
 
+	pthread_mutex_lock(&l->mutex);
+
 	l->changed = false;
+
+	call_level_hook(EVENT_SAVE, l, NULL, NULL);
 
 	char filename[256];
 	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
@@ -1150,6 +1158,10 @@ void *level_save_thread(void *arg)
 	snprintf(backup, sizeof backup, "levels/backups/%s-%lld.mcl", l->name, (long long int)time(NULL));
 	lcase(backup);
 
+	pthread_mutex_unlock(&l->mutex);
+
+	level_inuse(l, false);
+
 	/* Copy the file to back up */
 	int src = open(filename, O_RDONLY);
 	int dst = open(backup, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
@@ -1165,15 +1177,13 @@ void *level_save_thread(void *arg)
 
 	LOG("Backed up %s to %s\n", filename, backup);
 
-	pthread_mutex_unlock(&l->mutex);
-
 	return NULL;
 }
 
 void level_save(struct level_t *l)
 {
-	if (pthread_mutex_trylock(&l->mutex) != 0) return;
-	call_level_hook(EVENT_SAVE, l, NULL, NULL);
+	if (!level_inuse(l, true)) return;
+
 	level_save_queue(l);
 }
 
