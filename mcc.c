@@ -73,8 +73,6 @@ int main(int argc, char **argv)
 {
 	int tick = 0;
 
-	//config_read(&g_server);
-
 	g_server.logfile = fopen("log.txt", "a");
 	LOG("Server starting...\n");
 
@@ -154,18 +152,11 @@ int main(int argc, char **argv)
 				g_server.cpu_time = ((double) (c - g_server.cpu_start)) / CLOCKS_PER_SEC * 100.0;
 				g_server.cpu_start = c;
 			}
-			//if ((tick % MS_TO_TICKS(2500)) == 0) client_info();
-			//if ((tick % MS_TO_TICKS(60000)) == 0) heartbeat_start();
-			//if ((tick % MS_TO_TICKS(120000)) == 0) level_save_all();
-			//if ((tick % MS_TO_TICKS(20000)) == 0) level_unload_empty();
 
 			process_timers(cur_ticks);
 
-			//if ((tick % MS_TO_TICKS(240)) == 0)
-
 			level_process_physics((tick % MS_TO_TICKS(80)) == 0);
 			level_process_updates(true);
-			//(tick % MS_TO_TICKS(240)) == 0);
 
 			cuboid_process();
 			if ((tick % MS_TO_TICKS(g_server.pos_interval)) == 0)

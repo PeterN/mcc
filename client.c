@@ -305,24 +305,3 @@ void client_send_despawn(struct client_t *c, bool hiding)
 		}
 	}
 }
-
-void client_info(void)
-{
-	unsigned i;
-	for (i = 0; i < s_clients.used; i++)
-	{
-		const struct client_t *c = s_clients.items[i];
-		if (c->player == NULL)
-		{
-			printf("%d: Connecting...\n", i);
-		}
-		else if (c->player->level == NULL)
-		{
-			printf("%d: %s (%d)\n", i, c->player->username, c->player->globalid);
-		}
-		else
-		{
-			printf("%d: %s (%d) on %s (%d)\n", i, c->player->username, c->player->globalid, c->player->level->name, c->player->levelid);
-		}
-	}
-}
