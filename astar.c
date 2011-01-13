@@ -11,6 +11,55 @@
 #include "packet.h"
 #include "hash.h"
 
+#define RADIUS (7.0f / 32.0f)
+
+static bool point_testradius(const struct level_t *l, float x, float y, int bz)
+{
+	int bx1 = x - RADIUS;
+	int by1 = y - RADIUS;
+	int bx2 = x + RADIUS;
+	int by2 = y + RADIUS;
+
+	if (!blocktype_passable(level_get_blocktype(l, bx1, bz, by1))) return false;
+	if (bx1 != bx2)
+	{
+		if (by1 != by2 && !blocktype_passable(level_get_blocktype(l, bx2, bz, by2))) return false;
+		if (!blocktype_passable(level_get_blocktype(l, bx2, bz, by1))) return false;
+	}
+	if (by1 != by2 && !blocktype_passable(level_get_blocktype(l, bx1, bz, by2))) return false;
+
+	return true;
+}
+
+static bool path_iswalkable(const struct level_t *l, const struct point *a, const struct point *b)
+{
+	/* Cannot skip point if height changes */
+	if (fabsf(a->z - b->z) >= 0.1f) return false;
+
+	float dx = b->x - a->x;
+	float dy = b->y - a->y;
+	float angle = atan2(dy, dx);
+	float length = sqrtf(dx * dx + dy * dy);
+	float pos = 0.0f;
+
+	float ddx = cos(angle) * 0.25f;
+	float ddy = sin(angle) * 0.25f;
+
+	float x = a->x + 0.5f;
+	float y = a->y + 0.5f;
+
+	while (pos < length)
+	{
+		if (!point_testradius(l, x, y, a->z) || !point_testradius(l, x, y, a->z + 1)) return false;
+		if (point_testradius(l, x, y, a->z - 1)) return false;
+		pos += 0.25f;
+		x += ddx;
+		y += ddy;
+	}
+
+	return true;
+}
+
 int point_add(const struct level_t *l, const struct point *p, int d, struct point *q)
 {
 	struct point n = *p;
@@ -243,7 +292,7 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 	struct node end;
 	end.point = *b;
 
-	printf("Pathfinding from %d %d %d to %d %d %d\n", a->x, a->y, a->z, b->x, b->y, b->z);
+//	printf("Pathfinding from %d %d %d to %d %d %d\n", a->x, a->y, a->z, b->x, b->y, b->z);
 
 	hash_init(&as.closedhash, &as_hash, HASH_SIZE);
 
@@ -265,7 +314,7 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 				steps++;
 			}
 
-			printf("Found path, %d steps\n", steps - 1);
+			//printf("Found path, %d steps\n", steps - 1);
 
 			struct point *s = malloc(sizeof *s * steps);
 			struct point *ps = s + steps - 1;
@@ -280,6 +329,28 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 				ps->x = n->point.x;
 				ps->y = n->point.y;
 				ps->z = n->point.z;
+			}
+
+			if (steps > 2)
+			{
+				/* Optimise path */
+				ps = s;
+				struct point *ps2 = ps + 1;
+				do {
+					ps2++;
+					if (path_iswalkable(as.level, ps, ps2))
+					{
+						*(ps + 1) = *ps2;
+					}
+					else
+					{
+						*(ps + 1) = *(ps2 - 1);
+						ps++;
+					}
+				} while (ps2->x != -1);
+
+				ps++;
+				ps->x = -1;
 			}
 
 			hash_delete(&as.closedhash, true);
@@ -313,7 +384,7 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 	hash_delete(&as.closedhash, true);
 	openlist_wipe(&as.openlist);
 
-	printf("Path not found\n");
+//	printf("Path not found\n");
 
 	return NULL;
 }
