@@ -454,7 +454,7 @@ static void zombie_handle_tick(struct level_t *l, struct client_t *c, char *data
 
 			if (b1 == LAVA || b1 == LAVASTILL || b2 == LAVA || b2 == LAVASTILL)
 			{
-				arg->temp->life[i] -= 10;
+				arg->temp->life[i] -= is_zombie(cl->player) ? 5 : 10;
 				if (arg->temp->life[i] < 50 && (arg->temp->life[i] % 10) == 0)
 				{
 					char buf[64];
