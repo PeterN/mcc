@@ -162,8 +162,7 @@ bool light_check(struct level_t *level, unsigned index)
 
 void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, int16_t z, bool gravity, int data)
 {
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
+	if (!level_valid_xyz(l, x, y, z)) return;
 
 	unsigned index = level_get_index(l, x, y, z);
 	if (l->blocks[index].fixed) return;
@@ -318,8 +317,7 @@ void physics_dirt(struct level_t *l, unsigned index, const struct block_t *block
 
 void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, enum blocktype_t clash, enum blocktype_t convert)
 {
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
+	if (!level_valid_xyz(l, x, y, z)) return;
 
 	unsigned index = level_get_index(l, x, y, z);
 	if (!l->blocks[index].fixed)
@@ -463,8 +461,7 @@ enum blocktype_t convert_active_sponge(struct level_t *level, unsigned index, co
 #if 0
 void physics_active_sponge_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
 {
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
+	if (!level_valid_xyz(l, x, y, z)) return;
 
 	unsigned index = level_get_index(l, x, y, z);
 	switch (l->blocks[index].type)

@@ -1,13 +1,11 @@
 #include "block.h"
 #include "level.h"
 
-static struct spleef_t
-{
-	enum blocktype_t air;
-	enum blocktype_t floor1;
-	enum blocktype_t floor2;
-	enum blocktype_t green;
+#define FLOOR1 IRON
+#define FLOOR2 GOLDSOLID
 
+static struct
+{
 	enum blocktype_t spleef1;
 	enum blocktype_t spleef2;
 	enum blocktype_t spleeft;
@@ -15,34 +13,27 @@ static struct spleef_t
 
 static enum blocktype_t convert_spleef1(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	//return block->data == 1 ? s.air : s.floor1;
-
 	switch (block->data)
 	{
-		case 0: return s.floor1;
-		case 1: return s.air;
+		case 0: return FLOOR1;
+		case 1: return AIR;
 		case 2: return RED;
 		default: return BLUE;
 	}
-//	return block->data ? s.air : s.floor1;
 }
 
 static enum blocktype_t convert_spleef2(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	//return block->data == 1 ? s.air : s.floor2;
-
 	switch (block->data)
 	{
-		case 0: return s.floor2;
-		case 1: return s.air;
+		case 0: return FLOOR2;
+		case 1: return AIR;
 		case 2: return RED;
 		default: return BLUE;
 	}
-//
-//	return block->data ? s.air : s.floor2;
 }
 
-int trigger_spleef(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_spleef(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	level_addupdate(level, index, -1, 1);
 	return TRIG_EMPTY;
@@ -90,7 +81,7 @@ static void physics_spleef(struct level_t *level, unsigned index, const struct b
 
 static enum blocktype_t convert_spleeft(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	return s.green;
+	return GREEN;
 }
 
 static int trigger_spleeft(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
@@ -140,11 +131,6 @@ static bool spleef_level_hook(int event, struct level_t *l, struct client_t *c, 
 
 void module_init(void **data)
 {
-	s.air = blocktype_get_by_name("air");
-	s.floor1 = blocktype_get_by_name("iron");
-	s.floor2 = blocktype_get_by_name("gold");
-	s.green = blocktype_get_by_name("green");
-
 	s.spleef1 = register_blocktype(BLOCK_INVALID, "spleef1", RANK_BUILDER, &convert_spleef1, &trigger_spleef, NULL, &physics_spleef, false, false, false);
 	s.spleef2 = register_blocktype(BLOCK_INVALID, "spleef2", RANK_BUILDER, &convert_spleef2, &trigger_spleef, NULL, &physics_spleef, false, false, false);
 	s.spleeft = register_blocktype(BLOCK_INVALID, "spleeft", RANK_BUILDER, &convert_spleeft, &trigger_spleeft, NULL, NULL, false, false, false);
