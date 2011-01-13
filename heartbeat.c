@@ -22,7 +22,7 @@ struct heartbeat_t
 	bool heartbeat_resolved;
 };
 
-void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
+static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 {
 	struct heartbeat_t *h = arg;
 
@@ -94,11 +94,11 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 				{
 					*c = '\0';
 				}
-				printf("%s\n", b);
+				LOG("[heartbeat] %s\n", b);
 			}
 			else
 			{
-				printf("%s\n", buf);
+				LOG("[heartbeat] %s\n", buf);
 			}
 			break;
 		}
@@ -114,7 +114,7 @@ void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 	h->fd = -1;
 }
 
-void heartbeat_start(void *arg)
+static void heartbeat_start(void *arg)
 {
 	struct heartbeat_t *h = arg;
 

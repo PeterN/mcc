@@ -86,7 +86,7 @@ void irc_command(char *src, char *command)
 	}*/
 }
 
-void irc_process(struct irc_t *s, char *message)
+static void irc_process(struct irc_t *s, char *message)
 {
 	char buf[512];
 	char *src = NULL;
@@ -185,7 +185,7 @@ static int irc_convert_colour(int colour)
 	}
 }
 
-void irc_message(int hook, void *data, void *arg)
+static void irc_message(int hook, void *data, void *arg)
 {
 	struct irc_t *s = arg;
 
@@ -228,7 +228,7 @@ void irc_message(int hook, void *data, void *arg)
 	irc_queue(s, buf);
 }
 
-void irc_end(struct irc_t *s)
+static void irc_end(struct irc_t *s)
 {
 	LOG("[irc] Closed connection\n");
 
@@ -248,7 +248,7 @@ void irc_end(struct irc_t *s)
 	s->fd = -1;
 }
 
-void irc_run(int fd, bool can_write, bool can_read, void *arg)
+static void irc_run(int fd, bool can_write, bool can_read, void *arg)
 {
 	struct irc_t *s = arg;
 	char buf[513];
@@ -348,7 +348,7 @@ void irc_run(int fd, bool can_write, bool can_read, void *arg)
 	}
 }
 
-void irc_start(void *arg)
+static void irc_start(void *arg)
 {
 	struct irc_t *s = arg;
 
@@ -381,7 +381,7 @@ void irc_start(void *arg)
 			return;
 		}
 	}
-	
+
 	register_socket(fd, &irc_run, s);
 
 	s->fd = fd;
