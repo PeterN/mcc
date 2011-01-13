@@ -296,15 +296,6 @@ void player_send_positions(void)
 	}
 }
 
-void player_info(void)
-{
-	unsigned i;
-	for (i = 0; i < s_players.used; i++)
-	{
-		printf("Player %d = %s\n", i, s_players.items[i]->username);
-	}
-}
-
 void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp)
 {
 	struct level_t *level;

@@ -84,8 +84,6 @@ bool player_change_level(struct player_t *player, struct level_t *level);
 void player_move(struct player_t *player, struct position_t *pos);
 void player_teleport(struct player_t *player, const struct position_t *pos, bool instant);
 
-void player_info(void);
-
 void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp);
 
 enum rank_t rank_get_by_name(const char *rank);
