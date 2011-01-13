@@ -93,6 +93,24 @@ int main(int argc, char **argv)
 	level_worker_init();
 	astar_worker_init();
 
+	g_server.players = 0;
+	g_server.exit = false;
+	g_server.start_time = time(NULL);
+	g_server.cpu_start = clock();
+	g_server.pos_interval = 40;
+	g_server.cuboid_max = 100;
+
+	signal(SIGINT, &sighandler);
+
+	blocktype_init();
+
+	playerdb_init();
+
+	modules_init();
+
+	register_timer("save levels", 120000, &level_save_all, NULL);
+	register_timer("unload levels", 20000, &level_unload_empty, NULL);
+
 	if (!level_load("main", NULL))
 	{
 		struct level_t *l = malloc(sizeof *l);
@@ -111,24 +129,6 @@ int main(int argc, char **argv)
 
 		level_list_add(&s_levels, l);
 	}
-
-	g_server.players = 0;
-	g_server.exit = false;
-	g_server.start_time = time(NULL);
-	g_server.cpu_start = clock();
-	g_server.pos_interval = 40;
-	g_server.cuboid_max = 100;
-
-	signal(SIGINT, &sighandler);
-
-	blocktype_init();
-
-	playerdb_init();
-
-	modules_init();
-
-	register_timer("save levels", 120000, &level_save_all, NULL);
-	register_timer("unload levels", 20000, &level_unload_empty, NULL);
 
 	net_init(g_server.port);
 
