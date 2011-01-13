@@ -440,7 +440,6 @@ void player_list(struct client_t *c, const struct level_t *l)
 			if (len >= sizeof buf - (bufp - buf))
 			{
 				client_notify(c, buf);
-				LOG("%s\n", buf);
 				bufp = buf;
 				memset(buf, 0, sizeof buf);
 			}
@@ -452,7 +451,6 @@ void player_list(struct client_t *c, const struct level_t *l)
 
 			added = true;
 		}
-		LOG("%s\n", buf);
 
 		if (added) client_notify(c, buf);
 	}
