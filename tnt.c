@@ -3,35 +3,32 @@
 
 static struct
 {
-	enum blocktype_t tnt;
-	
 	enum blocktype_t active_tnt;
 	enum blocktype_t explosion;
 	enum blocktype_t fuse;
 } s;
 
-enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const struct block_t *block)
+static enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	return TNT;
 }
 
-int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	level_addupdate(l, index, s.explosion, 0x305);
 
 	return TRIG_FILL;
 }
 
-enum blocktype_t convert_explosion(struct level_t *level, unsigned index, const struct block_t *block)
+static enum blocktype_t convert_explosion(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	/* Flicker */
 	return HasBit(block->data, 12) ? AIR : LAVA;
 }
 
-void physics_explosion_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, int magnitude)
+static void physics_explosion_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, int magnitude)
 {
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
+	if (!level_valid_xyz(l, x, y, z)) return;
 
 	unsigned index = level_get_index(l, x, y, z);
 	if (l->blocks[index].fixed || l->blocks[index].type == ADMINIUM) return;
@@ -51,7 +48,7 @@ void physics_explosion_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, e
 	level_addupdate(l, index, type, magnitude);
 }
 
-void physics_explosion(struct level_t *l, unsigned index, const struct block_t *block)
+static void physics_explosion(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	int iter = GetBits(block->data, 8, 4);
 
@@ -88,7 +85,7 @@ void physics_explosion(struct level_t *l, unsigned index, const struct block_t *
 	}
 }
 
-enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const struct block_t *block)
+static enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	if (block->data == 0) return DARKGREY;
 
@@ -101,17 +98,16 @@ enum blocktype_t convert_fuse(struct level_t *level, unsigned index, const struc
 	}
 }
 
-int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	level_addupdate(l, index, -1, 5);
 
 	return TRIG_FILL;
 }
 
-void physics_fuse_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, enum blocktype_t tnt)
+static void physics_fuse_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, enum blocktype_t tnt)
 {
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
+	if (!level_valid_xyz(l, x, y, z)) return;
 
 	unsigned index = level_get_index(l, x, y, z);
 
@@ -131,7 +127,7 @@ void physics_fuse_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum b
 	}
 }
 
-void physics_fuse(struct level_t *l, unsigned index, const struct block_t *block)
+static void physics_fuse(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	int stage = GetBits(block->data, 0, 8);
 	if (stage == 0) return;
@@ -165,8 +161,6 @@ void physics_fuse(struct level_t *l, unsigned index, const struct block_t *block
 
 void module_init(void **data)
 {
-	s.tnt = blocktype_get_by_name("tnt");
-	
 	s.active_tnt = register_blocktype(BLOCK_INVALID, "active_tnt", RANK_ADV_BUILDER, &convert_active_tnt, &trigger_active_tnt, NULL, NULL, false, false, false);
 	s.explosion = register_blocktype(BLOCK_INVALID, "explosion", RANK_ADV_BUILDER, &convert_explosion, NULL, NULL, &physics_explosion, false, true, false);
 	s.fuse = register_blocktype(BLOCK_INVALID, "fuse", RANK_ADV_BUILDER, &convert_fuse, &trigger_fuse, NULL, &physics_fuse, false, false, false);

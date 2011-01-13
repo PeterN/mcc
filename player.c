@@ -296,15 +296,6 @@ void player_send_positions(void)
 	}
 }
 
-void player_info(void)
-{
-	unsigned i;
-	for (i = 0; i < s_players.used; i++)
-	{
-		printf("Player %d = %s\n", i, s_players.items[i]->username);
-	}
-}
-
 void player_undo(struct client_t *c, const char *username, const char *levelname, const char *timestamp)
 {
 	struct level_t *level;
@@ -440,7 +431,6 @@ void player_list(struct client_t *c, const struct level_t *l)
 			if (len >= sizeof buf - (bufp - buf))
 			{
 				client_notify(c, buf);
-				LOG("%s\n", buf);
 				bufp = buf;
 				memset(buf, 0, sizeof buf);
 			}
@@ -452,7 +442,6 @@ void player_list(struct client_t *c, const struct level_t *l)
 
 			added = true;
 		}
-		LOG("%s\n", buf);
 
 		if (added) client_notify(c, buf);
 	}

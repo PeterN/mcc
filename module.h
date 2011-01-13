@@ -28,7 +28,7 @@ struct module_t *module_get_by_name(const char *name);
 void module_init(struct module_t *m);
 void module_deinit(struct module_t *m);
 
-void modules_init();
-void modules_deinit();
+void modules_init(void);
+void modules_deinit(void);
 
 #endif /* MODULE_H */

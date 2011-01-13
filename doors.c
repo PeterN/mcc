@@ -65,7 +65,6 @@ DOOR1(obsidian, OBSIDIAN)
 
 static void trigger_door_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
 {
-	// Test x,y,z are valid!
 	if (!level_valid_xyz(l, x, y, z)) return;
 
 	unsigned index = level_get_index(l, x, y, z);

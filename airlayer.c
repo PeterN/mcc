@@ -6,15 +6,14 @@ static struct
 	enum blocktype_t air_layer;
 } s;
 
-enum blocktype_t convert_air_layer(struct level_t *level, unsigned index, const struct block_t *block)
+static enum blocktype_t convert_air_layer(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	return AIR;
 }
 
-void physics_air_layer_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
+static void physics_air_layer_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
 {
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return;
+	if (!level_valid_xyz(l, x, y, z)) return;
 
 	unsigned index = level_get_index(l, x, y, z);
 	switch (l->blocks[index].type)
@@ -28,7 +27,7 @@ void physics_air_layer_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, e
 	}
 }
 
-void physics_air_layer(struct level_t *l, unsigned index, const struct block_t *block)
+static void physics_air_layer(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	int16_t x, y, z;
 	level_get_xyz(l, index, &x, &y, &z);

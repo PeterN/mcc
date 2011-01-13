@@ -7,7 +7,7 @@ static struct
 	enum blocktype_t wire3d;
 } s;
 
-enum blocktype_t convert_wire(struct level_t *level, unsigned index, const struct block_t *block)
+static enum blocktype_t convert_wire(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	switch (block->data)
 	{
@@ -17,7 +17,7 @@ enum blocktype_t convert_wire(struct level_t *level, unsigned index, const struc
 	}
 }
 
-int trigger_wire(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_wire(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	if (block->data == 0)
 	{
@@ -27,10 +27,9 @@ int trigger_wire(struct level_t *l, unsigned index, const struct block_t *block,
 	return TRIG_FILL;
 }
 
-int physics_wire_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
+static int physics_wire_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type)
 {
-	// Test x,y,z are valid!
-	if (x < 0 || y < 0 || z < 0 || x >= l->x || y >= l->y || z >= l->z) return 0;
+	if (!level_valid_xyz(l, x, y, z)) return 0;
 
 	unsigned index = level_get_index(l, x, y, z);
 	if (l->blocks[index].type == type && l->blocks[index].data == 1)
@@ -41,7 +40,7 @@ int physics_wire_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum bl
 	return 0;
 }
 
-void physics_wire(struct level_t *l, unsigned index, const struct block_t *block)
+static void physics_wire(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	if (block->data == 2)
 	{
@@ -78,7 +77,7 @@ void physics_wire(struct level_t *l, unsigned index, const struct block_t *block
 	}
 }
 
-void physics_wire3d(struct level_t *l, unsigned index, const struct block_t *block)
+static void physics_wire3d(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	if (block->data == 2)
 	{
