@@ -26,7 +26,7 @@ void playerdb_init(void)
 	res = sqlite3_open("player.db", &s_db);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't open database: %s", sqlite3_errmsg(s_db));
+		LOG("Can't open database: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -35,21 +35,21 @@ void playerdb_init(void)
 	sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, rank INT, password TEXT, first_visit DATETIME, last_visit DATETIME, last_ip TEXT, identified INT)", NULL, NULL, &err);
 	if (err != NULL)
 	{
-		LOG("Errrrr: %s", err);
+		LOG("Errrrr: %s\n", err);
 		sqlite3_free(err);
 	}
 
 	sqlite3_exec(s_db, "CREATE TABLE IF NOT EXISTS bans (net TEXT PRIMARY KEY, date DATETIME)", NULL, NULL, &err);
 	if (err != NULL)
 	{
-		LOG("Errrrr: %s", err);
+		LOG("Errrrr: %s\n", err);
 		sqlite3_free(err);
 	}
 
 	res = sqlite3_prepare_v2(s_db, "SELECT rank FROM players WHERE username = lower(?)", -1, &s_rank_get_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -57,7 +57,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "UPDATE players SET rank = ? WHERE username = lower(?)", -1, &s_rank_set_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -65,7 +65,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "INSERT INTO players (username, rank) VALUES (lower(?), 10)", -1, &s_new_user_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -73,7 +73,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "SELECT id FROM players WHERE username = lower(?)", -1, &s_globalid_get_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -81,7 +81,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "SELECT username FROM players WHERE id = ?", -1, &s_username_get_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -89,7 +89,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "SELECT COUNT(*) FROM players WHERE username = lower(?) AND (password = ? OR (? = '' AND password IS NULL))", -1, &s_password_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -97,7 +97,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "UPDATE players SET password = ? WHERE username = lower(?)", -1, &s_set_password_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -105,7 +105,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "SELECT last_ip FROM players WHERE id = ? AND identified = 1", -1, &s_get_last_ip_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -113,7 +113,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "UPDATE players SET last_visit = ?, last_ip = ?, identified = ? WHERE id = ?", -1, &s_log_visit_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -121,7 +121,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "UPDATE players SET identified = ? WHERE id = ?", -1, &s_log_identify_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -129,7 +129,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "SELECT COUNT(*) FROM bans WHERE net = ?", -1, &s_check_ban_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -137,7 +137,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "INSERT INTO bans (net, date) VALUES (?, ?)", -1, &s_banip_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -145,7 +145,7 @@ void playerdb_init(void)
 	res = sqlite3_prepare_v2(s_db, "DELETE FROM bans WHERE net = ?", -1, &s_unbanip_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(s_db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_close(s_db);
 		return;
 	}
@@ -214,7 +214,7 @@ int playerdb_get_globalid(const char *username, bool add, bool *added)
 		}
 	}
 
-	LOG("Unable to get globalid for '%s'", username);
+	LOG("Unable to get globalid for '%s'\n", username);
 	return -1;
 }
 

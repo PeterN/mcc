@@ -134,7 +134,7 @@ void net_init(int port)
 	int on = 1;
 	if (setsockopt(s_listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == -1)
 	{
-		LOG("[network] net_init(): Could not set SO_REUSEADDR: %s", strerror(errno));
+		LOG("[network] net_init(): Could not set SO_REUSEADDR: %s\n", strerror(errno));
 	}
 
 	if (bind(s_listenfd, (struct sockaddr *)&serv_addr, sizeof serv_addr) < 0)

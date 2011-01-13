@@ -52,7 +52,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 	level->blocks = calloc(x * y * z, sizeof *level->blocks);
 	if (level->blocks == NULL)
 	{
-		LOG("level_init: allocation of %zu bytes failed", x * y * z * sizeof *level->blocks);
+		LOG("level_init: allocation of %zu bytes failed\n", x * y * z * sizeof *level->blocks);
 		return false;
 	}
 

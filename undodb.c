@@ -28,7 +28,7 @@ struct undodb_t *undodb_init(const char *name)
 	res = sqlite3_open(buf, &u.db);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't open database: %s", sqlite3_errmsg(u.db));
+		LOG("Can't open database: %s\n", sqlite3_errmsg(u.db));
 		sqlite3_close(u.db);
 		return NULL;
 	}
@@ -37,14 +37,14 @@ struct undodb_t *undodb_init(const char *name)
 	sqlite3_exec(u.db, "CREATE TABLE IF NOT EXISTS undo (id INTEGER PRIMARY KEY AUTOINCREMENT, playerid INT, x INT, y INT, z INT, oldtype INT, olddata INT, newtype INT, time DATETIME)", NULL, NULL, &err);
 	if (err != NULL)
 	{
-		LOG("Errrrr: %s", err);
+		LOG("Errrrr: %s\n", err);
 		sqlite3_free(err);
 	}
 
 	res = sqlite3_prepare_v2(u.db, "INSERT INTO undo (playerid, x, y, z, oldtype, olddata, newtype, time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", -1, &u.insert_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(u.db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(u.db));
 		sqlite3_close(u.db);
 		return NULL;
 	}
@@ -52,7 +52,7 @@ struct undodb_t *undodb_init(const char *name)
 	res = sqlite3_prepare_v2(u.db, "SELECT playerid, time, COUNT(*) FROM undo GROUP BY playerid, time / 900 ORDER BY time DESC LIMIT 15", -1, &u.query1_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(u.db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(u.db));
 		sqlite3_close(u.db);
 		return NULL;
 	}
@@ -60,7 +60,7 @@ struct undodb_t *undodb_init(const char *name)
 	res = sqlite3_prepare_v2(u.db, "SELECT time, COUNT(*) FROM undo WHERE playerid = ? GROUP BY time / 900 ORDER BY time DESC LIMIT 30", -1, &u.query2_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(u.db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(u.db));
 		sqlite3_close(u.db);
 		return NULL;
 	}
@@ -68,7 +68,7 @@ struct undodb_t *undodb_init(const char *name)
 	res = sqlite3_prepare_v2(u.db, "SELECT x, y, z, oldtype, olddata, newtype FROM undo WHERE playerid = ? ORDER BY id DESC LIMIT ?", -1, &u.query3_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
-		LOG("Can't prepare statement: %s", sqlite3_errmsg(u.db));
+		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(u.db));
 		sqlite3_close(u.db);
 		return NULL;
 	}
