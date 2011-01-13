@@ -27,12 +27,12 @@ static void astar_worker(void *arg)
 	free(job);
 }
 
-void astar_worker_init()
+void astar_worker_init(void)
 {
 	worker_init(&s_astar_worker, "astar", 30000, astar_worker);
 }
 
-void astar_worker_deinit()
+void astar_worker_deinit(void)
 {
 	worker_deinit(&s_astar_worker);
 }

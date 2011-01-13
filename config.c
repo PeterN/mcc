@@ -19,7 +19,7 @@ static struct
 	struct configitem *head;
 } s_config;
 
-static void config_free()
+static void config_free(void)
 {
 	struct configitem *prev;
 	struct configitem *curr = s_config.head;
@@ -66,7 +66,7 @@ void config_set_string(const char *key, const char *value)
 	item->next = NULL;
 }
 
-void config_rehash()
+static void config_rehash(void)
 {
 	FILE *f = fopen(s_config.filename, "r");
 	if (f == NULL) return;
@@ -94,7 +94,7 @@ void config_rehash()
 	fclose(f);
 }
 
-void config_write()
+static void config_write(void)
 {
 	FILE *f = fopen(s_config.filename, "w");
 	if (f == NULL) return;
@@ -108,7 +108,6 @@ void config_write()
 	fclose(f);
 }
 
-
 void config_init(const char *filename)
 {
 	s_config.filename = filename;
@@ -117,7 +116,7 @@ void config_init(const char *filename)
 	config_rehash();
 }
 
-void config_deinit()
+void config_deinit(void)
 {
 	config_write();
 }
