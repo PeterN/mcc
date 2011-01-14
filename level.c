@@ -731,13 +731,20 @@ void *level_gen_thread(void *arg)
 	level->type = NULL;
 
 	level->changed = true;
-	level_inuse(level, false);
 
 	snprintf(buf, sizeof buf, "Created level '%s'\n", level->name);
 	LOG(buf);
 	net_notify_ops(buf);
 
 	pthread_mutex_unlock(&level->mutex);
+
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		struct client_t *c = level->clients[i];
+		if (c != NULL) level_send_queue(c);
+	}
+
+	level_inuse(level, false);
 
 	return NULL;
 

@@ -2030,8 +2030,6 @@ CMD(resetlvl)
 		struct client_t *c = l->clients[i];
 		if (c == NULL) continue;
 		c->waiting_for_level = true;
-
-		level_send_queue(c);
 	}
 
 	return false;
