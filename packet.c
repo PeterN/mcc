@@ -212,11 +212,11 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 
 	player_change_level(c->player, NULL);
 
-	notify_file(c, "motd.txt");
+	client_notify_file(c, "motd.txt");
 
 	if (newuser)
 	{
-		notify_file(c, "rules.txt");
+		client_notify_file(c, "rules.txt");
 	}
 }
 

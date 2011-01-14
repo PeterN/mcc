@@ -23,26 +23,6 @@
 static const char s_on[] = TAG_RED "on";
 static const char s_off[] = TAG_GREEN "off";
 
-void notify_file(struct client_t *c, const char *filename)
-{
-	char buf[1024];
-	FILE *f = fopen(filename, "r");
-	if (f == NULL)
-	{
-		LOG("No %s found\n", filename);
-		return;
-	}
-
-	while (!feof(f))
-	{
-		memset(buf, 0, sizeof buf);
-		fgets(buf, sizeof buf, f);
-		if (buf[0] != '\0') client_notify(c, buf);
-	}
-
-	fclose(f);
-}
-
 struct notify_t
 {
 	struct client_t *c;
@@ -140,7 +120,7 @@ static const char help_adminrules[] =
 
 CMD(adminrules)
 {
-	notify_file(c, "adminrules.txt");
+	client_notify_file(c, "adminrules.txt");
 	return false;
 }
 
@@ -1484,7 +1464,7 @@ static const char help_motd[] =
 
 CMD(motd)
 {
-	notify_file(c, "motd.txt");
+	client_notify_file(c, "motd.txt");
 	return false;
 }
 
@@ -1878,7 +1858,7 @@ static const char help_ranks[] =
 
 CMD(ranks)
 {
-	notify_file(c, "ranks.txt");
+	client_notify_file(c, "ranks.txt");
 	return false;
 }
 
@@ -2084,7 +2064,7 @@ static const char help_rules[] =
 
 CMD(rules)
 {
-	notify_file(c, "rules.txt");
+	client_notify_file(c, "rules.txt");
 	return false;
 }
 

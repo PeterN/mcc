@@ -126,6 +126,28 @@ void client_notify(struct client_t *c, const char *message)
 	}
 }
 
+void client_notify_file(struct client_t *c, const char *filename)
+{
+	char buf[1024];
+	FILE *f = fopen(filename, "r");
+	if (f == NULL)
+	{
+		LOG("No %s found\n", filename);
+		return;
+	}
+
+	while (!feof(f))
+	{
+		memset(buf, 0, sizeof buf);
+		if (fgets(buf, sizeof buf, f) != NULL)
+		{
+			if (*buf != '\0') client_notify(c, buf);
+		}
+	}
+
+	fclose(f);
+}
+
 bool client_notify_by_username(const char *username, const char *message)
 {
 	unsigned i;
