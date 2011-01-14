@@ -31,16 +31,14 @@ struct level_hook_data_t
 
 enum
 {
-	EVENT_TICK    = 1 << 0,
-	EVENT_CHAT    = 1 << 1,
-	EVENT_MOVE    = 1 << 2,
-	EVENT_SPAWN   = 1 << 3,
-	EVENT_DESPAWN = 1 << 4,
-	EVENT_LOAD    = 1 << 5,
-	EVENT_SAVE    = 1 << 6,
-	EVENT_UNLOAD  = 1 << 7,
-	EVENT_INIT    = 1 << 8,
-	EVENT_DEINIT  = 1 << 9,
+	EVENT_TICK,
+	EVENT_CHAT,
+	EVENT_MOVE,
+	EVENT_SPAWN,
+	EVENT_DESPAWN,
+	EVENT_SAVE,
+	EVENT_INIT,
+	EVENT_DEINIT,
 };
 
 typedef bool(*level_hook_func_t)(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg);
