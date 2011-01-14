@@ -1102,8 +1102,11 @@ void *level_save_thread(void *arg)
 	if (gz == NULL)
 	{
 		pthread_mutex_unlock(&l->mutex);
+		level_inuse(l, false);
 		return NULL;
 	}
+
+	LOG("Saving level '%s'\n", l->name);
 
 	unsigned header  = 'MCLV';
 	unsigned version = 6;
