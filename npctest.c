@@ -6,7 +6,7 @@
 #include "astar.h"
 #include "astar_worker.h"
 
-#define NPC 64
+#define NPC 128
 
 #define RADIUS (7.0f / 32.0f)
 #define HEIGHT (51.0f / 32.0f)
