@@ -36,6 +36,7 @@ enum
 	EVENT_MOVE,
 	EVENT_SPAWN,
 	EVENT_DESPAWN,
+	EVENT_BLOCK,
 	EVENT_SAVE,
 	EVENT_INIT,
 	EVENT_DEINIT,
@@ -48,6 +49,14 @@ struct level_hooks_t
 	char name[16];
 	level_hook_func_t func;
 	struct level_hook_data_t data;
+};
+
+struct block_event
+{
+	int x, y, z;
+	enum blocktype_t bt; /* Existing blocktype */
+	enum blocktype_t nt; /* New blocktype */
+	uint16_t data;
 };
 
 struct level_t

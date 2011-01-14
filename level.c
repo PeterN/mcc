@@ -1637,21 +1637,27 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 	}
 
-	if (bt != nt)
+	struct block_event be;
+	be.x = x; be.y = y; be.z = z;
+	be.bt = bt; be.nt = nt; be.data = 0;
+
+	call_level_hook(EVENT_BLOCK, level, client, &be);
+
+	if (bt != be.nt)
 	{
 		if (level->undo == NULL)
 		{
 			level->undo = undodb_init(level->name);
 		}
-		undodb_log(level->undo, client->player->globalid, x, y, z, b->type, b->data, nt);
+		undodb_log(level->undo, client->player->globalid, x, y, z, b->type, b->data, be.nt);
 //		player_undo_log(client->player, index);
 
 		delete(level, index, b);
 
 		bool oldphysics = b->physics;
 
-		b->type = nt;
-		b->data = 0;
+		b->type = be.nt;
+		b->data = be.data;
 		b->fixed = ingame ? false : HasBit(client->player->flags, FLAG_PLACE_FIXED);
 		b->owner = !ingame && HasBit(client->player->flags, FLAG_DISOWN) ? 0 : client->player->globalid;
 		b->physics = blocktype_has_physics(nt);
