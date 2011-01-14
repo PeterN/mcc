@@ -23,6 +23,7 @@ enum {
 	FM_FIXED_NPC,
 };
 
+static enum blocktype_t s_npcwall;
 static enum blocktype_t s_door;
 
 struct npcinfo
@@ -788,13 +789,22 @@ static bool npctest_level_hook(int event, struct level_t *l, struct client_t *c,
 	return false;
 }
 
+static enum blocktype_t convert_npcwall(struct level_t *level, unsigned index, const struct block_t *block)
+{
+	return AIR;
+}
+
 void module_init(void **data)
 {
-	register_level_hook_func("npctest", &npctest_level_hook);
+	s_npcwall = register_blocktype(BLOCK_INVALID, "npcwall", RANK_MOD, &convert_npcwall, NULL, NULL, NULL, true, false, false);
 	s_door = blocktype_get_by_name("door");
+
+	register_level_hook_func("npctest", &npctest_level_hook);
 }
 
 void module_deinit(void *data)
 {
 	deregister_level_hook_func("npctest");
+
+	deregister_blocktype(s_npcwall);
 }
