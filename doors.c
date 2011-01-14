@@ -1,21 +1,24 @@
 #include "block.h"
 #include "level.h"
-#include "mcc.h"
 
 #define DOOR1(n, b) \
+	static enum blocktype_t s_door_ ## n; \
 	static enum blocktype_t convert_door_ ## n(struct level_t *level, unsigned index, const struct block_t *block) \
 	{ \
 		return block->data ? AIR : b; \
 	}
 
 #define DOOR2(n) \
-	register_blocktype(BLOCK_INVALID, "door_" #n, RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true, false)
+	s_door_ ##n = register_blocktype(BLOCK_INVALID, "door_" #n, RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true, false)
 
 #define DOOR3(n, r) \
-	register_blocktype(BLOCK_INVALID, "door_" #n, r, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true, false)
+	s_door_ ##n = register_blocktype(BLOCK_INVALID, "door_" #n, r, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true, false)
 
 #define DOOR4(n) \
-	register_blocktype(BLOCK_INVALID, "door", RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true, false)
+	s_door_ ##n = register_blocktype(BLOCK_INVALID, "door", RANK_BUILDER, &convert_door_ ## n, &trigger_door, NULL, &physics_door, false, true, false)
+
+#define DEDOOR(n) \
+	deregister_blocktype(s_door_ ##n)
 
 DOOR1(stone, ROCK)
 DOOR1(grass, GRASS)
@@ -156,4 +159,49 @@ void module_init(void **data)
 
 void module_deinit(void *data)
 {
+	DEDOOR(stone);
+	DEDOOR(grass);
+	DEDOOR(dirt);
+	DEDOOR(cobblestone);
+	DEDOOR(wood);
+	DEDOOR(plant);
+	DEDOOR(adminium);
+	DEDOOR(sand);
+	DEDOOR(gravel);
+	DEDOOR(gold_ore);
+	DEDOOR(iron_ore);
+	DEDOOR(coal);
+	DEDOOR(trunk);
+	DEDOOR(leaves);
+	DEDOOR(sponge);
+	DEDOOR(glass);
+	DEDOOR(red);
+	DEDOOR(orange);
+	DEDOOR(yellow);
+	DEDOOR(greenyellow);
+	DEDOOR(green);
+	DEDOOR(springgreen);
+	DEDOOR(cyan);
+	DEDOOR(blue);
+	DEDOOR(blueviolet);
+	DEDOOR(indigo);
+	DEDOOR(purple);
+	DEDOOR(magenta);
+	DEDOOR(pink);
+	DEDOOR(black);
+	DEDOOR(grey);
+	DEDOOR(white);
+	DEDOOR(yellow_flower);
+	DEDOOR(red_flower);
+	DEDOOR(brown_shroom);
+	DEDOOR(red_shroom);
+	DEDOOR(gold);
+	DEDOOR(iron);
+	DEDOOR(double_step);
+	DEDOOR(step);
+	DEDOOR(brick);
+	DEDOOR(tnt);
+	DEDOOR(bookcase);
+	DEDOOR(mossy_cobblestone);
+	DEDOOR(obsidian);
 }
