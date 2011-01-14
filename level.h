@@ -11,7 +11,7 @@
 
 #define MAX_CLIENTS_PER_LEVEL 64
 #define MAX_NPCS_PER_LEVEL 64
-#define MAX_HOOKS_PER_LEVEL 4
+#define MAX_HOOKS_PER_LEVEL 8
 
 struct player_t;
 struct client_t;
