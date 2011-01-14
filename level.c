@@ -731,6 +731,7 @@ void *level_gen_thread(void *arg)
 	level->type = NULL;
 
 	level->changed = true;
+	level_inuse(level, false);
 
 	snprintf(buf, sizeof buf, "Created level '%s'\n", level->name);
 	LOG(buf);
@@ -742,6 +743,7 @@ void *level_gen_thread(void *arg)
 
 level_error:
 	level->changed = true;
+	level_inuse(level, false);
 
 	snprintf(buf, sizeof buf, TAG_YELLOW "Level generation for %s failed\n", level->name);
 	LOG(buf);
