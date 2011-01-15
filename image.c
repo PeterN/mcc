@@ -35,7 +35,7 @@ static void image_worker(void *arg)
 
 static const char help_image[] =
 "/image\n"
-"Make images of the current level";
+"Make images of the current level.";
 
 static bool cmd_image(struct client_t *c, int params, const char **param)
 {
@@ -52,6 +52,20 @@ static bool cmd_image(struct client_t *c, int params, const char **param)
 	return false;
 }
 
+static const char help_imagepath[] =
+"/imagepath <path>"
+"Change the path where images are written.";
+
+static bool cmd_imagepath(struct client_t *c, int params, const char **param)
+{
+	if (params != 2) return true;
+
+	config_set_string("image.path", param[1]);
+
+	client_notify(c, TAG_YELLOW "Image path set");
+	return false;
+}
+
 void module_init(void **data)
 {
 	if (!config_get_string("image.path", &s_image_path))
@@ -60,10 +74,12 @@ void module_init(void **data)
 	}
 	worker_init(&s_image_worker, "image", 30000, &image_worker);
 	register_command("image", RANK_OP, &cmd_image, help_image);
+	register_command("imagepath", RANK_ADMIN, &cmd_imagepath, help_imagepath);
 }
 
 void module_deinit(void *data)
 {
 	deregister_command("image");
+	deregister_command("imagepath");
 	worker_deinit(&s_image_worker);
 }
