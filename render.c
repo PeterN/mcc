@@ -133,41 +133,34 @@ enum blocktype_t level_get_blocktype2(const struct level_t *level, int16_t x, in
 	return b->type;
 }
 
+static inline bool is_trans(enum blocktype_t block)
+{
+	return blocktype_get_colour(block).a != 0xFF;
+//	return block == AIR || block == WATER || block == WATERSTILL || block == GLASS;
+}
+
 uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 {
-	int row, col, off;
 	switch (rot)
 	{
 		case ROT_0:
 			*w = level->x;
 			*h = level->z;
-			row = *w;
-			col = 1;
-			off = 0;
 			break;
 
 		case ROT_90:
 			*w = level->z;
 			*h = level->x;
-			row = 1;
-			col = -*w;
-			off = *w * (*h - 1);
 			break;
 
 		case ROT_180:
 			*w = level->x;
 			*h = level->z;
-			row = -*w;
-			col = -1;
-			off = (*w * *h) - 1;
 			break;
 
 		case ROT_270:
 			*w = level->z;
 			*h = level->x;
-			row = -1;
-			col = *w;
-			off = *w - 1;
 			break;
 	}
 
@@ -176,10 +169,16 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 
 	int size = *w * *h * sizeof (uint32_t);
 	uint32_t *map = malloc(size);
+	if (map == NULL) return NULL;
 
 	memset(map, 0, size);
 
 	int16_t *shadowmap = malloc(level->x * level->z * sizeof *shadowmap);
+	if (shadowmap == NULL)
+	{
+		free(map);
+		return NULL;
+	}
 
 	int x, y, z;
 	for (z = 0; z < level->z; z++)
@@ -223,6 +222,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 				mx = (x - z) * 2 - ox;
 				my = (z + x) * 1 - y * 2 + oy;
 
+				if (is_trans(level_get_blocktype2(level, x, y + 1, z)))
 				if (!trans || level_get_blocktype2(level, x, y + 1, z) != b)
 				{
 					if (y < cy)
@@ -244,19 +244,14 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 				struct col_t c1 = darken(c);
 				struct col_t c2 = darken(c1);
 
-				if (y < cy1)
-				{
-					c1 = darken(c1);
-					c1 = darken(c1);
-				}
-				if (y < cy2)
-				{
-					c2 = darken(c2);
-					c2 = darken(c2);
-				}
-				
+				if (is_trans(level_get_blocktype2(level, x, y, z + 1)))
 				if (!trans || level_get_blocktype2(level, x, y, z + 1) != b)
 				{
+					if (y < cy1)
+					{
+						c1 = darken(c1);
+						c1 = darken(c1);
+					}
 					setpixel(map, *w, mx + 0, my + 1, c1);
 					setpixel(map, *w, mx + 1, my + 1, c1);
 					setpixel(map, *w, mx + 0, my + 2, c1);
@@ -264,8 +259,14 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 					if (!trans) setpixel(map, *w, mx + 1, my + 3, c1);
 				}
 
+				if (is_trans(level_get_blocktype2(level, x + 1, y, z)))
 				if (!trans || level_get_blocktype2(level, x + 1, y, z) != b)
 				{
+					if (y < cy2)
+					{
+						c2 = darken(c2);
+						c2 = darken(c2);
+					}
 					setpixel(map, *w, mx + 2, my + 1, c2);
 					setpixel(map, *w, mx + 3, my + 1, c2);
 					setpixel(map, *w, mx + 2, my + 2, c2);
@@ -275,6 +276,8 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 			}
 		}
 	}
+
+	free(shadowmap);
 
 	/* Convert from ARGB to format required for PNG */
 	int i;
@@ -291,7 +294,7 @@ uint32_t *level_render_iso(const struct level_t *level, int rot, int *w, int *h)
 
 uint32_t *level_render_flat(const struct level_t *level, int rot, int *w, int *h)
 {
-	int row, col, off;
+	int row = 0, col = 0, off = 0;
 	switch (rot)
 	{
 		case ROT_0:
@@ -328,6 +331,7 @@ uint32_t *level_render_flat(const struct level_t *level, int rot, int *w, int *h
 	}
 
 	uint32_t *map = malloc(level->x * level->z * sizeof *map);
+	if (map == NULL) return NULL;
 
 	int x, y, z;
 	for (z = 0; z < level->z; z++)
@@ -373,9 +377,14 @@ uint32_t *level_render_flat(const struct level_t *level, int rot, int *w, int *h
 
 uint32_t *level_render(const struct level_t *level, int rot, bool iso, int *w, int *h)
 {
-	//if (iso) return level_render_iso(level, rot, w, h);
-
-	return level_render_iso(level, rot, w, h);
+	if (iso) 
+	{
+		return level_render_iso(level, rot, w, h);
+	}
+	else
+	{
+		return level_render_flat(level, rot, w, h);
+	}
 }
 
 static void PNGAPI png_my_error(png_structp png_ptr, png_const_charp message)
@@ -389,13 +398,13 @@ static void PNGAPI png_my_warning(png_structp png_ptr, png_const_charp message)
 	fprintf(stderr, "libpng warning: %s - %s\n", message, (const char *)png_get_error_ptr(png_ptr));
 }
 
-void level_render_png(const struct level_t *level, int rot, bool iso)
+void level_render_png(const struct level_t *level, int rot, bool iso, const char *path)
 {
 	char filename[256];
 	png_structp png_ptr;
 	png_infop info_ptr;
 
-	snprintf(filename, sizeof filename, "%s.png", level->name);
+	snprintf(filename, sizeof filename, "%s/%s-%s.png", path, iso ? "iso" : "flat", level->name);
 	lcase(filename);
 
 	FILE *f = fopen(filename, "wb");
@@ -403,6 +412,11 @@ void level_render_png(const struct level_t *level, int rot, bool iso)
 
 	int w, h;
 	uint32_t *imagebuf = level_render(level, rot, iso, &w, &h);
+	if (imagebuf == NULL)
+	{
+		fclose(f);
+		return;
+	}
 
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, (void *)filename, png_my_error, png_my_warning);
 	if (png_ptr == NULL)
@@ -453,11 +467,12 @@ void level_render_png(const struct level_t *level, int rot, bool iso)
 	fclose(f);
 }
 
+#if 0
 int main(int argc, char **argv)
 {
 	g_server.logfile = stderr;
 
-	if (argc != 3) return 0;
+	if (argc != 4) return 0;
 
 	int rot;
 	if (!strcmp(argv[2], "0")) rot = ROT_0;
@@ -468,6 +483,10 @@ int main(int argc, char **argv)
 		LOG("Invalid rotation");
 		return -1;
 	}
+
+	int iso;
+	if (!strcmp(argv[3], "iso")) iso = 1;
+	else iso = 0;
 
 	struct level_t *l;
 	if (!level_load(argv[1], &l))
@@ -480,7 +499,8 @@ int main(int argc, char **argv)
 	pthread_mutex_lock(&l->mutex);
 	pthread_mutex_unlock(&l->mutex);
 
-	level_render_png(l, rot, false);
+	level_render_png(l, rot, iso);
 
 	return 0;
 }
+#endif
