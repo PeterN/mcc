@@ -1380,39 +1380,39 @@ static const char help_mapinfo[] =
 
 CMD(mapinfo)
 {
+	unsigned i;
 	const struct level_t *l = c->player->level;
-	char buf[64];
+	char buf[4096];
+	char *bufp, *endp = buf + sizeof buf;
+
 	snprintf(buf, sizeof buf, "Level: %s  Owner: %s", l->name, playerdb_get_username(l->owner));
 	client_notify(c, buf);
 	snprintf(buf, sizeof buf, "Extents: %d x %d x %d", l->x, l->y, l->z);
 	client_notify(c, buf);
-	snprintf(buf, sizeof buf, "Visit permission: %s  Build permission: %s", rank_get_name(l->rankvisit), rank_get_name(l->rankbuild));
-	client_notify(c, buf);
-	
-	if (c->player->rank == RANK_ADMIN || c->player->globalid == c->player->level->owner)
-	{
-		snprintf(buf, sizeof buf, "Own permission: %s", rank_get_name(l->rankown));
-		client_notify(c, buf);
-	
-		unsigned i;
-		for (i = 0; i < c->player->level->uservisit.used; i++)
-		{
-			snprintf(buf, sizeof buf, "Visit permission: %s", playerdb_get_username(c->player->level->uservisit.items[i]));
-			client_notify(c, buf);
-		}
-		
-		for (i = 0; i < c->player->level->userbuild.used; i++)
-		{
-			snprintf(buf, sizeof buf, "Build permission: %s", playerdb_get_username(c->player->level->userbuild.items[i]));
-			client_notify(c, buf);
-		}
 
-		for (i = 0; i < c->player->level->userown.used; i++)
-		{
-			snprintf(buf, sizeof buf, "Own permission: %s", playerdb_get_username(c->player->level->userown.items[i]));
-			client_notify(c, buf);
-		}
+	bufp = buf;
+	bufp += snprintf(bufp, endp - bufp, "Visit permission: %s", rank_get_name(l->rankvisit));
+	for (i = 0; i < c->player->level->uservisit.used; i++)
+	{
+		bufp += snprintf(bufp, endp - bufp, " %s", playerdb_get_username(c->player->level->uservisit.items[i]));
 	}
+	client_notify(c, buf);
+
+	bufp = buf;
+	bufp += snprintf(bufp, endp - bufp, "Build permission: %s", rank_get_name(l->rankbuild));
+	for (i = 0; i < c->player->level->userbuild.used; i++)
+	{
+		bufp += snprintf(bufp, endp - bufp, " %s", playerdb_get_username(c->player->level->userbuild.items[i]));
+	}
+	client_notify(c, buf);
+
+	bufp = buf;
+	bufp += snprintf(bufp, endp - bufp, "Own permission: %s", rank_get_name(l->rankown));
+	for (i = 0; i < c->player->level->userown.used; i++)
+	{
+		bufp += snprintf(bufp, endp - bufp, " %s", playerdb_get_username(c->player->level->userown.items[i]));
+	}
+	client_notify(c, buf);
 
 	return false;
 }
@@ -2791,7 +2791,7 @@ static const struct command s_builtin_commands[] = {
 
 void commands_init()
 {
-	struct command *comp = s_builtin_commands;
+	const struct command *comp = s_builtin_commands;
 	for (; comp->command != NULL; comp++)
 	{
 		register_command(comp->command, comp->rank, comp->func, comp->help);
