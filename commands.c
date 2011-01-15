@@ -7,7 +7,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <time.h>
 #include "client.h"
 #include "level.h"
 #include "packet.h"
