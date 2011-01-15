@@ -224,7 +224,7 @@ bool player_check_spam(struct player_t *player)
 	return false;
 }
 
-void player_send_position(struct player_t *player)
+static void player_send_position(struct player_t *player, unsigned cur_tick)
 {
 	int changed = 0;
 	int dx = 0, dy = 0, dz = 0;
@@ -250,6 +250,8 @@ void player_send_position(struct player_t *player)
 	player->oldpos = player->pos;
 
 	if (player->client->hidden) return;
+
+	player->last_active = cur_tick;
 
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
@@ -278,7 +280,7 @@ void player_send_position(struct player_t *player)
 	}
 }
 
-void player_send_positions(void)
+void player_send_positions(unsigned cur_tick)
 {
 	unsigned i;
 	for (i = 0; i < s_players.used; i++)
@@ -292,7 +294,7 @@ void player_send_positions(void)
 			continue;
 		}
 
-		player_send_position(player);
+		player_send_position(player, cur_tick);
 	}
 }
 

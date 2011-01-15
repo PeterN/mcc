@@ -46,7 +46,8 @@ struct player_t
 	enum rank_t rank;
 	enum mode_t mode;
 	uint8_t flags;
-	uint8_t	teleport;
+	uint8_t teleport;
+	unsigned last_active;
 
 	char afk[64];
 
@@ -95,7 +96,7 @@ static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 	player->mode = (player->mode == mode) ? MODE_NORMAL : mode;
 }
 
-void player_send_positions(void);
+void player_send_positions(unsigned cur_tick);
 bool player_check_spam(struct player_t *player);
 
 void player_set_alias(struct player_t *player, const char *alias, bool send_spawn);
