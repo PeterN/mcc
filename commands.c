@@ -2724,7 +2724,7 @@ CMD(whois)
 	}
 	else
 	{
-		unsigned idle = gettime() / 1000 - c->player->last_active;
+		unsigned idle = gettime() / 1000 - p->last_active;
 
 		snprintf(buf, sizeof buf, "%s" TAG_WHITE " is online, on level %s", p->colourusername, p->level->name);
 		client_notify(c, buf);
