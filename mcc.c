@@ -3,6 +3,7 @@
 #include <signal.h>
 #include "block.h"
 #include "config.h"
+#include "commands.h"
 #include "mcc.h"
 #include "level.h"
 #include "level_worker.h"
@@ -41,6 +42,7 @@ void mcc_exit(void)
 	timers_deinit();
 	blocktype_deinit();
 	socket_deinit();
+	commands_deinit();
 
 	playerdb_close();
 
@@ -82,6 +84,8 @@ int main(int argc, char **argv)
 
 	level_worker_init();
 	astar_worker_init();
+
+	commands_init();
 
 	g_server.players = 0;
 	g_server.exit = false;

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include "client.h"
+#include "commands.h"
 #include "level.h"
 #include "packet.h"
 #include "player.h"
@@ -82,17 +83,38 @@ static char *prettytime(char *buf, const char *endp, int time, int acc)
 	return bufp;
 }
 
-typedef bool(*command_func_t)(struct client_t *c, int params, const char **param);
-
-struct command_t
+struct command
 {
 	const char *command;
 	enum rank_t rank;
-	command_func_t func;
+	command_func func;
 	const char *help;
 };
 
-struct command_t s_commands[];
+static inline bool command_compare(struct command *a, struct command *b)
+{
+	return strcmp(a->command, b->command) == 0;
+}
+
+LIST(command, struct command, command_compare)
+static struct command_list_t s_commands;
+
+void register_command(const char *command, enum rank_t rank, command_func func, const char *help)
+{
+	struct command cmd;
+	cmd.command = command;
+	cmd.rank = rank;
+	cmd.func = func;
+	cmd.help = help;
+	command_list_add(&s_commands, cmd);
+}
+
+void deregister_command(const char *command)
+{
+	struct command cmd;
+	cmd.command = command;
+	command_list_del_item(&s_commands, cmd);
+}
 
 #define CMD(x) static bool cmd_ ## x (struct client_t *c, int params, const char **param)
 
@@ -338,9 +360,11 @@ CMD(commands)
 	strcpy(buf, "Commands: ");
 	bufp = buf + strlen(buf);
 
-	struct command_t *comp = s_commands;
-	for (; comp->command != NULL; comp++)
+	unsigned i;
+	for (i = 0; i < s_commands.used; i++)
 	{
+		struct command *comp = &s_commands.items[i];
+
 		if (c->player->rank < comp->rank) continue;
 
 		char buf2[64];
@@ -770,9 +794,10 @@ CMD(help)
 {
 	if (params != 2) return true;
 
-	struct command_t *comp = s_commands;
-	for (; comp->command != NULL; comp++)
+	unsigned i;
+	for (i = 0; i < s_commands.used; i++)
 	{
+		struct command *comp = &s_commands.items[i];
 		if (strcasecmp(comp->command, param[1]) == 0)
 		{
 			client_notify(c, comp->help);
@@ -2680,7 +2705,7 @@ CMD(whois)
 	return false;
 }
 
-struct command_t s_commands[] = {
+static const struct command s_builtin_commands[] = {
 	{ "activelava", RANK_ADV_BUILDER, &cmd_activelava, help_activelava },
 	{ "activewater", RANK_ADV_BUILDER, &cmd_activewater, help_activewater },
 	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
@@ -2764,11 +2789,25 @@ struct command_t s_commands[] = {
 	{ NULL, -1, NULL, NULL },
 };
 
-bool command_process(struct client_t *client, int params, const char **param)
+void commands_init()
 {
-	struct command_t *comp = s_commands;
+	struct command *comp = s_builtin_commands;
 	for (; comp->command != NULL; comp++)
 	{
+		register_command(comp->command, comp->rank, comp->func, comp->help);
+	}
+}
+
+void commands_deinit()
+{
+}
+
+bool command_process(struct client_t *client, int params, const char **param)
+{
+	unsigned i;
+	for (i = 0; i < s_commands.used; i++)
+	{
+		struct command *comp = &s_commands.items[i];
 		if (client->player->rank >= comp->rank && strcasecmp(param[0], comp->command) == 0)
 		{
 			if (comp->func(client, params, param))
@@ -2781,3 +2820,5 @@ bool command_process(struct client_t *client, int params, const char **param)
 
 	return false;
 }
+
+
