@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "astar.h"
 #include "astar_worker.h"
+#include "level.h"
 #include "worker.h"
 
 static struct worker s_astar_worker;
@@ -12,7 +13,7 @@ struct astar_job
 	struct level_t *level;
 	struct point a;
 	struct point b;
-	astar_cb *callback;
+	astar_callback callback;
 	void *data;
 };
 
@@ -37,7 +38,7 @@ void astar_worker_deinit(void)
 	worker_deinit(&s_astar_worker);
 }
 
-void astar_queue(struct level_t *level, const struct point *a, const struct point *b, astar_cb *callback, void *data)
+void astar_queue(struct level_t *level, const struct point *a, const struct point *b, astar_callback callback, void *data)
 {
 	assert(level != NULL);
 	assert(a != NULL);

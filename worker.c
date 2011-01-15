@@ -57,7 +57,7 @@ void *worker_thread(void *arg)
 	return NULL;
 }
 
-void worker_init(struct worker *worker, const char *name, unsigned timeout, worker_callback *callback)
+void worker_init(struct worker *worker, const char *name, unsigned timeout, worker_callback callback)
 {
 	memset(worker, 0, sizeof *worker);
 

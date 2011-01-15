@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "hash.h"
 
-void hash_init(struct hash *h, hash_proc *hash, unsigned num_buckets)
+void hash_init(struct hash *h, hash_proc hash, unsigned num_buckets)
 {
 	assert(h != NULL);
 	h->hash = hash;
@@ -15,7 +15,7 @@ void hash_init(struct hash *h, hash_proc *hash, unsigned num_buckets)
 	memset(h->buckets, 0, num_buckets * (sizeof *h->buckets + sizeof *h->buckets_in_use));
 }
 
-struct hash *hash_new(hash_proc *hash, unsigned num_buckets)
+struct hash *hash_new(hash_proc hash, unsigned num_buckets)
 {
 	struct hash *h = malloc(sizeof *h);
 
