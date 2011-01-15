@@ -47,7 +47,15 @@ int book_allocate()
 		char filename[20];
 		sprintf(filename, "book%04d.txt", i);
 		FILE *f = fopen(filename, "r");
-		if (f == NULL) return i;
+		if (f == NULL)
+		{
+			f = fopen(filename, "w");
+			if (f != NULL)
+			{
+				fclose(f);
+				return i;
+			}
+		}
 		fclose(f);
 	}
 	return 0;
@@ -61,6 +69,10 @@ static bool book_handle_chat(struct level_t *l, struct client_t *c, char *data, 
 	{
 		if (strcmp(data, "cancel book") == 0)
 		{
+			char filename[20];
+			sprintf(filename, "book%04d.txt", arg->book[c->player->levelid]);
+			remove(filename);
+
 			arg->book[c->player->levelid] = 0;
 			client_notify(c, TAG_YELLOW "Canceled writing book");
 		}
@@ -76,6 +88,8 @@ static bool book_handle_chat(struct level_t *l, struct client_t *c, char *data, 
 		}
 		return true;
 	}
+
+	if (!level_user_can_build(l, c->player)) return false;
 
 	if (strcasecmp("write book", data) == 0)
 	{
