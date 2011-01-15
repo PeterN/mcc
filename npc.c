@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include "bitstuff.h"
 #include "client.h"
 #include "level.h"

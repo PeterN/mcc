@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <time.h>
 #include <unistd.h>
 #include <signal.h>
 #include "block.h"
@@ -14,16 +13,9 @@
 #include "playerdb.h"
 #include "client.h"
 #include "timer.h"
+#include "gettime.h"
 
 struct server_t g_server;
-
-static unsigned gettime(void)
-{
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-
-	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
 
 void mcc_exit(void)
 {

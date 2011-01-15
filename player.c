@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include "bitstuff.h"
 #include "client.h"
 #include "level.h"
@@ -11,6 +10,7 @@
 #include "network.h"
 #include "util.h"
 #include "level_worker.h"
+#include "gettime.h"
 
 static struct player_list_t s_players;
 
@@ -179,14 +179,6 @@ void player_teleport(struct player_t *player, const struct position_t *pos, bool
 	{
 		client_add_packet(player->client, packet_send_teleport_player(0xFF, &player->pos));
 	}
-}
-
-static unsigned gettime(void)
-{
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-
-	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 bool player_check_spam(struct player_t *player)
