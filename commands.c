@@ -18,6 +18,7 @@
 #include "undodb.h"
 #include "util.h"
 #include "level_worker.h"
+#include "gettime.h"
 
 static const char s_on[] = TAG_RED "on";
 static const char s_off[] = TAG_GREEN "off";
@@ -53,6 +54,32 @@ static void reconstruct(char *buf, size_t len, int params, const char **param)
 		strcat(buf, param[i]);
 		if (i < params - 1) strcat(buf, " ");
 	}
+}
+
+static char *prettytime(char *buf, const char *endp, int time, int acc)
+{
+	int seconds = time % 60;
+	int minutes = time / 60 % 60;
+	int hours   = time / 3600 % 24;
+	int days    = time / 86400;
+
+	char *bufp = buf;
+	if (days > 0)
+	{
+		bufp += snprintf(bufp, endp - bufp, "%d day%s ", days, days > 1 ? "s" : "");
+	}
+	if (hours > 0 || (days > 0 && acc))
+	{
+		bufp += snprintf(bufp, endp - bufp, "%d hour%s ", hours, hours > 1 ? "s" : "");
+		if (days > 0 && !acc) return bufp;
+	}
+	if (minutes > 0 || ((hours > 0 || days > 0) && acc))
+	{
+		bufp += snprintf(bufp, endp - bufp, "%d minute%s ", minutes, minutes > 1 ? "s" : "");
+		if (hours > 0 && !acc) return bufp;
+	}
+	bufp += snprintf(bufp, endp - bufp, "%d second%s ", seconds, seconds > 1 ? "s" : "");
+	return bufp;
 }
 
 typedef bool(*command_func_t)(struct client_t *c, int params, const char **param);
@@ -2541,31 +2568,11 @@ static const char help_uptime[] =
 CMD(uptime)
 {
 	time_t uptime = time(NULL) - g_server.start_time;
-	char buf[128], *bufp = buf;
+	char buf[128];
 
-	int seconds = uptime % 60;
-	int minutes = uptime / 60 % 60;
-	int hours   = uptime / 3600 % 24;
-	int days	= uptime / 86400;
-
-	bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "Server uptime is ");
-	if (days > 0)
-	{
-		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d days ", days);
-	}
-	if (hours > 0)
-	{
-		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d hours ", hours);
-	}
-	if (minutes > 0)
-	{
-		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d minutes ", minutes);
-	}
-	if (seconds > 0)
-	{
-		bufp += snprintf(bufp, (sizeof buf) - (bufp - buf), "%d seconds ", seconds);
-	}
-
+	char *bufp = buf, *endp = buf + sizeof buf;
+	bufp += snprintf(bufp, endp - bufp, "Server uptime is ");
+	bufp = prettytime(bufp, endp, uptime, true);
 	client_notify(c, buf);
 
 	snprintf(buf, sizeof buf, "Server CPU usage is %f%%", g_server.cpu_time);
@@ -2616,6 +2623,8 @@ static const char help_whois[] =
 CMD(whois)
 {
 	char buf[128];
+	char *bufp;
+	char *endp = buf + sizeof buf;
 
 	if (params != 2) return true;
 
@@ -2634,31 +2643,36 @@ CMD(whois)
 	{
 		snprintf(buf, sizeof buf, "%s is offline", param[1]);
 		client_notify(c, buf);
-		snprintf(buf, sizeof buf, "%s's rank is %s", param[1], rank_get_name(playerdb_get_rank(param[1])));
-		client_notify(c, buf);
+
+		bufp = buf;
+		bufp += snprintf(bufp, endp - bufp, "Rank: %s", rank_get_name(playerdb_get_rank(param[1])));
 
 		if (c->player->rank >= RANK_OP)
 		{
-			snprintf(buf, sizeof buf, "%s last connected from %s", param[1], playerdb_get_last_ip(globalid));
-			client_notify(c, buf);
+			bufp += snprintf(bufp, endp - bufp, "  Last IP: %s", playerdb_get_last_ip(globalid));
 		}
+		client_notify(c, buf);
 	}
 	else
 	{
+		unsigned idle = gettime() / 1000 - c->player->last_active;
+
 		snprintf(buf, sizeof buf, "%s" TAG_WHITE " is online, on level %s", p->colourusername, p->level->name);
 		client_notify(c, buf);
-		snprintf(buf, sizeof buf, "%s's rank is %s", p->username, rank_get_name(p->rank));
+
+		bufp = buf;
+		bufp += snprintf(bufp, endp - bufp, "Rank: %s  Idle: ", rank_get_name(p->rank));
+		bufp = prettytime(bufp, endp, idle, false);
+
+		if (c->player->rank >= RANK_OP)
+		{
+			bufp += snprintf(bufp, endp - bufp, " IP: %s", p->client->ip);
+		}
 		client_notify(c, buf);
 
 		if (p->afk[0] != '\0')
 		{
-			snprintf(buf, sizeof buf, "%s is away: %s\n", p->username, p->afk);
-			client_notify(c, buf);
-		}
-
-		if (c->player->rank >= RANK_OP)
-		{
-			snprintf(buf, sizeof buf, "%s is connected from %s", p->username, p->client->ip);
+			snprintf(buf, sizeof buf, "Away: %s\n", p->afk);
 			client_notify(c, buf);
 		}
 	}
