@@ -22,6 +22,7 @@ struct cuboid_t
 	bool undo;
 	int count;
 	struct level_t *srclevel;
+	struct client_t *client;
 };
 
 static inline bool cuboid_t_compare(struct cuboid_t *a, struct cuboid_t *b)

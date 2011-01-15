@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include "client.h"
 #include "commands.h"
+#include "cuboid.h"
 #include "level.h"
 #include "packet.h"
 #include "player.h"
@@ -1131,7 +1132,7 @@ CMD(kbu)
 		undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
 	}
 
-	level_user_undo(l, globalid);
+	level_user_undo(l, globalid, c);
 
 	return false;
 }

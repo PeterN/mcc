@@ -112,7 +112,14 @@ void cuboid_process(void)
 							level_notify_all(c->level, TAG_YELLOW "Level finished loading");
 							level_inuse(c->srclevel, false);
 						}
-						printf("ok: %d blocks changed\n", c->count);
+
+						if (c->client != NULL && client_is_valid(c->client))
+						{
+							char buf[64];
+							snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed", c->count);
+							client_notify(c->client, buf);
+						}
+
 						level_inuse(c->level, false);
 						cuboid_list_del_index(&s_cuboids, i);
 						return;

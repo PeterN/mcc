@@ -174,7 +174,8 @@ bool level_user_can_visit(const struct level_t *l, const struct player_t *p);
 bool level_user_can_build(const struct level_t *l, const struct player_t *p);
 bool level_user_can_own(const struct level_t *l, const struct player_t *p);
 
-void level_user_undo(struct level_t *level, unsigned globalid);
+void level_cuboid(struct level_t *level, unsigned start, unsigned end, enum blocktype_t old_type, enum blocktype_t new_type, const struct player_t *p);
+void level_user_undo(struct level_t *level, unsigned globalid, struct client_t *client);
 
 bool level_inuse(struct level_t *level, bool inuse);
 
