@@ -456,11 +456,13 @@ CMD(cuboid)
 		if (c->player->cuboid_type == BLOCK_INVALID)
 		{
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
+			client_notify(c, buf);
 			return false;
 		}
 		else if (c->player->rank < blocktype_min_rank(c->player->cuboid_type))
 		{
 			snprintf(buf, sizeof buf, "You do not have permission to place %s", param[1]);
+			client_notify(c, buf);
 			return false;
 		}
 	}
@@ -1969,11 +1971,13 @@ CMD(replace)
 	if (c->player->replace_type == BLOCK_INVALID)
 	{
 		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
+		client_notify(c, buf);
 		return false;
 	}
 	else if (c->player->rank < blocktype_min_rank(c->player->replace_type))
 	{
 		snprintf(buf, sizeof buf, "You do not have permission to replace %s", param[1]);
+		client_notify(c, buf);
 		return false;
 	}
 
@@ -1983,11 +1987,13 @@ CMD(replace)
 		if (c->player->cuboid_type == BLOCK_INVALID)
 		{
 			snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+			client_notify(c, buf);
 			return false;
 		}
 		else if (c->player->rank < blocktype_min_rank(c->player->cuboid_type))
 		{
 			snprintf(buf, sizeof buf, "You do not have permission to place %s", param[2]);
+			client_notify(c, buf);
 			return false;
 		}
 	}
@@ -2025,11 +2031,13 @@ CMD(replaceall)
 	if (oldtype == BLOCK_INVALID)
 	{
 		snprintf(buf, sizeof buf, "Unknown block type %s", param[1]);
+		client_notify(c, buf);
 		return false;
 	}
 	else if (oldtype == ADMINIUM && c->player->rank < RANK_OP)
 	{
 		snprintf(buf, sizeof buf, "You do not have permission to replace adminium");
+		client_notify(c, buf);
 		return false;
 	}
 
@@ -2037,11 +2045,13 @@ CMD(replaceall)
 	if (newtype == BLOCK_INVALID)
 	{
 		snprintf(buf, sizeof buf, "Unknown block type %s", param[2]);
+		client_notify(c, buf);
 		return false;
 	}
 	else if (newtype == ADMINIUM && c->player->rank < RANK_OP)
 	{
 		snprintf(buf, sizeof buf, "You do not have permission to place adminium");
+		client_notify(c, buf);
 		return false;
 	}
 
