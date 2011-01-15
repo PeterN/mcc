@@ -6,8 +6,6 @@
 #include "astar.h"
 #include "astar_worker.h"
 
-#define NPC 128
-
 #define RADIUS (7.0f / 32.0f)
 #define HEIGHT (51.0f / 32.0f)
 #define HEADROOM RADIUS
@@ -26,7 +24,7 @@ enum {
 static enum blocktype_t s_npcwall;
 static enum blocktype_t s_door;
 
-struct npcinfo
+struct npctemp
 {
 	struct npc *npc;
 	struct point *path; /* Current path */
@@ -37,96 +35,105 @@ struct npcinfo
 	bool pf;            /* Pathfinding? */
 };
 
-struct npctest
+struct npcinfo
 {
-	int i;
-	struct {
-		char name[64];
-		struct position_t pos;
-		int8_t followid;
-		int8_t stareid;
-		int8_t fm;
-	} n[NPC];
-	struct npcinfo *t;
+	char name[32];
+	struct position_t pos;
+	uint16_t followid;
+	uint16_t stareid;
+	uint8_t flags;
+	uint8_t fm;
+	uint8_t pathstep;  /* Step along path we're following */
+	char path[16]; /* Name of path we're following */
+
+	uint8_t reserved[192];
+};
+
+struct npcdata
+{
+	int tick;
+	int num_npc;
+	struct npctemp *t;
+	struct npcinfo n[];
 };
 
 struct pftemp
 {
-	struct npctest *arg;
+	struct level_hook_data_t *arg;
 	int i;
 };
 
-void npctest_save(struct level_t *l, struct npctest *arg)
+void npc_save(struct level_t *l, struct npcdata *nd)
 {
 	int i;
-	for (i = 0; i < NPC; i++)
+	for (i = 0; i < nd->num_npc; i++)
 	{
-		if (arg->t[i].npc != NULL)
+		if (nd->t[i].npc != NULL)
 		{
-			arg->n[i].pos = arg->t[i].npc->pos;
+			nd->n[i].pos = nd->t[i].npc->pos;
 		}
 	}
 }
 
-void npctest_init(struct level_t *l, struct npctest *arg)
+void npc_init(struct level_t *l, struct npcdata *nd)
 {
-	arg->t = calloc(NPC, sizeof *arg->t);
+	nd->t = calloc(nd->num_npc, sizeof *nd->t);
 
 	int i;
-	for (i = 0; i < NPC; i++)
+	for (i = 0; i < nd->num_npc; i++)
 	{
-		if (arg->n[i].name[0] != '\0')
+		if (nd->n[i].name[0] != '\0')
 		{
-			arg->t[i].npc = npc_add(l, arg->n[i].name, arg->n[i].pos);
-			arg->t[i].sx = arg->n[i].pos.x / 32.0f;
-			arg->t[i].sy = arg->n[i].pos.y / 32.0f;
-			arg->t[i].sz = arg->n[i].pos.z / 32.0f;
+			nd->t[i].npc = npc_add(l, nd->n[i].name, nd->n[i].pos);
+			nd->t[i].sx = nd->n[i].pos.x / 32.0f;
+			nd->t[i].sy = nd->n[i].pos.y / 32.0f;
+			nd->t[i].sz = nd->n[i].pos.z / 32.0f;
 		}
 		else
 		{
-			arg->t[i].npc = NULL;
+			nd->t[i].npc = NULL;
 		}
 	}
 }
 
-void npctest_deinit(struct level_t *l, struct npctest *arg)
+void npc_deinit(struct level_t *l, struct npcdata *nd)
 {
-	npctest_save(l, arg);
+	npc_save(l, nd);
 
 	int i;
-	for (i = 0; i < NPC; i++)
+	for (i = 0; i < nd->num_npc; i++)
 	{
-		if (arg->t[i].npc != NULL)
+		if (nd->t[i].npc != NULL)
 		{
-			npc_del(arg->t[i].npc);
+			npc_del(nd->t[i].npc);
 		}
 
-		free(arg->t[i].path);
+		free(nd->t[i].path);
 	}
 
-	free(arg->t);
+	free(nd->t);
 }
 
-static int npctest_get_by_name(struct npctest *arg, const char *name)
+static int npc_get_by_name(struct npcdata *nd, const char *name)
 {
 	int i;
 
 	char *ep;
 	i = strtol(name, &ep, 10);
-	if (*ep == '\0' && i >= 0 && i < NPC && arg->n[i].name[0] != '\0') return i;
+	if (*ep == '\0' && i >= 0 && i < nd->num_npc && nd->n[i].name[0] != '\0') return i;
 
-	for (i = 0; i < NPC; i++)
+	for (i = 0; i < nd->num_npc; i++)
 	{
-		if (strcasecmp(arg->n[i].name, name) == 0)
+		if (strcasecmp(nd->n[i].name, name) == 0)
 		{
 			return i;
 		}
 	}
 
 	int n = strlen(name);
-	for (i = 0; i < NPC; i++)
+	for (i = 0; i < nd->num_npc; i++)
 	{
-		if (strncasecmp(arg->n[i].name, name, n) == 0)
+		if (strncasecmp(nd->n[i].name, name, n) == 0)
 		{
 			return i;
 		}
@@ -135,7 +142,39 @@ static int npctest_get_by_name(struct npctest *arg, const char *name)
 	return -1;
 }
 
-static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, int fm, int8_t *out)
+static int npc_allocate(struct level_hook_data_t *arg)
+{
+	struct npcdata *nd = arg->data;
+
+	/* Find and use an empty slot first */
+	int i;
+	for (i = 0; i < nd->num_npc; i++)
+	{
+		if (*nd->n[i].name == '\0') return i;
+	}
+
+	/* Create new slot */
+	arg->size = sizeof (struct npcdata) + sizeof (struct npcinfo) * (nd->num_npc + 1);
+	nd = realloc(arg->data, arg->size);
+	if (nd == NULL) return -1;
+	arg->data = nd;
+	memset(&nd->n[i], 0, sizeof nd->n[i]);
+
+	struct npctemp *t = realloc(nd->t, sizeof (struct npctemp) * (nd->num_npc + 1));
+	if (t == NULL)
+	{
+		LOG("Unable to reallocate npc tempdata\n");
+		return -1;
+	}
+	nd->t = t;
+	memset(&nd->t[i], 0, sizeof nd->t[i]);
+
+	nd->num_npc++;
+
+	return i;
+}
+
+static void npc_find_nearest(struct level_t *l, int i, struct npcdata *nd, int fm, uint16_t *out)
 {
 	long mindist = INT_MAX;
 	int nearest = -1;
@@ -143,7 +182,7 @@ static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, 
 
 	if (fm == FM_FIXED_PLAYER || fm == FM_FIXED_NPC) return;
 
-	const struct position_t us = arg->t[i].npc->pos;
+	const struct position_t us = nd->t[i].npc->pos;
 
 	if (fm == FM_RANDOM_PLAYER || fm == FM_RANDOM_ANY)
 	{
@@ -169,7 +208,7 @@ static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, 
 	{
 		for (j = 0; j < MAX_NPCS_PER_LEVEL; j++)
 		{
-			if (l->npcs[j] != NULL && l->npcs[j] != arg->t[i].npc)
+			if (l->npcs[j] != NULL && l->npcs[j] != nd->t[i].npc)
 			{
 				const struct position_t them = l->npcs[j]->pos;
 				int dx = us.x - them.x;
@@ -191,23 +230,27 @@ static void npctest_find_nearest(struct level_t *l, int i, struct npctest *arg, 
 	}
 }
 
-static void npctest_astar_cb(struct level_t *l, struct point *path, void *data)
+static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
 {
 	struct pftemp *temp = data;
-	struct npcinfo *ni = &temp->arg->t[temp->i];
+	struct level_hook_data_t *arg = temp->arg;
+	struct npcdata *nd = arg->data;
+	struct npctemp *ni = &nd->t[temp->i];
 
-	void *oldpath = ni->path;
-	ni->path = path;
-	ni->step = 0;
+	if (ni->path != NULL)
+	{
+		void *oldpath = ni->path;
+		ni->path = path;
+		ni->step = 0;
+		nd->n[temp->i].stareid = 0;
+		free(oldpath);
+	}
+
 	ni->pf = false;
-
-	temp->arg->n[temp->i].stareid = 0;
-
 	free(temp);
-	free(oldpath);
 }
 
-static const struct position_t *npctest_getpos(struct level_t *l, int nearest)
+static const struct position_t *npc_getpos(struct level_t *l, int nearest)
 {
 	nearest -= 1;
 
@@ -224,7 +267,7 @@ static const struct position_t *npctest_getpos(struct level_t *l, int nearest)
 	return &l->npcs[nearest]->pos;
 }
 
-static bool npctest_4point(const struct level_t *l, float x, float y, float z)
+static bool npc_4point(const struct level_t *l, float x, float y, float z)
 {
 	int bx = x - RADIUS;
 	int bz = z - RADIUS;
@@ -248,7 +291,7 @@ static inline bool fmatch(float a, float b)
 	return fabsf(a - b) < 0.05f;
 }
 
-static bool npctest_iswalkable(const struct level_t *l, float ax, float ay, float az, float bx, float by, float bz)
+static bool npc_iswalkable(const struct level_t *l, float ax, float ay, float az, float bx, float by, float bz)
 {
 	/* Cannot skip point if height changes */
 	if (!fmatch(ay, by)) return false;
@@ -267,8 +310,8 @@ static bool npctest_iswalkable(const struct level_t *l, float ax, float ay, floa
 
 	while (pos < length)
 	{
-		if (!npctest_4point(l, x, ay, z) || !npctest_4point(l, x, ay + 1.0f, z)) return false;
-		if (npctest_4point(l, x, ay - 1.0f, z)) return false;
+		if (!npc_4point(l, x, ay, z) || !npc_4point(l, x, ay + 1.0f, z)) return false;
+		if (npc_4point(l, x, ay - 1.0f, z)) return false;
 		pos += 0.25f;
 		x += ddx;
 		z += ddz;
@@ -278,14 +321,15 @@ static bool npctest_iswalkable(const struct level_t *l, float ax, float ay, floa
 }
 
 
-static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
+static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *arg)
 {
-	struct npcinfo *ni = &arg->t[i];
+	struct npcdata *nd = arg->data;
+	struct npctemp *ni = &nd->t[i];
 
 	/* Already getting a path... */
 	if (ni->pf) return;
 
-	const struct position_t *them = npctest_getpos(l, arg->n[i].followid);
+	const struct position_t *them = npc_getpos(l, nd->n[i].followid);
 
 	if (them == NULL) return;
 
@@ -295,7 +339,7 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 		free(ni->path);
 		ni->path = NULL;
 
-		arg->n[i].stareid = arg->n[i].followid;
+		nd->n[i].stareid = nd->n[i].followid;
 		return;
 	}
 
@@ -307,7 +351,7 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 	float bz = them->z / 32.0f;
 	float by = them->y / 32.0f - HEIGHT;
 
-	for (; by > 0 && npctest_4point(l, bx, by - 1, bz); by--);
+	for (; by > 0 && npc_4point(l, bx, by - 1, bz); by--);
 
 	struct point a;
 	a.x = ax; a.y = az; a.z = ay;
@@ -320,13 +364,13 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 		free(ni->path);
 		ni->path = NULL;
 
-		arg->n[i].stareid = arg->n[i].followid;
+		nd->n[i].stareid = nd->n[i].followid;
 		return;
 	}
 
-	if (npctest_iswalkable(l, ax, ay, az, bx, by, bz))
+	if (npc_iswalkable(l, ax, ay, az, bx, by, bz))
 	{
-		/* We can walk directly to our target, so don't bother pathfinding */
+		/* We can walk directly to our tndet, so don't bother pathfinding */
 		free(ni->path);
 		ni->path = malloc(3 * sizeof (struct point));
 		ni->step = 0;
@@ -340,7 +384,7 @@ static void npctest_replacepath(struct level_t *l, struct npctest *arg, int i)
 	temp->arg = arg;
 	temp->i = i;
 
-	astar_queue(l, &a, &b, &npctest_astar_cb, temp);
+	astar_queue(l, &a, &b, &npc_astar_cb, temp);
 	ni->pf = true;
 }
 
@@ -353,10 +397,10 @@ static inline float min(float a, float b)
 	return a < b ? a : b;
 }
 
-static bool npctest_canmoveto(struct level_t *l, float x, float y, float z, float dx, float dz)
+static bool npc_canmoveto(struct level_t *l, float x, float y, float z, float dx, float dz)
 {
-	if (!npctest_4point(l, x + dx, y - HEIGHT, z + dz)) return false;
-	if (!npctest_4point(l, x + dx, y - HEIGHT + 1.0f, z + dz)) return false;
+	if (!npc_4point(l, x + dx, y - HEIGHT, z + dz)) return false;
+	if (!npc_4point(l, x + dx, y - HEIGHT + 1.0f, z + dz)) return false;
 	return true;
 
 	int bx = x;
@@ -375,45 +419,49 @@ static bool npctest_canmoveto(struct level_t *l, float x, float y, float z, floa
 	return true;
 }
 
-static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
+static void npc_handle_tick(struct level_t *l, struct level_hook_data_t *arg)
 {
-	arg->i++;
+	struct npcdata *nd = arg->data;
+	nd->tick++;
 
-	int i = arg->i % 64;
-	if (arg->n[i].followid != 0)
+	int i;
+	for (i = nd->tick % 50; i < nd->num_npc; i += 50)
 	{
-		int8_t followid = arg->n[i].followid;
-		npctest_find_nearest(l, i, arg, arg->n[i].fm, &arg->n[i].followid);
-		if (followid != arg->n[i].followid)
+		if (nd->n[i].followid != 0)
 		{
-			npctest_replacepath(l, arg, i);
+			int8_t followid = nd->n[i].followid;
+			npc_find_nearest(l, i, nd, nd->n[i].fm, &nd->n[i].followid);
+			if (followid != nd->n[i].followid)
+			{
+				npc_replacepath(l, i, arg);
+			}
+		}
+		else if (nd->n[i].stareid != 0)
+		{
+			npc_find_nearest(l, i, nd, FM_RANDOM_PLAYER, &nd->n[i].stareid);
 		}
 	}
-	else if (arg->n[i].stareid != 0)
-	{
-		npctest_find_nearest(l, i, arg, FM_RANDOM_PLAYER, &arg->n[i].stareid);
-	}
 
-	for (i = 0; i < NPC; i++)
+	for (i = 0; i < nd->num_npc; i++)
 	{
-		struct npcinfo *ni = &arg->t[i];
+		struct npctemp *ni = &nd->t[i];
 		struct position_t *us = &ni->npc->pos;
 
-		if (arg->n[i].followid == 0) continue;
+		if (nd->n[i].followid == 0) continue;
 		/* Waiting for path */
 		if (ni->path == NULL)
 		{
-			npctest_replacepath(l, arg, i);
+			npc_replacepath(l, i, arg);
 		}
 		else
 		{
-			const struct position_t *them = npctest_getpos(l, arg->n[i].followid);
+			const struct position_t *them = npc_getpos(l, nd->n[i].followid);
 			if (them != NULL && position_match(&ni->npc->pos, them, 48)) continue;
 
 			const struct point *p = ni->path + ni->step;
 			if (p->x == -1)
 			{
-				npctest_replacepath(l, arg, i);
+				npc_replacepath(l, i, arg);
 			}
 			else
 			{
@@ -423,7 +471,7 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 
 				float azimuth = atan2(dz, dx);
 
-				if (arg->n[i].stareid == 0 && (arg->i % 8) == 0)
+				if (nd->n[i].stareid == 0 && (nd->tick % 8) == 0)
 				{
 					us->h = azimuth * 256 / (2 * M_PI) + 64;
 					us->p = 0;
@@ -438,7 +486,7 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 				float ddx = min(dx, cos(azimuth) * sp);
 				float ddz = min(dz, sin(azimuth) * sp);
 
-				if (npctest_canmoveto(l, ni->sx, ni->sy, ni->sz, ddx, ddz))
+				if (npc_canmoveto(l, ni->sx, ni->sy, ni->sz, ddx, ddz))
 				{
 					ni->sx += ddx;
 					ni->sz += ddz;
@@ -467,15 +515,15 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 				ni->sy += ni->vs;
 				if (ni->vs > 0.0f)
 				{
-					if (!npctest_4point(l, ni->sx, ni->sy + HEADROOM, ni->sz))
+					if (!npc_4point(l, ni->sx, ni->sy + HEADROOM, ni->sz))
 					{
 						ni->sy = ((int)(ni->sy - HEIGHT)) + HEIGHT + HEADROOM;
 						ni->vs = 0.0f;
 					}
 				}
-				if (ni->vs < 0.0f) // && arg->temp->sy[i] < (p->z + HEIGHT))
+				if (ni->vs < 0.0f) // && nd->temp->sy[i] < (p->z + HEIGHT))
 				{
-					if (!npctest_4point(l, ni->sx, ni->sy - HEIGHT, ni->sz))
+					if (!npc_4point(l, ni->sx, ni->sy - HEIGHT, ni->sz))
 					{
 						ni->sy = ((int)(ni->sy - HEIGHT)) + HEIGHT + 1.0f;
 						ni->vs = 0.0f;
@@ -489,7 +537,7 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 
 				us->y = ni->sy * 32.0f;
 
-				/* Check we're at approximately the centre of the target tile */
+				/* Check we're at approximately the centre of the tndet tile */
 				if (fmatch(ni->sx, p->x + 0.5f) &&
 					fmatch(ni->sz, p->y + 0.5f) &&
 					fmatch(ni->sy - HEIGHT, p->z))
@@ -499,17 +547,17 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 			}
 		}
 
-		if ((arg->i % 100) == 0) npctest_replacepath(l, arg, i);
+		if ((nd->tick % 100) == 0) npc_replacepath(l, i, arg);
 	}
 
 	const int step = 8;
-	for (i = arg->i % step; i < NPC; i += step)
+	for (i = nd->tick % step; i < nd->num_npc; i += step)
 	{
-		struct position_t *us = &arg->t[i].npc->pos;
+		struct position_t *us = &nd->t[i].npc->pos;
 
-		if (arg->n[i].stareid == 0) continue;
+		if (nd->n[i].stareid == 0) continue;
 
-		const struct position_t *them = npctest_getpos(l, arg->n[i].stareid);
+		const struct position_t *them = npc_getpos(l, nd->n[i].stareid);
 		if (them == NULL) continue;
 
 		int dx = us->x - them->x;
@@ -524,49 +572,51 @@ static void npctest_handle_tick(struct level_t *l, struct npctest *arg)
 	}
 }
 
-static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *data, struct npctest *arg)
+static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, struct level_hook_data_t *arg)
 {
+	struct npcdata *nd = arg->data;
 	char buf[65];
 
 	if (c->player->rank < RANK_OP) return false;
 
 	if (strncasecmp(data, "npc add ", 8) == 0)
 	{
-		int i;
-		for (i = 0; i < NPC; i++)
+		int i = npc_allocate(arg);
+		if (i > -1)
 		{
-			if (arg->n[i].name[0] == '\0')
-			{
-				snprintf(arg->n[i].name, sizeof arg->n[i].name, data + 8);
-				arg->t[i].npc = npc_add(l, arg->n[i].name, c->player->pos);
-				arg->t[i].sx = c->player->pos.x / 32.0f;
-				arg->t[i].sy = c->player->pos.y / 32.0f;
-				arg->t[i].sz = c->player->pos.z / 32.0f;
+			/* Might have reallocated */
+			nd = arg->data;
 
-				arg->n[i].followid = 0;
-				arg->n[i].stareid = 0;
+			snprintf(nd->n[i].name, sizeof nd->n[i].name, data + 8);
+			nd->t[i].npc = npc_add(l, nd->n[i].name, c->player->pos);
+			nd->t[i].sx = c->player->pos.x / 32.0f;
+			nd->t[i].sy = c->player->pos.y / 32.0f;
+			nd->t[i].sz = c->player->pos.z / 32.0f;
+			nd->n[i].followid = 0;
+			nd->n[i].stareid = 0;
 
-				snprintf(buf, sizeof buf, TAG_YELLOW "%s created", data + 8);
-				break;
-			}
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s created", data + 8);
 		}
-		if (i == NPC) snprintf(buf, sizeof buf, TAG_YELLOW "No free NPC slots");
+		else
+		{
+			snprintf(buf, sizeof buf, TAG_YELLOW "No free NPC slots");
+		}
 	}
 	else if (strncasecmp(data, "npc del ", 8) == 0)
 	{
-		int i = npctest_get_by_name(arg, data + 8);
+		int i = npc_get_by_name(nd, data + 8);
 
 		if (i >= 0)
 		{
-			snprintf(buf, sizeof buf, TAG_YELLOW "%s deleted", arg->n[i].name);
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s deleted", nd->n[i].name);
 
-			npc_del(arg->t[i].npc);
-			free(arg->t[i].path);
-			arg->n[i].name[0] = '\0';
-			arg->n[i].followid = 0;
-			arg->n[i].stareid = 0;
-			arg->t[i].npc = NULL;
-			arg->t[i].path = NULL;
+			npc_del(nd->t[i].npc);
+			free(nd->t[i].path);
+			nd->n[i].name[0] = '\0';
+			nd->n[i].followid = 0;
+			nd->n[i].stareid = 0;
+			nd->t[i].npc = NULL;
+			nd->t[i].path = NULL;
 		}
 		else
 		{
@@ -575,20 +625,20 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	}
 	else if (strncasecmp(data, "npc get ", 8) == 0)
 	{
-		int i = npctest_get_by_name(arg, data + 8);
+		int i = npc_get_by_name(nd, data + 8);
 
 		if (i >= 0)
 		{
-			arg->t[i].npc->pos = c->player->pos;
-			arg->t[i].sx = c->player->pos.x / 32.0f;
-			arg->t[i].sy = c->player->pos.y / 32.0f;
-			arg->t[i].sz = c->player->pos.z / 32.0f;
-			if (arg->n[i].followid != 0)
+			nd->t[i].npc->pos = c->player->pos;
+			nd->t[i].sx = c->player->pos.x / 32.0f;
+			nd->t[i].sy = c->player->pos.y / 32.0f;
+			nd->t[i].sz = c->player->pos.z / 32.0f;
+			if (nd->n[i].followid != 0)
 			{
-				npctest_replacepath(l, arg, i);
+				npc_replacepath(l, i, arg);
 			}
 
-			snprintf(buf, sizeof buf, TAG_YELLOW "Summoned %s", arg->n[i].name);
+			snprintf(buf, sizeof buf, TAG_YELLOW "Summoned %s", nd->n[i].name);
 		}
 		else
 		{
@@ -597,10 +647,10 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	}
 	else if (strncasecmp(data, "npc tp ", 7) == 0)
 	{
-		int i = npctest_get_by_name(arg, data + 7);
+		int i = npc_get_by_name(nd, data + 7);
 		if (i >= 0)
 		{
-			player_teleport(c->player, &arg->t[i].npc->pos, true);
+			player_teleport(c->player, &nd->t[i].npc->pos, true);
 			return true;
 		}
 		else
@@ -621,39 +671,39 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 
 		*name++ = '\0';
 
-		int i = npctest_get_by_name(arg, name);
+		int i = npc_get_by_name(nd, name);
 
 		if (i >= 0)
 		{
-			arg->n[i].followid = c->player->levelid + 1;
+			nd->n[i].followid = c->player->levelid + 1;
 
 			if (strcasecmp(buf2, "off") == 0)
 			{
-				arg->n[i].followid = 0;
+				nd->n[i].followid = 0;
 			}
 			else if (strcasecmp(buf2, "player") == 0)
 			{
-				arg->n[i].fm = FM_RANDOM_PLAYER;
+				nd->n[i].fm = FM_RANDOM_PLAYER;
 			}
 			else if (strcasecmp(buf2, "npc") == 0)
 			{
-				arg->n[i].fm = FM_RANDOM_NPC;
+				nd->n[i].fm = FM_RANDOM_NPC;
 			}
 			else if (strcasecmp(buf2, "any") == 0)
 			{
-				arg->n[i].fm = FM_RANDOM_ANY;
+				nd->n[i].fm = FM_RANDOM_ANY;
 			}
 			else if (strcasecmp(buf2, "me") == 0)
 			{
-				arg->n[i].fm = FM_FIXED_PLAYER;
+				nd->n[i].fm = FM_FIXED_PLAYER;
 			}
 			else
 			{
-				arg->n[i].followid = npctest_get_by_name(arg, buf2) + MAX_CLIENTS_PER_LEVEL + 1;
-				arg->n[i].fm = FM_FIXED_NPC;
+				nd->n[i].followid = npc_get_by_name(nd, buf2) + MAX_CLIENTS_PER_LEVEL + 1;
+				nd->n[i].fm = FM_FIXED_NPC;
 			}
 
-			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sfollowing", arg->n[i].name, arg->n[i].followid ? "" : "not ");
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sfollowing", nd->n[i].name, nd->n[i].followid ? "" : "not ");
 		}
 		else
 		{
@@ -664,19 +714,19 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	}
 	else if (strncasecmp(data, "npc stare ", 10) == 0)
 	{
-		int i = npctest_get_by_name(arg, data + 10);
+		int i = npc_get_by_name(nd, data + 10);
 
 		if (i >= 0)
 		{
-			if (arg->n[i].stareid == 0)
+			if (nd->n[i].stareid == 0)
 			{
-				arg->n[i].stareid = c->player->levelid + 1;
+				nd->n[i].stareid = c->player->levelid + 1;
 			}
 			else
 			{
-				arg->n[i].stareid = 0;
+				nd->n[i].stareid = 0;
 			}
-			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sstaring", arg->n[i].name, arg->n[i].stareid ? "" : "not ");
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sstaring", nd->n[i].name, nd->n[i].stareid ? "" : "not ");
 		}
 		else
 		{
@@ -686,17 +736,17 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	else if (strcasecmp(data, "npc wipe") == 0)
 	{
 		int i;
-		for (i = 0; i < NPC; i++)
+		for (i = 0; i < nd->num_npc; i++)
 		{
-			if (arg->n[i].name[0] != '\0')
+			if (nd->n[i].name[0] != '\0')
 			{
-				npc_del(arg->t[i].npc);
-				free(arg->t[i].path);
-				arg->n[i].name[0] = '\0';
-				arg->n[i].followid = 0;
-				arg->n[i].stareid = 0;
-				arg->t[i].npc = NULL;
-				arg->t[i].path = NULL;
+				npc_del(nd->t[i].npc);
+				free(nd->t[i].path);
+				nd->n[i].name[0] = '\0';
+				nd->n[i].followid = 0;
+				nd->n[i].stareid = 0;
+				nd->t[i].npc = NULL;
+				nd->t[i].path = NULL;
 			}
 		}
 		snprintf(buf, sizeof buf, TAG_YELLOW "NPCs wiped");
@@ -709,12 +759,12 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		bufp = buf + strlen(buf);
 
 		int i;
-		for (i = 0; i < NPC; i++)
+		for (i = 0; i < nd->num_npc; i++)
 		{
-			if (arg->n[i].name[0] == '\0') continue;
+			if (nd->n[i].name[0] == '\0') continue;
 
 			char buf2[64];
-			snprintf(buf2, sizeof buf2, " %d:%s", i, arg->n[i].name);
+			snprintf(buf2, sizeof buf2, " %d:%s", i, nd->n[i].name);
 
 			size_t len = strlen(buf2);
 			if (len >= sizeof buf - (bufp - buf))
@@ -739,51 +789,46 @@ static bool npctest_handle_chat(struct level_t *l, struct client_t *c, char *dat
 	return true;
 }
 
-static void npctest_handle_move(struct level_t *l, struct client_t *c, int index, struct npctest *arg)
-{
-	/* Changing levels, don't handle teleports */
-	if (c->player->level != c->player->new_level) return;
-}
+//static void npc_handle_move(struct level_t *l, struct client_t *c, int index, struct npcdata *nd)
+//{
+//	/* Changing levels, don't handle teleports */
+//	if (c->player->level != c->player->new_level) return;
+//}
 
-static bool npctest_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
+static bool npc_level_hook(int event, struct level_t *l, struct client_t *c, void *data, struct level_hook_data_t *arg)
 {
 	switch (event)
 	{
-		case EVENT_TICK: npctest_handle_tick(l, arg->data); break;
-		case EVENT_CHAT: return npctest_handle_chat(l, c, data, arg->data);
-		case EVENT_MOVE: npctest_handle_move(l, c, *(int *)data, arg->data); break;
-		case EVENT_SAVE: npctest_save(l, arg->data); break;
+		case EVENT_TICK: npc_handle_tick(l, arg); break;
+		case EVENT_CHAT: return npc_handle_chat(l, c, data, arg);
+		//case EVENT_MOVE: npc_handle_move(l, c, *(int *)data, arg->data); break;
+		case EVENT_SAVE: npc_save(l, arg->data); break;
 		case EVENT_INIT:
-		{
 			if (arg->size == 0)
 			{
-				LOG("Allocating new npctest data on %s\n", l->name);
+				LOG("Allocating new npc data on %s\n", l->name);
 			}
 			else
 			{
-				if (arg->size == sizeof (struct npctest))
+				struct npcdata *nd = arg->data;
+				if (arg->size == sizeof (struct npcdata) + sizeof (struct npcinfo) * nd->num_npc)
 				{
-					npctest_init(l, arg->data);
+					npc_init(l, arg->data);
 					break;
 				}
 
-				LOG("Found invalid npctest data on %s, erasing\n", l->name);
+				LOG("Found invalid npc data on %s, erasing\n", l->name);
 				free(arg->data);
 			}
 
-			arg->size = sizeof (struct npctest);
+			arg->size = sizeof (struct npcdata);
 			arg->data = calloc(1, arg->size);
-
-			struct npctest *npc = arg->data;
-			npc->t = calloc(NPC, sizeof *npc->t);
 			break;
-		}
+
 		case EVENT_DEINIT:
-		{
 			if (l == NULL) break;
 
-			npctest_deinit(l, arg->data);
-		}
+			npc_deinit(l, arg->data);
 	}
 
 	return false;
@@ -799,12 +844,12 @@ void module_init(void **data)
 	s_npcwall = register_blocktype(BLOCK_INVALID, "npcwall", RANK_MOD, &convert_npcwall, NULL, NULL, NULL, true, false, false);
 	s_door = blocktype_get_by_name("door");
 
-	register_level_hook_func("npctest", &npctest_level_hook);
+	register_level_hook_func("npc", &npc_level_hook);
 }
 
 void module_deinit(void *data)
 {
-	deregister_level_hook_func("npctest");
+	deregister_level_hook_func("npc");
 
 	deregister_blocktype(s_npcwall);
 }
