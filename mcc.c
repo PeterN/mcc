@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 			cuboid_process();
 			if ((tick % MS_TO_TICKS(g_server.pos_interval)) == 0)
 			{
-				player_send_positions(cur_ticks);
+				player_send_positions(cur_ticks / 1000);
 				npc_send_positions();
 			}
 		}
