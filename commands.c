@@ -1656,15 +1656,26 @@ CMD(perbuild)
 			client_notify(c, "User does not exist");
 			return false;
 		}
-		
-		if (param[1][0] == '-')
+
+		if (user_list_contains(&c->player->level->userbuild, globalid))
 		{
+			if (param[1][0] == '+')
+			{
+				client_notify(c, "User already in list");
+				return false;
+			}
 			user_list_del_item(&c->player->level->userbuild, globalid);
 		}
 		else
 		{
+			if (param[1][0] == '-')
+			{
+				client_notify(c, "user not in list");
+				return false;
+			}
 			user_list_add(&c->player->level->userbuild, globalid);
 		}
+
 		c->player->level->changed = true;
 		client_notify(c, "Build permission set");
 	}
@@ -1706,15 +1717,26 @@ CMD(perown)
 			client_notify(c, "User does not exist");
 			return false;
 		}
-		
-		if (param[1][0] == '-')
+
+		if (user_list_contains(&c->player->level->userown, globalid))
 		{
+			if (param[1][0] == '+')
+			{
+				client_notify(c, "User already in list");
+				return false;
+			}
 			user_list_del_item(&c->player->level->userown, globalid);
 		}
 		else
 		{
+			if (param[1][0] == '-')
+			{
+				client_notify(c, "user not in list");
+				return false;
+			}
 			user_list_add(&c->player->level->userown, globalid);
 		}
+
 		c->player->level->changed = true;
 		client_notify(c, "Own permission set");
 	}
@@ -1756,15 +1778,26 @@ CMD(pervisit)
 			client_notify(c, "User does not exist");
 			return false;
 		}
-		
-		if (param[1][0] == '-')
+
+		if (user_list_contains(&c->player->level->uservisit, globalid))
 		{
+			if (param[1][0] == '+')
+			{
+				client_notify(c, "User already in list");
+				return false;
+			}
 			user_list_del_item(&c->player->level->uservisit, globalid);
 		}
 		else
 		{
+			if (param[1][0] == '-')
+			{
+				client_notify(c, "user not in list");
+				return false;
+			}
 			user_list_add(&c->player->level->uservisit, globalid);
 		}
+
 		c->player->level->changed = true;
 		client_notify(c, "Visit permission set");
 	}

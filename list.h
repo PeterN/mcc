@@ -55,6 +55,18 @@ static inline void X ## _list_del_item(struct X ## _list_t *list, T item) \
 static inline void X ## _list_del_index(struct X ## _list_t *list, size_t index) \
 { \
 	list->items[index] = list->items[--list->used]; \
+} \
+\
+static inline bool X ## _list_contains(struct X ## _list_t *list, T item) \
+{ \
+	size_t i; \
+	for (i = 0; i < list->used; i++) \
+	{ \
+		if (compare_func(&list->items[i], &item)) { \
+			return true; \
+		} \
+	} \
+	return false; \
 }
 
 #endif /* LIST_H */
