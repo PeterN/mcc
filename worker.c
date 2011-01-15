@@ -3,17 +3,10 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <time.h>
 #include "queue.h"
 #include "worker.h"
 #include "mcc.h"
-
-static unsigned gettime(void)
-{
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
+#include "gettime.h"
 
 void *worker_thread(void *arg)
 {

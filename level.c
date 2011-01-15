@@ -23,6 +23,7 @@
 #include "network.h"
 #include "undodb.h"
 #include "util.h"
+#include "gettime.h"
 
 struct level_list_t s_levels;
 
@@ -1728,14 +1729,6 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
 			client_add_packet(c, packet_send_set_block(x, y, z, convert(level, index, b)));
 		}
 	}
-}
-
-static int gettime(void)
-{
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-
-	return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 static void level_run_physics(struct level_t *level, bool can_init, bool limit)
