@@ -144,7 +144,7 @@ static bool book_level_hook(int event, struct level_t *l, struct client_t *c, vo
 
 void module_init(void **data)
 {
-	s.book = register_blocktype(BLOCK_INVALID, "book", RANK_ADV_BUILDER, &convert_book, &trigger_book, &delete_book, NULL, false, false, false);
+	s.book = register_blocktype(BLOCK_INVALID, "book", RANK_ADMIN, &convert_book, &trigger_book, &delete_book, NULL, false, false, false);
 	register_level_hook_func("book", &book_level_hook);
 }
 
