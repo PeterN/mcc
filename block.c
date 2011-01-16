@@ -315,6 +315,11 @@ void physics_dirt(struct level_t *l, unsigned index, const struct block_t *block
 	}
 }
 
+static enum blocktype_t convert_water(struct level_t *level, unsigned index, const struct block_t *block)
+{
+	return WATERSTILL;
+}
+
 void physics_active_water_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, enum blocktype_t clash, enum blocktype_t convert)
 {
 	if (!level_valid_xyz(l, x, y, z)) return;
@@ -343,6 +348,11 @@ void physics_active_water(struct level_t *l, unsigned index, const struct block_
 	physics_active_water_sub(l, x + 1, y, z, block->type, LAVA, OBSIDIAN);
 	physics_active_water_sub(l, x, y, z - 1, block->type, LAVA, OBSIDIAN);
 	physics_active_water_sub(l, x, y, z + 1, block->type, LAVA, OBSIDIAN);
+}
+
+static enum blocktype_t convert_lava(struct level_t *level, unsigned index, const struct block_t *block)
+{
+	return LAVASTILL;
 }
 
 void physics_active_lava(struct level_t *l, unsigned index, const struct block_t *block)
@@ -576,9 +586,9 @@ void blocktype_init(void)
 	register_blocktype(WOOD, "wood", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
 	register_blocktype(SHRUB, "plant", RANK_GUEST, NULL, NULL, NULL, NULL, true, true, false);
 	register_blocktype(ADMINIUM, "adminium", RANK_OP, NULL, NULL, NULL, NULL, false, false, false);
-	register_blocktype(WATER, "active_water", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_water, false, true, true);
+	register_blocktype(WATER, "active_water", RANK_ADV_BUILDER, &convert_water, NULL, NULL, &physics_active_water, false, true, true);
 	register_blocktype(WATERSTILL, "water", RANK_BUILDER, NULL, NULL, NULL, NULL, false, true, true);
-	register_blocktype(LAVA, "active_lava", RANK_ADV_BUILDER, NULL, NULL, NULL, &physics_active_lava, false, true, true);
+	register_blocktype(LAVA, "active_lava", RANK_ADV_BUILDER, &convert_lava, NULL, NULL, &physics_active_lava, false, true, true);
 	register_blocktype(LAVASTILL, "lava", RANK_BUILDER, NULL, NULL, NULL, NULL, false, true, true);
 	register_blocktype(SAND, "sand", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false, false, false);
 	register_blocktype(GRAVEL, "gravel", RANK_GUEST, NULL, NULL, NULL, &physics_gravity, false, false, false);
