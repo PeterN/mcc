@@ -29,9 +29,12 @@ static int trigger_book(struct level_t *level, unsigned index, const struct bloc
 
 void delete_book(struct level_t *l, unsigned index, const struct block_t *block)
 {
-	char filename[20];
-	sprintf(filename, "book%04d.txt", block->data);
-	remove(filename);
+	if (block->data != 0)
+	{
+		char filename[20];
+		sprintf(filename, "book%04d.txt", block->data);
+		remove(filename);
+	}
 }
 
 struct book_t
