@@ -544,6 +544,7 @@ static void npc_handle_tick(struct level_t *l, struct level_hook_data_t *arg)
 				{
 					ni->step++;
 				}
+				l->changed = true;
 			}
 		}
 
@@ -596,6 +597,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 			nd->n[i].stareid = 0;
 
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s created", data + 8);
+			l->changed = true;
 		}
 		else
 		{
@@ -617,6 +619,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 			nd->n[i].stareid = 0;
 			nd->t[i].npc = NULL;
 			nd->t[i].path = NULL;
+			l->changed = true;
 		}
 		else
 		{
@@ -639,6 +642,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 			}
 
 			snprintf(buf, sizeof buf, TAG_YELLOW "Summoned %s", nd->n[i].name);
+			l->changed = true;
 		}
 		else
 		{
@@ -704,6 +708,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 			}
 
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sfollowing", nd->n[i].name, nd->n[i].followid ? "" : "not ");
+			l->changed = true;
 		}
 		else
 		{
@@ -727,6 +732,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 				nd->n[i].stareid = 0;
 			}
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s now %sstaring", nd->n[i].name, nd->n[i].stareid ? "" : "not ");
+			l->changed = true;
 		}
 		else
 		{
@@ -750,6 +756,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 			}
 		}
 		snprintf(buf, sizeof buf, TAG_YELLOW "NPCs wiped");
+		l->changed = true;
 	}
 	else if (strcasecmp(data, "npc list") == 0)
 	{
