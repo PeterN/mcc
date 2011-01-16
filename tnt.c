@@ -23,7 +23,7 @@ static int trigger_active_tnt(struct level_t *l, unsigned index, const struct bl
 static enum blocktype_t convert_explosion(struct level_t *level, unsigned index, const struct block_t *block)
 {
 	/* Flicker */
-	return HasBit(block->data, 12) ? AIR : LAVA;
+	return HasBit(block->data, 12) ? AIR : LAVASTILL;
 }
 
 static void physics_explosion_sub(struct level_t *l, int16_t x, int16_t y, int16_t z, enum blocktype_t type, int magnitude)
