@@ -7,6 +7,7 @@ static struct
 	enum blocktype_t active_tnt;
 	enum blocktype_t explosion;
 	enum blocktype_t fuse;
+	enum blocktype_t fire;
 } s;
 
 static enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index, const struct block_t *block)
@@ -55,13 +56,14 @@ static void physics_active_tnt(struct level_t *l, unsigned index, const struct b
 				if (!level_valid_xyz(l, bx, by, bz)) continue;
 
 				index = level_get_index(l, bx, by, bz);
-				if (l->blocks[index].fixed || l->blocks[index].type == ADMINIUM || l->blocks[index].type == s.explosion) continue;
+				const enum blocktype_t type = l->blocks[index].type;
+				if (l->blocks[index].fixed || type == ADMINIUM || type == s.explosion || type == s.fire) continue;
 
-				if (l->blocks[index].type == s.active_tnt)
+				if (type == s.active_tnt)
 				{
 					if (l->blocks[index].data == 0) level_addupdate(l, index, BLOCK_INVALID, ((rand() % 5 + 5) << 8) | 1);
 				}
-				else if (l->blocks[index].type == s.fuse)
+				else if (type == s.fuse)
 				{
 					/* Trigger fuse early */
 					if (l->blocks[index].data == 0) level_addupdate(l, index, BLOCK_INVALID, 2);
@@ -71,7 +73,14 @@ static void physics_active_tnt(struct level_t *l, unsigned index, const struct b
 					int d = dx * dx + dy * dy + dz * dz;
 					if (d < r2)
 					{
-						level_addupdate(l, index, s.explosion, 8);
+						if (type == LEAF || type == WOOD || type == TRUNK || type == BOOKCASE)
+						{
+							level_addupdate(l, index, s.fire, 500);
+						}
+						else
+						{
+							level_addupdate(l, index, s.explosion, 8);
+						}
 					}
 				}
 			}
@@ -241,11 +250,78 @@ static void physics_fuse(struct level_t *l, unsigned index, const struct block_t
 	}
 }
 
+static enum blocktype_t convert_fire(struct level_t *level, unsigned index, const struct block_t *block)
+{
+	//return block->data % 198 == 0 ? AIR : LAVASTILL;
+	return LAVASTILL;
+}
+
+/* Can't trigger lava :/ */
+/*static int trigger_fire(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
+{
+	return (rand() % 9 < 3) ? TRIG_NONE : TRIG_FILL;
+}*/
+
+static bool physics_fire_sub(struct level_t *l, int x, int y, int z, int dy, int stage)
+{
+	if (!level_valid_xyz(l, x, y, z)) return false;
+
+	unsigned index = level_get_index(l, x, y, z);
+	if (l->blocks[index].fixed) return false;
+
+	enum blocktype_t type = l->blocks[index].type;
+	if (type == LEAF || type == WOOD || type == TRUNK || type == BOOKCASE)
+	{
+		level_addupdate(l, index, s.fire, stage);
+		return true;
+	}
+	else if (type == AIR && dy > 0 && rand() % 30 == 0)
+	{
+		level_addupdate(l, index, s.fire, 50);
+		return true;
+	}
+
+	return false;
+}
+
+static void physics_fire(struct level_t *l, unsigned index, const struct block_t *block)
+{
+	int stage = GetBits(block->data, 0, 8);
+	if (stage > 0)
+	{
+		if (rand() % 50 == 0)
+		{
+			int16_t x, y, z, dx, dy, dz;
+			level_get_xyz(l, index, &x, &y, &z);
+
+			int i;
+			for (i = 0; i < 10; i++)
+			{
+				int s = rand() % 45;
+				dx = (s % 3) - 1;
+				dz = ((s / 3) % 3) - 1;
+				dy = (s / 9) - 1;
+
+				if (dx == 0 && dy == 0 && dz == 0) continue;
+
+				if (physics_fire_sub(l, x + dx, y + dy, z + dz, dy, stage + rand() % (500 - stage))) break;
+			}
+		}
+
+		level_addupdate(l, index, BLOCK_INVALID, stage - 1);
+	}
+	else
+	{
+		level_addupdate(l, index, AIR, 0);
+	}
+}
+
 void module_init(void **data)
 {
 	s.active_tnt = register_blocktype(BLOCK_INVALID, "active_tnt", RANK_ADV_BUILDER, &convert_active_tnt, &trigger_active_tnt, NULL, &physics_active_tnt, false, false, false);
 	s.explosion = register_blocktype(BLOCK_INVALID, "explosion", RANK_ADV_BUILDER, &convert_explosion, NULL, NULL, &physics_explosion, false, true, false);
 	s.fuse = register_blocktype(BLOCK_INVALID, "fuse", RANK_ADV_BUILDER, &convert_fuse, &trigger_fuse, NULL, &physics_fuse, false, false, false);
+	s.fire = register_blocktype(BLOCK_INVALID, "fire", RANK_OP, &convert_fire, NULL, NULL, &physics_fire, false, false, false);
 }
 
 void module_deinit(void *data)
@@ -253,4 +329,5 @@ void module_deinit(void *data)
 	deregister_blocktype(s.active_tnt);
 	deregister_blocktype(s.explosion);
 	deregister_blocktype(s.fuse);
+	deregister_blocktype(s.fire);
 }
