@@ -110,10 +110,7 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 		if (hit)
 		{
 			level_addupdate(l, loc, s_active_tnt, 0x401);
-			cg->c[i].active = false;
-			cg->c[i].loc = -1;
 			printf("Hit at %f %f %f\n", cg->c[i].x, cg->c[i].y, cg->c[i].z);
-			break;
 		}
 
 		if (cg->c[i].loc != -1 && cg->c[i].loc != cg->c[i].origin && cg->c[i].loc != loc)
@@ -121,6 +118,13 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 			s_block.type = AIR;
 			level_change_block_force(l, &s_block, cg->c[i].loc);
 			physics_list_add(&l->physics, cg->c[i].loc);
+		}
+
+		if (hit)
+		{
+			cg->c[i].loc = -1;
+			cg->c[i].active = false;
+			break;
 		}
 
 		if (valid)
