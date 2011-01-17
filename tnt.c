@@ -42,6 +42,7 @@ static void physics_active_tnt(struct level_t *l, unsigned index, const struct b
 	level_get_xyz(l, index, &x, &y, &z);
 
 	int dx, dy, dz, bx, by, bz;
+	int r2 = r * r;
 	for (dx = -r; dx <= r; dx++)
 	{
 		for (dy = -r; dy <= r; dy++)
@@ -67,8 +68,8 @@ static void physics_active_tnt(struct level_t *l, unsigned index, const struct b
 				}
 				else if (rand() % 4 < 3)
 				{
-					float d = sqrtf(dx * dx + dy * dy + dz * dz);
-					if (d < r)
+					int d = dx * dx + dy * dy + dz * dz;
+					if (d < r2)
 					{
 						level_addupdate(l, index, s.explosion, 8);
 					}
