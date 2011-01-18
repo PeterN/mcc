@@ -22,7 +22,7 @@ static void physics_cannon(struct level_t *level, unsigned index, const struct b
 	/* Decrement reload counter */
 	if (block->data > 0)
 	{
-		level_addupdate(level, index, BLOCK_INVALID, block->data - 1);
+		level_addupdate(level, index, block->type, block->data - 1);
 	}
 }
 

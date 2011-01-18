@@ -1826,17 +1826,15 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 		struct block_update_t *bu = &level->updates.items[level->updates_iter];
 		struct block_t *b = &level->blocks[bu->index];
 
+		if (!b->touched && b->type != bu->oldtype) b->touched = true;
+
 		/* Already touched this block */
 		if (b->touched) continue;
 
 		enum blocktype_t pt1 = convert(level, bu->index, b);
 
-		if (bu->newtype != BLOCK_INVALID)
-		{
-			b->type = bu->newtype;
-		}
-
 		b->touched = true;
+		b->type = bu->newtype;
 		b->data = bu->newdata;
 		b->physics = blocktype_has_physics(b->type);
 		if (b->physics) physics_list_add(&level->physics, bu->index);

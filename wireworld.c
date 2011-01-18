@@ -21,7 +21,7 @@ static int trigger_wire(struct level_t *l, unsigned index, const struct block_t 
 {
 	if (block->data == 0)
 	{
-		level_addupdate(l, index, -1, 1);
+		level_addupdate(l, index, block->type, 1);
 	}
 
 	return TRIG_FILL;
@@ -44,11 +44,11 @@ static void physics_wire(struct level_t *l, unsigned index, const struct block_t
 {
 	if (block->data == 2)
 	{
-		level_addupdate(l, index, -1, 0);
+		level_addupdate(l, index, block->type, 0);
 	}
 	else if (block->data == 1)
 	{
-		level_addupdate(l, index, -1, 2);
+		level_addupdate(l, index, block->type, 2);
 	}
 	else
 	{
@@ -68,11 +68,11 @@ static void physics_wire(struct level_t *l, unsigned index, const struct block_t
 
 		if (n == 1 || n == 2)
 		{
-			level_addupdate(l, index, -1, 1);
+			level_addupdate(l, index, block->type, 1);
 		}
 		else
 		{
-			level_addupdate(l, index, -1, 0);
+			level_addupdate(l, index, block->type, 0);
 		}
 	}
 }
@@ -81,11 +81,11 @@ static void physics_wire3d(struct level_t *l, unsigned index, const struct block
 {
 	if (block->data == 2)
 	{
-		level_addupdate(l, index, -1, 0);
+		level_addupdate(l, index, block->type, 0);
 	}
 	else if (block->data == 1)
 	{
-		level_addupdate(l, index, -1, 2);
+		level_addupdate(l, index, block->type, 2);
 	}
 	else
 	{
@@ -104,7 +104,7 @@ static void physics_wire3d(struct level_t *l, unsigned index, const struct block
 					n += physics_wire_sub(l, x + dx, y + dy, z + dz, block->type);
 					if (n > 2)
 					{
-						level_addupdate(l, index, -1, 0);
+						level_addupdate(l, index, block->type, 0);
 						return;
 					}
 				}
@@ -113,11 +113,11 @@ static void physics_wire3d(struct level_t *l, unsigned index, const struct block
 
 		if (n == 1 || n == 2)
 		{
-			level_addupdate(l, index, -1, 1);
+			level_addupdate(l, index, block->type, 1);
 		}
 		else
 		{
-			level_addupdate(l, index, -1, 0);
+			level_addupdate(l, index, block->type, 0);
 		}
 	}
 }

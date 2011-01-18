@@ -73,7 +73,7 @@ static void trigger_door_sub(struct level_t *l, int16_t x, int16_t y, int16_t z,
 	unsigned index = level_get_index(l, x, y, z);
 	if (l->blocks[index].type == type && l->blocks[index].data == 0)
 	{
-		level_addupdate(l, index, -1, 20);
+		level_addupdate(l, index, type, 20);
 	}
 }
 
@@ -81,7 +81,7 @@ static int trigger_door(struct level_t *l, unsigned index, const struct block_t 
 {
 	if (block->data == 0)
 	{
-		level_addupdate(l, index, -1, 20);
+		level_addupdate(l, index, block->type, 20);
 	}
 
 	return TRIG_EMPTY;
@@ -104,7 +104,7 @@ static void physics_door(struct level_t *l, unsigned index, const struct block_t
 			trigger_door_sub(l, x, y, z + 1, block->type);
 		}
 
-		level_addupdate(l, index, -1, block->data - 1);
+		level_addupdate(l, index, block->type, block->data - 1);
 	}
 }
 

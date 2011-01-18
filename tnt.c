@@ -1,6 +1,8 @@
 #include <math.h>
 #include "level.h"
 #include "block.h"
+#include "colour.h"
+#include "network.h"
 
 static struct
 {
@@ -17,7 +19,7 @@ static enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index
 
 static int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
-	level_addupdate(l, index, BLOCK_INVALID, ((rand() % 3 + 3) << 8) | 1);
+	level_addupdate(l, index, block->type, ((rand() % 3 + 3) << 8) | 1);
 
 	return TRIG_FILL;
 }
@@ -25,7 +27,7 @@ static int trigger_active_tnt(struct level_t *l, unsigned index, const struct bl
 static void physics_active_tnt(struct level_t *l, unsigned index, const struct block_t *block)
 {
 	int r = GetBits(block->data, 0, 8);
-	if (r == 0) return;
+	if (r == 0 || r > 7) return;
 
 	int mr = GetBits(block->data, 8, 8);
 
@@ -36,13 +38,14 @@ static void physics_active_tnt(struct level_t *l, unsigned index, const struct b
 	}
 	else
 	{
-		level_addupdate(l, index, BLOCK_INVALID, (mr << 8) | nr);
+		level_addupdate(l, index, block->type, (mr << 8) | nr);
 	}
 
 	int16_t x, y, z;
 	level_get_xyz(l, index, &x, &y, &z);
 
 	int dx, dy, dz, bx, by, bz;
+	int r1 = (r - 1) * (r - 1);
 	int r2 = r * r;
 	for (dx = -r; dx <= r; dx++)
 	{
@@ -59,19 +62,20 @@ static void physics_active_tnt(struct level_t *l, unsigned index, const struct b
 				const enum blocktype_t type = l->blocks[index].type;
 				if (l->blocks[index].fixed || type == ADMINIUM || type == s.explosion || type == s.fire) continue;
 
-				if (type == s.active_tnt)
+				int d = dx * dx + dy * dy + dz * dz;
+				if (d >= r1 && d < r2)
 				{
-					if (l->blocks[index].data == 0) level_addupdate(l, index, BLOCK_INVALID, ((rand() % 5 + 5) << 8) | 1);
-				}
-				else if (type == s.fuse)
-				{
-					/* Trigger fuse early */
-					if (l->blocks[index].data == 0) level_addupdate(l, index, BLOCK_INVALID, 2);
-				}
-				else if (rand() % 4 < 3)
-				{
-					int d = dx * dx + dy * dy + dz * dz;
-					if (d < r2)
+					if (type == s.active_tnt)
+					{
+						if (l->blocks[index].data == 0) level_addupdate(l, index, type, ((rand() % 3 + 4) << 8) | 1);
+					}
+					else if (type == s.fuse)
+					{
+						/* Trigger fuse early */
+						if (l->blocks[index].data == 0) level_addupdate(l, index, type, 2);
+					}
+
+					if (rand() % 4 < 3)
 					{
 						if (type == LEAF || type == WOOD || type == TRUNK || type == BOOKCASE)
 						{
@@ -136,7 +140,7 @@ static void physics_explosion(struct level_t *l, unsigned index, const struct bl
 			invis = true;
 		}
 
-		level_addupdate(l, index, BLOCK_INVALID, (invis << 12) | (tr - 1));
+		level_addupdate(l, index, block->type, (invis << 12) | (tr - 1));
 	}
 
 	/*
@@ -191,7 +195,7 @@ static enum blocktype_t convert_fuse(struct level_t *level, unsigned index, cons
 
 static int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
-	level_addupdate(l, index, -1, 5);
+	level_addupdate(l, index, block->type, 5);
 
 	return TRIG_FILL;
 }
@@ -205,16 +209,20 @@ static void physics_fuse_sub(struct level_t *l, int16_t x, int16_t y, int16_t z)
 	/* Don't mess with fixed blocks */
 	if (l->blocks[index].fixed) return;
 
-	if (l->blocks[index].type == s.fuse)
+	enum blocktype_t type = l->blocks[index].type;
+	if (type == s.fuse)
 	{
 		if (l->blocks[index].data == 0)
 		{
-			level_addupdate(l, index, BLOCK_INVALID, 5);
+			level_addupdate(l, index, type, 5);
 		}
 	}
-	else if (l->blocks[index].type == s.active_tnt)
+	else if (type == s.active_tnt)
 	{
-		level_addupdate(l, index, BLOCK_INVALID, ((rand() % 3 + 3) << 8) | 1);
+		if (l->blocks[index].data == 0)
+		{
+			level_addupdate(l, index, type, ((rand() % 3 + 3) << 8) | 1);
+		}
 	}
 }
 
@@ -246,7 +254,7 @@ static void physics_fuse(struct level_t *l, unsigned index, const struct block_t
 	}
 	else
 	{
-		level_addupdate(l, index, BLOCK_INVALID, (stage - 1) | ((rand() % 4) << 8));
+		level_addupdate(l, index, block->type, (stage - 1) | ((rand() % 4) << 8));
 	}
 }
 
@@ -280,6 +288,20 @@ static bool physics_fire_sub(struct level_t *l, int x, int y, int z, int dy, int
 		level_addupdate(l, index, s.fire, 50);
 		return true;
 	}
+	else if (type == s.fuse)
+	{
+		if (l->blocks[index].data == 0)
+		{
+			level_addupdate(l, index, type, 5);
+		}
+	}
+	else if (type == s.active_tnt)
+	{
+		if (l->blocks[index].data == 0)
+		{
+			level_addupdate(l, index, type, ((rand() % 3 + 3) << 8) | 1);
+		}
+	}
 
 	return false;
 }
@@ -308,7 +330,7 @@ static void physics_fire(struct level_t *l, unsigned index, const struct block_t
 			}
 		}
 
-		level_addupdate(l, index, BLOCK_INVALID, stage - 1);
+		level_addupdate(l, index, block->type, stage - 1);
 	}
 	else
 	{

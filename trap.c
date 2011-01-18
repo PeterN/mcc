@@ -10,7 +10,7 @@ static enum blocktype_t convert_trap(struct level_t *level, unsigned index, cons
 
 static void physics_trap(struct level_t *l, unsigned index, const struct block_t *block)
 {
-	level_addupdate(l, index, BLOCK_INVALID, (block->data + 1) % 40);
+	level_addupdate(l, index, block->type, (block->data + 1) % 40);
 }
 
 void module_init(void **data)

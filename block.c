@@ -167,20 +167,21 @@ void physics_air_sub(struct level_t *l, unsigned index2, int16_t x, int16_t y, i
 	unsigned index = level_get_index(l, x, y, z);
 	if (l->blocks[index].fixed) return;
 
-	switch (l->blocks[index].type)
+	enum blocktype_t type = l->blocks[index].type;
+	switch (type)
 	{
 		default: return;
 		case WATER:
 		case LAVA:
 			/* Reactivate water */
-			if (data == 0) level_addupdate(l, index, -1, 0);
+			if (data == 0) level_addupdate(l, index, type, 0);
 			return;
 
 		case SAND:
 		case GRAVEL:
 			if (gravity)
 			{
-				level_addupdate(l, index, -1, 0);
+				level_addupdate(l, index, type, 0);
 			}
 			return;
 	}
@@ -236,7 +237,7 @@ void delete_air(struct level_t *l, unsigned index, const struct block_t *block)
 		{
 			case GRASS:
 //				if (l->blocks[index2].data == 1)
-					level_addupdate(l, index2, BLOCK_INVALID, 0);
+					level_addupdate(l, index2, GRASS, 0);
 				break;
 
 //			case DIRT:
@@ -264,7 +265,7 @@ void physics_air(struct level_t *l, unsigned index, const struct block_t *block)
 		{
 //			if (flood == 0)
 //			{
-				level_addupdate(l, index, -1, 1);
+				level_addupdate(l, index, AIR, 1);
 				flood = 1;
 //			}
 		}
@@ -296,7 +297,7 @@ void physics_grass(struct level_t *l, unsigned index, const struct block_t *bloc
 	}
 	else
 	{
-		level_addupdate(l, index, BLOCK_INVALID, block->data + 1);
+		level_addupdate(l, index, GRASS, block->data + 1);
 	}
 }
 
@@ -311,7 +312,7 @@ void physics_dirt(struct level_t *l, unsigned index, const struct block_t *block
 	}
 	else
 	{
-		level_addupdate(l, index, BLOCK_INVALID, block->data + 1);
+		level_addupdate(l, index, DIRT, block->data + 1);
 	}
 }
 
@@ -359,7 +360,7 @@ void physics_active_lava(struct level_t *l, unsigned index, const struct block_t
 {
 	if (block->data < 20)
 	{
-		level_addupdate(l, index, BLOCK_INVALID, block->data + 1);
+		level_addupdate(l, index, LAVA, block->data + 1);
 	}
 	else
 	{
@@ -500,7 +501,7 @@ void physics_active_sponge(struct level_t *l, unsigned index, const struct block
 
 		/* Leave a 'trail' of 10 blocks of active sponge to prevent
 		 * active water/lava coming back so soon. */
-		level_addupdate(l, index, BLOCK_INVALID, 10);
+		level_addupdate(l, index, block->type, 10);
 	}
 	else
 	{
@@ -510,7 +511,7 @@ void physics_active_sponge(struct level_t *l, unsigned index, const struct block
 		}
 		else
 		{
-			level_addupdate(l, index, BLOCK_INVALID, block->data - 1);
+			level_addupdate(l, index, block->type, block->data - 1);
 		}
 	}
 }

@@ -35,7 +35,7 @@ static enum blocktype_t convert_spleef2(struct level_t *level, unsigned index, c
 
 static int trigger_spleef(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
 {
-	level_addupdate(level, index, -1, 1);
+	level_addupdate(level, index, block->type, 1);
 	return TRIG_EMPTY;
 }
 
@@ -44,10 +44,11 @@ static void physics_spleef_sub(struct level_t *level, int16_t x, int16_t y, int1
 	if (x < 0 || y < 0 || z < 0 || x >= level->x || y >= level->y || z >= level->z) return;
 
 	unsigned index = level_get_index(level, x, y, z);
-	if (level->blocks[index].type == s.spleef1 || level->blocks[index].type == s.spleef2)
+	enum blocktype_t type = level->blocks[index].type;
+	if (type == s.spleef1 || type == s.spleef2)
 	{
 		if (level->blocks[index].data < 2)
-			level_addupdate(level, index, -1, 2);
+			level_addupdate(level, index, type, 2);
 	}
 }
 
@@ -70,11 +71,11 @@ static void physics_spleef(struct level_t *level, unsigned index, const struct b
 			/* Fall through */
 
 		default:
-			level_addupdate(level, index, -1, block->data + 1);
+			level_addupdate(level, index, block->type, block->data + 1);
 			break;
 
 		case 10:
-			level_addupdate(level, index, -1, 0);
+			level_addupdate(level, index, block->type, 0);
 			break;
 	}
 }
