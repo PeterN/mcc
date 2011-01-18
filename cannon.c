@@ -90,7 +90,6 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 				}
 				else
 				{
-					printf("type %s\n", blocktype_get_name(l->blocks[newloc].type));
 					hit = true;
 					/* Hit something */
 					break;
@@ -110,7 +109,6 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 		if (hit)
 		{
 			level_addupdate(l, loc, s_active_tnt, 0x401);
-			printf("Hit at %f %f %f\n", cg->c[i].x, cg->c[i].y, cg->c[i].z);
 		}
 
 		if (cg->c[i].loc != -1 && cg->c[i].loc != cg->c[i].origin && cg->c[i].loc != loc)
