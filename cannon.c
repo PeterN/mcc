@@ -151,12 +151,12 @@ static void cannons_handle_block(struct level_t *l, struct client_t *c, struct b
 	{
 		be->nt = be->bt;
 
-		//unsigned index = level_get_index(l, be->x, be->y, be->z);
-		//if (l->blocks[index].data != 0)
-		//{
-		//	client_notify(c, TAG_YELLOW "Cannot fire, reloading...");
-		//	return;
-		//}
+		unsigned index = level_get_index(l, be->x, be->y, be->z);
+		if (l->blocks[index].data != 0)
+		{
+			client_notify(c, TAG_YELLOW "Cannot fire, reloading...");
+			return;
+		}
 
 		/* Left click */
 		int i = c->player->levelid;
@@ -185,7 +185,7 @@ static void cannons_handle_block(struct level_t *l, struct client_t *c, struct b
 
 		client_notify(c, TAG_YELLOW "Fire!");
 
-		//level_addupdate(l, index, BLOCK_INVALID, 40);
+		level_addupdate(l, index, be->bt, 40);
 	}
 }
 
@@ -263,7 +263,7 @@ static bool cannons_level_hook(int event, struct level_t *l, struct client_t *c,
 
 void module_init(void **data)
 {
-	s_cannon = register_blocktype(BLOCK_INVALID, "cannon", RANK_ADV_BUILDER, &convert_cannon, NULL, NULL, NULL, false, false, false);
+	s_cannon = register_blocktype(BLOCK_INVALID, "cannon", RANK_ADV_BUILDER, &convert_cannon, NULL, NULL, &physics_cannon, false, false, false);
 	s_cannon_ball = register_blocktype(BLOCK_INVALID, "cannon_ball", RANK_ADMIN, &convert_cannon_ball, NULL, NULL, NULL, false, false, false);
 
 	s_active_tnt = blocktype_get_by_name("active_tnt");
