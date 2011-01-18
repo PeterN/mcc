@@ -54,7 +54,6 @@ void cuboid_process(void)
 					{
 						unsigned index2 = level_get_index(c->srclevel, c->cx, c->cy, c->cz);
 						*b = c->srclevel->blocks[index2];
-						b->touched = true;
 					}
 					else
 					{
@@ -64,7 +63,6 @@ void cuboid_process(void)
 						b->owner = (c->new_type == AIR && !c->fixed) ? 0 : c->owner;
 						b->fixed = c->fixed;
 						b->physics = blocktype_has_physics(c->new_type);
-						b->touched = true;
 					}
 
 					if (oldphysics != b->physics)

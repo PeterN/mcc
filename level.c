@@ -1805,55 +1805,29 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 	{
 		if (!can_init) return;
 
-	   // LOG("Starting update run with %lu blocks\n", level->updates.used)
-
 		level->updates_runtime = 0;
-
-		int i;
-		for (i = 0; i < level->updates.used; i++)
-		{
-			struct block_update_t *bu = &level->updates.items[i];
-			struct block_t *b = &level->blocks[bu->index];
-			b->touched = b->type != bu->oldtype;
-		}
 	}
 
 	//LOG("Done %d out of %lu\n", level->updates_iter, level->updates.used);
 
-	int n = g_server.cuboid_max;
-	for (; level->updates_iter < level->updates.used; level->updates_iter++)
+	if (limit)
 	{
-		struct block_update_t *bu = &level->updates.items[level->updates_iter];
-		struct block_t *b = &level->blocks[bu->index];
-
-		if (!b->touched && b->type != bu->oldtype) b->touched = true;
-
-		/* Already touched this block */
-		if (b->touched) continue;
-
-		enum blocktype_t pt1 = convert(level, bu->index, b);
-
-		b->touched = true;
-		b->type = bu->newtype;
-		b->data = bu->newdata;
-		b->physics = blocktype_has_physics(b->type);
-		if (b->physics) physics_list_add(&level->physics, bu->index);
-
-		enum blocktype_t pt2 = convert(level, bu->index, b);
-		int16_t x, y, z;
-		level_get_xyz(level, bu->index, &x, &y, &z);
-
-		/* Don't send client updates when in "no limits" or instant mode */
-		if (limit && !level->instant && pt1 != pt2)
+		int n = g_server.cuboid_max;
+		for (; level->updates_iter < level->updates.used; level->updates_iter++)
 		{
+			struct block_update_t *bu = &level->updates.items[level->updates_iter];
+
+			int16_t x, y, z;
+			level_get_xyz(level, bu->index, &x, &y, &z);
+
 			unsigned j;
-			for (j = 0; j < s_clients.used; j++)
+			for (j = 0; j < MAX_CLIENTS_PER_LEVEL; j++)
 			{
-				struct client_t *c = s_clients.items[j];
-				if (c->player == NULL) continue;
-				if (c->player->level == level)
+				struct client_t *c = level->clients[j];
+				if (c == NULL || c->player == NULL) continue;
+				if (!c->waiting_for_level && !c->sending_level)
 				{
-					client_add_packet(c, packet_send_set_block(x, y, z, pt2));
+					client_add_packet(c, packet_send_set_block(x, y, z, bu->newtype));
 				}
 			}
 
@@ -1890,38 +1864,26 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
 {
-	struct block_update_t bu;
-	bu.index = index;
-	bu.oldtype = level->blocks[index].type;
-	bu.newtype = newtype;
-	bu.newdata = newdata;
-	block_update_list_add(&level->updates, bu);
-}
+	struct block_t *b = &level->blocks[index];
 
-void level_addupdate_override(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
-{
-	/* Time sink? */
-	unsigned i;
-	for (i = 0; i < level->updates.used; i++)
+	enum blocktype_t pt1 = convert(level, index, b);
+
+	b->type = newtype;
+	b->data = newdata;
+	b->physics = blocktype_has_physics(b->type);
+
+	if (b->physics) physics_list_add(&level->physics, index);
+
+	enum blocktype_t pt2 = convert(level, index, b);
+
+	if (pt1 != pt2)
 	{
-		struct block_update_t *bu = &level->updates.items[i];
-		if (index == bu->index) {
-			/* Override update */
-			if (bu->newtype == WATER)
-			{
-				bu->newtype = newtype;
-				bu->newdata = newdata;
-			}
-			return;
-		}
-	}
+		struct block_update_t bu;
+		bu.index = index;
+		bu.newtype = pt2;
 
-	struct block_update_t bu;
-	bu.index = index;
-	bu.oldtype = level->blocks[index].type;
-	bu.newtype = newtype;
-	bu.newdata = newdata;
-	block_update_list_add(&level->updates, bu);
+		block_update_list_add(&level->updates, bu);
+	}
 }
 
 void level_prerun(struct level_t *l)
@@ -1971,7 +1933,7 @@ void level_process_updates(bool can_init)
 		if (pthread_mutex_trylock(&level->mutex) != 0) continue;
 		pthread_mutex_unlock(&level->mutex);
 
-		level_run_updates(level, can_init, true);
+		level_run_updates(level, can_init, !level->instant);
 	}
 }
 
