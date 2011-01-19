@@ -33,7 +33,7 @@ static enum blocktype_t convert_cannon_ball(struct level_t *level, unsigned inde
 
 struct cannons
 {
-	int tick;
+	int16_t maxy;
 	struct
 	{
 		int active;
@@ -43,7 +43,6 @@ struct cannons
 		float vel_v;
 		unsigned loc;
 		unsigned origin;
-		//struct block_t b[4];
 	} c[MAX_CLIENTS_PER_LEVEL];
 	float p[MAX_CLIENTS_PER_LEVEL];
 };
@@ -55,7 +54,6 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 	{
 		if (!cg->c[i].active) continue;
 
-		bool valid = true;
 		bool hit = false;
 		unsigned loc = cg->c[i].loc;
 
@@ -68,17 +66,13 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 			cg->c[i].z += dz;
 			cg->c[i].y += cg->c[i].vel_v * 0.1;
 
-			if (!level_valid_xyz(l, cg->c[i].x, cg->c[i].y, cg->c[i].z))
+			if (!level_valid_xyz(l, cg->c[i].x, cg->c[i].y > cg->maxy ? cg->maxy : cg->c[i].y, cg->c[i].z))
 			{
 				loc = -1;
-				if (cg->c[i].y < l->y || !level_valid_xyz(l, cg->c[i].x, l->y - 1, cg->c[i].z))
-				{
-					cg->c[i].active = false;
-					break;
-				}
-				valid = false;
+				cg->c[i].active = false;
+				break;
 			}
-			else
+			else if (cg->c[i].y <= cg->maxy)
 			{
 				unsigned newloc = level_get_index(l, cg->c[i].x, cg->c[i].y, cg->c[i].z);
 				if (newloc == loc) continue;
@@ -96,6 +90,9 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 				}
 			}
 		}
+
+		/* Don't place if the cannon ball is off limits. */
+		if (cg->c[i].y > cg->maxy) loc = -1;
 
 		/* Apply gravity */
 		cg->c[i].vel_v -= 1.0f / 32.0f;
@@ -125,20 +122,13 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 			break;
 		}
 
-		if (valid)
+		if (cg->c[i].loc != -1 && loc != cg->c[i].origin)
 		{
-			if (loc != cg->c[i].origin)
-			{
-				s_block.type = s_cannon_ball;
-				delete(l, loc, &l->blocks[loc]);
-				level_change_block_force(l, &s_block, loc);
-				cg->c[i].loc = loc;
-				cg->c[i].origin = -1;
-			}
-		}
-		else
-		{
-			cg->c[i].loc = -1;
+			s_block.type = s_cannon_ball;
+			delete(l, loc, &l->blocks[loc]);
+			level_change_block_force(l, &s_block, loc);
+			cg->c[i].loc = loc;
+			cg->c[i].origin = -1;
 		}
 	}
 }
@@ -213,6 +203,23 @@ static bool cannons_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		}
 		return true;
 	}
+	else if (strncasecmp(data, "canon maxy ", 11) == 0)
+	{
+		char buf[64];
+		char *endp;
+		int i = strtol(data + 11, &endp, 10);
+		if (*endp != '\0' || i < 0 || i >= l->y)
+		{
+			snprintf(buf, sizeof buf, TAG_YELLOW "MaxY must be between 0 and %d", l->y - 1);
+		}
+		else
+		{
+			cg->maxy = i;
+			snprintf(buf, sizeof buf, TAG_YELLOW "MaxY set to %d", i);
+		}
+		client_notify(c, buf);
+		return true;
+	}
 
 	return false;
 }
@@ -233,26 +240,22 @@ static bool cannons_level_hook(int event, struct level_t *l, struct client_t *c,
 			break;
 
 		case EVENT_INIT:
-			if (arg->size != 0) free(arg->data);
-			arg->size = sizeof (struct cannons);
-			arg->data = calloc(1, arg->size);
-
+			if (arg->size != sizeof (struct cannons))
 			{
+				free(arg->data);
+
+				arg->size = sizeof (struct cannons);
+				arg->data = calloc(1, arg->size);
+
 				struct cannons *cg = arg->data;
+				cg->maxy = l->y - 1;
+
 				int i;
 				for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 				{
 					cg->p[i] = 3.0f;
 				}
 			}
-
-			break;
-
-		case EVENT_DEINIT:
-			if (l == NULL) break;
-			free(arg->data);
-			arg->size = 0;
-			arg->data = NULL;
 			break;
 	}
 
