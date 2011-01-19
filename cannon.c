@@ -239,6 +239,13 @@ static bool cannons_level_hook(int event, struct level_t *l, struct client_t *c,
 			cannons_handle_block(l, c, data, arg->data);
 			break;
 
+		case EVENT_SPAWN:
+		{
+			struct cannons *cg = arg->data;
+			cg->p[c->player->levelid] = 3.0f;
+			break;
+		}
+
 		case EVENT_INIT:
 			if (arg->size != sizeof (struct cannons))
 			{
@@ -249,12 +256,6 @@ static bool cannons_level_hook(int event, struct level_t *l, struct client_t *c,
 
 				struct cannons *cg = arg->data;
 				cg->maxy = l->y - 1;
-
-				int i;
-				for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-				{
-					cg->p[i] = 3.0f;
-				}
 			}
 			break;
 	}
