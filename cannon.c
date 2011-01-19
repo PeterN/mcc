@@ -203,11 +203,11 @@ static bool cannons_handle_chat(struct level_t *l, struct client_t *c, char *dat
 		}
 		return true;
 	}
-	else if (strncasecmp(data, "canon maxy ", 11) == 0)
+	else if (strncasecmp(data, "cannon maxy ", 12) == 0)
 	{
 		char buf[64];
 		char *endp;
-		int i = strtol(data + 11, &endp, 10);
+		int i = strtol(data + 12, &endp, 10);
 		if (*endp != '\0' || i < 0 || i >= l->y)
 		{
 			snprintf(buf, sizeof buf, TAG_YELLOW "MaxY must be between 0 and %d", l->y - 1);
