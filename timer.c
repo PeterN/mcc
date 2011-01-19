@@ -23,7 +23,7 @@ static inline bool timer_t_compare(struct timer_t **a, struct timer_t **b)
 LIST(timer, struct timer_t *, timer_t_compare)
 static struct timer_list_t s_timers;
 
-struct timer_t *register_timer(const char *name, unsigned interval, timer_func_t timer_func, void *arg)
+struct timer_t *register_timer(const char *name, unsigned interval, timer_func_t timer_func, void *arg, bool wait)
 {
 	struct timer_t *t = malloc(sizeof *t);
 	t->name       = strdup(name);
@@ -32,7 +32,7 @@ struct timer_t *register_timer(const char *name, unsigned interval, timer_func_t
 	t->arg        = arg;
 
 	/* Make timer run on next tick */
-	t->next_trigger = gettime();
+	t->next_trigger = gettime() + (wait ? t->interval : 0);
 
 	timer_list_add(&s_timers, t);
 
@@ -74,4 +74,11 @@ void process_timers(unsigned tick)
 			t->timer_func(t->arg);
 		}
 	}
+}
+
+void timer_set_interval(struct timer_t *t, unsigned interval)
+{
+	/* Adjust next triggering */
+	t->next_trigger += (interval - t->interval);
+	t->interval = interval;
 }

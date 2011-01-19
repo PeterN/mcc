@@ -418,7 +418,7 @@ void module_init(void **arg)
 	config_get_string("irc.pass", &s->settings.pass);
 
 	s->fd = -1;
-	s->timer = register_timer("irc", 60000, &irc_start, s);
+	s->timer = register_timer("irc", 60000, &irc_start, s, false);
 }
 
 void module_deinit(void *arg)

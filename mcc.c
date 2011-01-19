@@ -102,8 +102,8 @@ int main(int argc, char **argv)
 
 	modules_init();
 
-	register_timer("save levels", 120000, &level_save_all, NULL);
-	register_timer("unload levels", 20000, &level_unload_empty, NULL);
+	register_timer("save levels", 120000, &level_save_all, NULL, true);
+	register_timer("unload levels", 20000, &level_unload_empty, NULL, true);
 
 	if (!level_load("main", NULL))
 	{

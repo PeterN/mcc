@@ -16,6 +16,7 @@ struct heartbeat_t
 {
 	int fd;
 	struct timer_t *timer;
+	struct timer_t *timeout_timer;
 
 	struct sockaddr_in heartbeat_addr;
 	int heartbeat_stage;
@@ -100,11 +101,17 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 			{
 				LOG("[heartbeat] %s\n", buf);
 			}
-			break;
+			return;
 		}
 
 		default:
 			break;
+	}
+
+	if (h->timeout_timer != NULL)
+	{
+		deregister_timer(h->timeout_timer);
+		h->timeout_timer = NULL;
 	}
 
 	close(fd);
@@ -112,6 +119,27 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 	deregister_socket(fd);
 
 	h->fd = -1;
+
+	timer_set_interval(h->timer, 60000);
+}
+
+static void heartbeat_timeout(void *arg)
+{
+	struct heartbeat_t *h = arg;
+
+	if (h->fd != -1)
+	{
+		close(h->fd);
+		deregister_socket(h->fd);
+		h->fd = -1;
+
+		LOG("[heartbeat] Timeout out during %s\n", h->heartbeat_stage == 0 ? "connect" : "transfer");
+
+		timer_set_interval(h->timer, 20000);
+	}
+
+	deregister_timer(h->timeout_timer);
+	h->timeout_timer = NULL;
 }
 
 static void heartbeat_start(void *arg)
@@ -151,6 +179,8 @@ static void heartbeat_start(void *arg)
 	register_socket(h->fd, &heartbeat_run, h);
 
 	h->heartbeat_stage = 0;
+
+	h->timeout_timer = register_timer("heartbeat_timeout", 10000, &heartbeat_timeout, h, true);
 }
 
 void module_init(void **arg)
@@ -158,7 +188,7 @@ void module_init(void **arg)
 	struct heartbeat_t *h = malloc(sizeof *h);
 	h->fd = -1;
 	h->heartbeat_resolved = false;
-	h->timer = register_timer("heartbeat", 60000, &heartbeat_start, h);
+	h->timer = register_timer("heartbeat", 60000, &heartbeat_start, h, false);
 
 	*arg = h;
 }
