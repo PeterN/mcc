@@ -33,6 +33,7 @@ struct npctemp
 	float hs, vs;       /* Horizontal / vertical speed */
 	bool iw;            /* In-water? */
 	bool pf;            /* Pathfinding? */
+	bool debug;         /* Debug? */
 };
 
 struct npcinfo
@@ -232,6 +233,8 @@ static void npc_find_nearest(struct level_t *l, int i, struct npcdata *nd, int f
 
 static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
 {
+	char buf[128];
+
 	struct pftemp *temp = data;
 	struct level_hook_data_t *arg = temp->arg;
 	struct npcdata *nd = arg->data;
@@ -239,11 +242,25 @@ static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
 
 	if (ni->path != NULL)
 	{
+		if (ni->debug)
+		{
+			snprintf(buf, sizeof buf, "%s: Got a path", nd->n[temp->i].name);
+			level_notify_all(l, buf);
+		}
+
 		void *oldpath = ni->path;
 		ni->path = path;
 		ni->step = 0;
 		nd->n[temp->i].stareid = 0;
 		free(oldpath);
+	}
+	else
+	{
+		if (ni->debug)
+		{
+			snprintf(buf, sizeof buf, "%s: Couldn't get a path", nd->n[temp->i].name);
+			level_notify_all(l, buf);
+		}
 	}
 
 	ni->pf = false;
@@ -323,6 +340,8 @@ static bool npc_iswalkable(const struct level_t *l, float ax, float ay, float az
 
 static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *arg)
 {
+	char buf[128];
+
 	struct npcdata *nd = arg->data;
 	struct npctemp *ni = &nd->t[i];
 
@@ -351,7 +370,18 @@ static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *
 	float bz = them->z / 32.0f;
 	float by = them->y / 32.0f - HEIGHT;
 
+	if (ni->debug)
+	{
+		snprintf(buf, sizeof buf, "%s: Finding path from %f %f %f to %f %f %f", nd->n[i].name, ax, ay, az, bx, by, bz);
+		level_notify_all(l, buf);
+	}
+
 	for (; by > 0 && npc_4point(l, bx, by - 1, bz); by--);
+	if (ni->debug && by != them->y / 32.0f - HEIGHT)
+	{
+		snprintf(buf, sizeof buf, "%s: Adjusted target to %f", nd->n[i].name, by);
+		level_notify_all(l, buf);
+	}
 
 	struct point a;
 	a.x = ax; a.y = az; a.z = ay;
@@ -371,6 +401,12 @@ static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *
 	if (npc_iswalkable(l, ax, ay, az, bx, by, bz))
 	{
 		/* We can walk directly to our tndet, so don't bother pathfinding */
+		if (ni->debug)
+		{
+			snprintf(buf, sizeof buf, "%s: Can walk directly", nd->n[i].name);
+			level_notify_all(l, buf);
+		}
+
 		free(ni->path);
 		ni->path = malloc(3 * sizeof (struct point));
 		ni->step = 0;
@@ -378,6 +414,12 @@ static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *
 		ni->path[1] = b;
 		ni->path[2].x = -1;
 		return;
+	}
+
+	if (ni->debug)
+	{
+		snprintf(buf, sizeof buf, "%s: Waiting for a path, final search: %d %d %d to %d %d %d", nd->n[i].name, a.x, a.z, a.y, b.x, b.z, b.y);
+		level_notify_all(l, buf);
 	}
 
 	struct pftemp *temp = malloc(sizeof *temp);
@@ -623,7 +665,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 		}
 		else
 		{
-			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 7);
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 8);
 		}
 	}
 	else if (strncasecmp(data, "npc get ", 8) == 0)
@@ -660,6 +702,19 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 		else
 		{
 			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 7);
+		}
+	}
+	else if (strncasecmp(data, "npc debug ", 10) == 0)
+	{
+		int i = npc_get_by_name(nd, data + 10);
+		if (i >= 0)
+		{
+			nd->t[i].debug = !nd->t[i].debug;
+			snprintf(buf, sizeof buf, TAG_YELLOW "Debug %sabled for %s", nd->t[i].debug ? "en" : "dis", nd->n[i].name);
+		}
+		else
+		{
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 10);
 		}
 	}
 	else if (strncasecmp(data, "npc follow ", 11) == 0)
@@ -712,7 +767,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 		}
 		else
 		{
-			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 10);
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 11);
 		}
 
 		free(buf2);
