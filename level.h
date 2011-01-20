@@ -136,6 +136,11 @@ static inline enum blocktype_t level_get_blocktype(const struct level_t *level, 
 	return level->blocks[level_get_index(level, x, y, z)].type;
 }
 
+static inline unsigned level_get_blockowner(const struct level_t *level, int x, int y, int z)
+{
+	return level->blocks[level_get_index(level, x, y, z)].owner;
+}
+
 bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const char *name, bool zero);
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index);
 bool level_send(struct client_t *client);
