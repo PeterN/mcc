@@ -43,6 +43,7 @@ struct cannons
 		float vel_v;
 		unsigned loc;
 		unsigned origin;
+		unsigned owner;
 	} c[MAX_CLIENTS_PER_LEVEL];
 	float p[MAX_CLIENTS_PER_LEVEL];
 };
@@ -105,12 +106,13 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 		/* Moved: */
 		if (hit)
 		{
-			level_addupdate(l, loc, s_active_tnt, 0x401);
+			level_addupdate_with_owner(l, loc, s_active_tnt, 0x401, cg->c[i].owner);
 		}
 
 		if (cg->c[i].loc != -1 && cg->c[i].loc != cg->c[i].origin && cg->c[i].loc != loc)
 		{
 			s_block.type = AIR;
+			s_block.owner = cg->c[i].owner;
 			level_change_block_force(l, &s_block, cg->c[i].loc);
 			physics_list_add(&l->physics, cg->c[i].loc);
 		}
@@ -125,6 +127,7 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 		if (cg->c[i].loc != -1 && loc != cg->c[i].origin)
 		{
 			s_block.type = s_cannon_ball;
+			s_block.owner = 0;
 			delete(l, loc, &l->blocks[loc]);
 			level_change_block_force(l, &s_block, loc);
 			cg->c[i].loc = loc;
@@ -170,10 +173,11 @@ static void cannons_handle_block(struct level_t *l, struct client_t *c, struct b
 		cg->c[i].vel_h = f * cos(p);
 		cg->c[i].vel_v = -f * sin(p);
 		cg->c[i].active = 1;
+		cg->c[i].owner = c->player->globalid;
 
 		client_notify(c, TAG_YELLOW "Fire!");
 
-		level_addupdate(l, index, be->bt, 40);
+		level_addupdate_with_owner(l, index, be->bt, 40, cg->c[i].owner);
 	}
 }
 
