@@ -11,7 +11,7 @@
 #include "packet.h"
 #include "hash.h"
 
-#define RADIUS (7.0f / 32.0f)
+#define RADIUS (9.0f / 32.0f)
 
 static bool point_testradius(const struct level_t *l, float x, float y, int bz)
 {

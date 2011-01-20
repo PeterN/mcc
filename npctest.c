@@ -6,7 +6,7 @@
 #include "astar.h"
 #include "astar_worker.h"
 
-#define RADIUS (7.0f / 32.0f)
+#define RADIUS (9.0f / 32.0f)
 #define HEIGHT (51.0f / 32.0f)
 #define HEADROOM RADIUS
 #define GRAVITY (1.0f / 32.0f)
