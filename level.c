@@ -1886,6 +1886,31 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 	}
 }
 
+void level_addupdate_with_owner(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata, unsigned owner)
+{
+	struct block_t *b = &level->blocks[index];
+
+	enum blocktype_t pt1 = convert(level, index, b);
+
+	b->type = newtype;
+	b->data = newdata;
+	b->owner = owner;
+	b->physics = blocktype_has_physics(b->type);
+
+	if (b->physics) physics_list_add(&level->physics, index);
+
+	enum blocktype_t pt2 = convert(level, index, b);
+
+	if (pt1 != pt2)
+	{
+		struct block_update_t bu;
+		bu.index = index;
+		bu.newtype = pt2;
+
+		block_update_list_add(&level->updates, bu);
+	}
+}
+
 void level_prerun(struct level_t *l)
 {
 	int n;
