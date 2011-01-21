@@ -11,7 +11,7 @@
 #include "packet.h"
 #include "hash.h"
 
-#define RADIUS (7.0f / 32.0f)
+#define RADIUS (9.0f / 32.0f)
 
 static bool point_testradius(const struct level_t *l, float x, float y, int bz)
 {
@@ -229,15 +229,13 @@ static struct node *as_isinlist(struct node **headref, struct node *node)
 
 static void as_maybe(struct as *as, struct node *curr, const struct node *end, struct point n)
 {
-	struct node *tentative = malloc(sizeof *tentative);
-	memset(tentative, 0, sizeof *tentative);
-	tentative->point = n;
-
 	if (hashnode_get(&as->closedhash, level_get_index(as->level, n.x, n.z, n.y), 0) != NULL)
 	{
-		free(tentative);
 		return;
 	}
+
+	struct node *tentative = calloc(1, sizeof *tentative);
+	tentative->point = n;
 
 	float g = curr->g + point_dist(&curr->point, &n, false);
 
@@ -285,8 +283,7 @@ struct point *as_find(const struct level_t *level, const struct point *a, const 
 	memset(&as, 0, sizeof as);
 	as.level = level;
 
-	struct node *start = malloc(sizeof *start);
-	memset(start, 0, sizeof *start);
+	struct node *start = calloc(1, sizeof *start);
 	start->point = *a;
 
 	struct node end;

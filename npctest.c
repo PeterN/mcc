@@ -6,7 +6,7 @@
 #include "astar.h"
 #include "astar_worker.h"
 
-#define RADIUS (7.0f / 32.0f)
+#define RADIUS (9.0f / 32.0f)
 #define HEIGHT (51.0f / 32.0f)
 #define HEADROOM RADIUS
 #define GRAVITY (1.0f / 32.0f)
@@ -237,7 +237,7 @@ static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
 	struct npcdata *nd = arg->data;
 	struct npctemp *ni = &nd->t[temp->i];
 
-	if (ni->path != NULL)
+	if (path != NULL)
 	{
 		void *oldpath = ni->path;
 		ni->path = path;
@@ -351,6 +351,7 @@ static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *
 	float bz = them->z / 32.0f;
 	float by = them->y / 32.0f - HEIGHT;
 
+	for (; by < l->y - 1 && !npc_4point(l, bx, by, bz); by++);
 	for (; by > 0 && npc_4point(l, bx, by - 1, bz); by--);
 
 	struct point a;
@@ -623,7 +624,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 		}
 		else
 		{
-			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 7);
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 8);
 		}
 	}
 	else if (strncasecmp(data, "npc get ", 8) == 0)
@@ -712,7 +713,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 		}
 		else
 		{
-			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 10);
+			snprintf(buf, sizeof buf, TAG_YELLOW "%s not found", data + 11);
 		}
 
 		free(buf2);
