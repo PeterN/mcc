@@ -232,8 +232,6 @@ static void npc_find_nearest(struct level_t *l, int i, struct npcdata *nd, int f
 
 static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
 {
-	char buf[128];
-
 	struct pftemp *temp = data;
 	struct level_hook_data_t *arg = temp->arg;
 	struct npcdata *nd = arg->data;
@@ -325,8 +323,6 @@ static bool npc_iswalkable(const struct level_t *l, float ax, float ay, float az
 
 static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *arg)
 {
-	char buf[128];
-
 	struct npcdata *nd = arg->data;
 	struct npctemp *ni = &nd->t[i];
 
