@@ -25,6 +25,7 @@ struct heartbeat_t
 
 static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 {
+	bool success = false;
 	struct heartbeat_t *h = arg;
 
 	switch (h->heartbeat_stage)
@@ -83,6 +84,7 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 			else if (res == 0)
 			{
 				/* Read nothing, break to close */
+				success = true;
 				break;
 			}
 
@@ -120,7 +122,7 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 
 	h->fd = -1;
 
-	timer_set_interval(h->timer, 60000);
+	timer_set_interval(h->timer, success ? 60000 : 15000);
 }
 
 static void heartbeat_timeout(void *arg)
@@ -135,7 +137,7 @@ static void heartbeat_timeout(void *arg)
 
 		LOG("[heartbeat] Timeout out during %s\n", h->heartbeat_stage == 0 ? "connect" : "transfer");
 
-		timer_set_interval(h->timer, 20000);
+		timer_set_interval(h->timer, 15000);
 	}
 
 	deregister_timer(h->timeout_timer);
