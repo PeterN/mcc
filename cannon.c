@@ -177,7 +177,7 @@ static void cannons_handle_block(struct level_t *l, struct client_t *c, struct b
 
 		client_notify(c, TAG_YELLOW "Fire!");
 
-		level_addupdate_with_owner(l, index, be->bt, 40, cg->c[i].owner);
+		level_addupdate(l, index, be->bt, 40);
 	}
 }
 
