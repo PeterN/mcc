@@ -522,12 +522,12 @@ enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, con
 	return STAIRCASESTEP;
 }
 
-int trigger_stair(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+int trigger_double_stair(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
 {
 	/* Only the block owner can remove a double step */
 	if (c->player->globalid != block->owner) return TRIG_NONE;
 
-	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
+	level_addupdate(l, index, STAIRCASESTEP, 0);
 
 	return TRIG_EMPTY;
 }
@@ -542,14 +542,12 @@ void physics_stair(struct level_t *l, unsigned index, const struct block_t *bloc
 		unsigned index2 = level_get_index(l, x, y - 1, z);
 
 		const struct block_t *below = &l->blocks[index2];
-		if (below->type == STAIRCASESTEP || below->type == blocktype_get_by_name("single_stair"))
+		if (below->type == STAIRCASESTEP)
 		{
 			level_addupdate(l, index, AIR, 0);
 			level_addupdate(l, index2, STAIRCASEFULL, 0);
 		}
 	}
-
-	level_addupdate(l, index, blocktype_get_by_name("single_stair"), 0);
 }
 
 enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const struct block_t *block)
@@ -622,7 +620,7 @@ void blocktype_init(void)
 	register_blocktype(REDMUSHROOM, "red_shroom", RANK_GUEST, NULL, NULL, NULL, NULL, true, true, false);
 	register_blocktype(GOLDSOLID, "gold", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
 	register_blocktype(IRON, "iron", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
-	register_blocktype(STAIRCASEFULL, "double_stair", RANK_GUEST, NULL, &trigger_stair, NULL, NULL, false, false, false);
+	register_blocktype(STAIRCASEFULL, "double_stair", RANK_GUEST, NULL, &trigger_double_stair, NULL, NULL, false, false, false);
 	register_blocktype(STAIRCASESTEP, "stair", RANK_GUEST, NULL, NULL, NULL, &physics_stair, false, false, false);
 	register_blocktype(BRICK, "brick", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
 	register_blocktype(TNT, "tnt", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
