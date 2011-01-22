@@ -75,8 +75,6 @@ static void generate_salt(void *arg)
 	}
 	salt[i] = '\0';
 
-	printf("New salt len %d, salt %s\n", len, salt);
-
 	free(g_server.old_salt);
 	g_server.old_salt = strdup(g_server.salt);
 
