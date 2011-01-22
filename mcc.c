@@ -82,6 +82,23 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
+	if (!config_get_string("salt", &g_server.salt))
+	{
+		/* Generate salt */
+		static const char saltchars[] =
+			"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		char salt[20];
+		int len = (rand() % 5) + 12;
+		int i;
+		for (i = 0; i < len; i++)
+		{
+			salt[i] = saltchars[rand() % sizeof saltchars];
+		}
+		salt[i] = '\0';
+		config_set_string("salt", salt);
+		config_get_string("salt", &g_server.salt);
+	}
+
 	level_worker_init();
 	astar_worker_init();
 
