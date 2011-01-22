@@ -22,6 +22,7 @@ LIBSRC += landscape.c
 LIBSRC += land2.c
 LIBSRC += level.c
 LIBSRC += level_worker.c
+LIBSRC += md5.c
 LIBSRC += module.c
 LIBSRC += network.c
 LIBSRC += npc.c
