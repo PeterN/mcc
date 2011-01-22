@@ -67,6 +67,8 @@ int main(int argc, char **argv)
 {
 	int tick = 0;
 
+	srand(getpid() + time(NULL));
+
 	g_server.logfile = fopen("log.txt", "a");
 	LOG("Server starting...\n");
 
