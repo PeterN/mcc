@@ -60,6 +60,29 @@ static void sighandler(int sig)
 	exit(0);
 }
 
+static void generate_salt(void *arg)
+{
+	/* Generate salt */
+	static const char saltchars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+	char salt[20];
+	int len = (rand() % 5) + 12;
+
+	int i;
+	for (i = 0; i < len; i++)
+	{
+		salt[i] = saltchars[rand() % (sizeof saltchars - 1)];
+	}
+	salt[i] = '\0';
+
+	printf("New salt len %d, salt %s\n", len, salt);
+
+	free(g_server.old_salt);
+	g_server.old_salt = strdup(g_server.salt);
+
+	config_set_string("salt", salt);
+}
+
 #define TICK_INTERVAL 40
 #define MS_TO_TICKS(x) ((x) / TICK_INTERVAL)
 
@@ -86,18 +109,7 @@ int main(int argc, char **argv)
 
 	if (!config_get_string("salt", &g_server.salt))
 	{
-		/* Generate salt */
-		static const char saltchars[] =
-			"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		char salt[20];
-		int len = (rand() % 5) + 12;
-		int i;
-		for (i = 0; i < len; i++)
-		{
-			salt[i] = saltchars[rand() % sizeof saltchars];
-		}
-		salt[i] = '\0';
-		config_set_string("salt", salt);
+		generate_salt(NULL);
 		config_get_string("salt", &g_server.salt);
 	}
 
@@ -123,6 +135,7 @@ int main(int argc, char **argv)
 
 	register_timer("save levels", 120000, &level_save_all, NULL, true);
 	register_timer("unload levels", 20000, &level_unload_empty, NULL, true);
+	register_timer("salt", 15 * 60 * 1000, &generate_salt, NULL, false);
 
 	if (!level_load("main", NULL))
 	{

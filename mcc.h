@@ -10,6 +10,7 @@ struct server_t
 	char *name;
 	char *motd;
 	char *salt;
+	char *old_salt;
 	int max_players;
 	int players;
 	int port;
