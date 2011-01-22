@@ -9,6 +9,7 @@
 #include "player.h"
 #include "level.h"
 #include "mcc.h"
+#include "md5.h"
 
 struct packet_t *packet_init(size_t len)
 {
@@ -128,6 +129,29 @@ size_t packet_recv_size(uint8_t type)
 	}
 }
 
+bool verify_login(const char *salt, const char *username, const char *hash)
+{
+	if (salt == NULL) return false;
+
+	char salted[128];
+	snprintf(salted, sizeof salted, "%s%s", salt, username);
+
+	uint8_t digest[16];
+	md5_context md5;
+	md5_starts(&md5);
+	md5_update(&md5, (uint8_t *)salted, strlen(salted));
+	md5_finish(&md5, digest);
+
+	char digestasc[33];
+	int i;
+	for (i = 0; i < 16; i++)
+	{
+		sprintf(&digestasc[i * 2], "%02x", digest[i]);
+	}
+
+	return strcasecmp(hash, digestasc) == 0;
+}
+
 void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 {
 	char buf[64];
@@ -149,7 +173,27 @@ void packet_recv_player_id(struct client_t *c, struct packet_t *p)
 	char *key = packet_recv_string(p);
 	/* uint8_t unused = */ packet_recv_byte(p);
 
-	LOG("%s - %s\n", username, key);
+	int offset = 32 - strlen(key);
+	if (offset < 0)
+	{
+		net_close(c, "Invalid key");
+		return;
+	}
+
+	if (strcmp(key, "--") != 0)
+	{
+		char hash[33];
+		hash[32] = '\0';
+		/* Prefill with zeros, not NUL */
+		memset(hash, '0', sizeof hash - 1);
+		strcpy(hash + offset, key);
+
+		if (!verify_login(g_server.salt, username, hash) && !verify_login(g_server.old_salt, username, hash))
+		{
+			net_close(c, "Invalid login");
+			return;
+		}
+	}
 
 	const char *type;
 
