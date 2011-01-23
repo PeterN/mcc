@@ -32,6 +32,7 @@ struct client_t
 	pthread_mutex_t packet_send_mutex;
 
 	int packet_send_count;
+	int inuse;
 };
 
 static inline bool client_t_compare(struct client_t **a, struct client_t **b)
@@ -41,6 +42,7 @@ static inline bool client_t_compare(struct client_t **a, struct client_t **b)
 LIST(client, struct client_t *, client_t_compare)
 
 extern struct client_list_t s_clients;
+extern pthread_mutex_t s_client_list_mutex;
 
 struct client_t *client_get_by_player(struct player_t *p);
 
@@ -56,5 +58,7 @@ static inline bool client_is_valid(struct client_t *c)
 {
 	return client_list_contains(&s_clients, c);
 }
+
+bool client_inuse(struct client_t *c, bool inuse);
 
 #endif /* CLIENT_H */

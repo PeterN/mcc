@@ -327,3 +327,19 @@ void client_send_despawn(struct client_t *c, bool hiding)
 		}
 	}
 }
+
+pthread_mutex_t s_client_list_mutex;
+
+bool client_inuse(struct client_t *c, bool inuse)
+{
+	pthread_mutex_lock(&s_client_list_mutex);
+	if (!client_is_valid(c) || c->inuse < 0)
+	{
+		pthread_mutex_unlock(&s_client_list_mutex);
+		return false;
+	}
+
+	c->inuse += inuse ? 1 : -1;
+	pthread_mutex_unlock(&s_client_list_mutex);
+	return true;
+}

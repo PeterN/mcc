@@ -28,9 +28,13 @@ void make_worker(void *data)
 void send_worker(void *data)
 {
 	struct client_t *client = data;
-	level_send(client);
 
-	if (client->waiting_for_level) level_send_queue(client);
+	if (client_inuse(client, true))
+	{
+		level_send(client);
+		if (client->waiting_for_level) level_send_queue(client);
+		client_inuse(client, false);
+	}
 }
 
 void level_worker_init(void)
