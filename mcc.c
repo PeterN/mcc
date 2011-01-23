@@ -75,8 +75,11 @@ static void generate_salt(void *arg)
 	}
 	salt[i] = '\0';
 
-	free(g_server.old_salt);
-	g_server.old_salt = strdup(g_server.salt);
+	if (g_server.salt != NULL)
+	{
+		free(g_server.old_salt);
+		g_server.old_salt = strdup(g_server.salt);
+	}
 
 	config_set_string("salt", salt);
 }
