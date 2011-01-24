@@ -27,7 +27,7 @@ static enum blocktype_t convert_chequer(struct level_t *level, unsigned index, c
 
 static enum blocktype_t convert_oldcobble(struct level_t *level, unsigned index, const struct block_t *block)
 {
-	return block->data > 10 ? STONE : STONEVINE;
+	return block->data <= 90 ? STONE : STONEVINE;
 }
 
 void physics_oldcobble(struct level_t *level, unsigned index, const struct block_t *block)
