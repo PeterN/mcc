@@ -37,18 +37,6 @@ LIBSRC += worker.c
 LIBOBJ := $(LIBSRC:.c=.o)
 LIBO := libmcc.so
 
-HBSRC := heartbeat.c
-HBOBJ := $(HBSRC:.c=.o)
-HBO := heartbeat.so
-
-IPCSRC := ipc.c
-IPCOBJ := $(IPCSRC:.c=.o)
-IPCO := ipc.so
-
-IRCSRC := irc.c
-IRCOBJ := $(IRCSRC:.c=.o)
-IRCO := irc.so
-
 MCCSRC := mcc.c
 MCCOBJ := $(MCCSRC:.c=.o)
 MCCO := mcc
@@ -57,130 +45,34 @@ SETRANKSRC := setrank.c
 SETRANKOBJ := $(SETRANKSRC:.c=.o)
 SETRANKO := setrank
 
-WWSRC := wireworld.c
-WWOBJ := $(WWSRC:.c=.o)
-WWO := wireworld.so
-
-SPLEEFSRC := spleef.c
-SPLEEFOBJ := $(SPLEEFSRC:.c=.o)
-SPLEEFO := spleef.so
-
-TNTSRC := tnt.c
-TNTOBJ := $(TNTSRC:.c=.o)
-TNTO := tnt.so
-
-ALSRC := airlayer.c
-ALOBJ := $(ALSRC:.c=.o)
-ALO := airlayer.so
-
-PORTALSRC := portal.c
-PORTALOBJ := $(PORTALSRC:.c=.o)
-PORTALO := portal.so
-
-SIGNSSRC := signs.c
-SIGNSOBJ := $(SIGNSSRC:.c=.o)
-SIGNSO := signs.so
-
-ZOMBIESRC := zombies.c
-ZOMBIEOBJ := $(ZOMBIESRC:.c=.o)
-ZOMBIEO := zombies.so
-
-NOHACKSSRC := nohacks.c
-NOHACKSOBJ := $(NOHACKSSRC:.c=.o)
-NOHACKSO := nohacks.so
-
-NPCTESTSRC := npctest.c
-NPCTESTOBJ := $(NPCTESTSRC:.c=.o)
-NPCTESTO := npctest.so
-
-DOORSSRC := doors.c
-DOORSOBJ := $(DOORSSRC:.c=.o)
-DOORSO := doors.so
-
-BOOKSRC := book.c
-BOOKOBJ := $(BOOKSRC:.c=.o)
-BOOKO := book.so
-
 IMAGESRC := image.c render.c
 IMAGEOBJ := $(IMAGESRC:.c=.o)
 IMAGEO := image.so
-
-TRAPSRC := trap.c
-TRAPOBJ := $(TRAPSRC:.c=.o)
-TRAPO := trap.so
-
-CANNONSRC := cannon.c
-CANNONOBJ := $(CANNONSRC:.c=.o)
-CANNONO := cannon.so
-
-WARSRC := war.c
-WAROBJ := $(WARSRC:.c=.o)
-WARO := war.so
 
 BANIPSRC := banip.c
 BANIPOBJ := $(BANIPSRC:.c=.o)
 BANIPO := banip
 
-all: $(MCCO) $(WWO) $(SPLEEFO) $(TNTO) $(HBO) $(IRCO) $(ALO) $(IPCO) $(SETRANKO) $(BANIPO) $(PORTALO) $(DOORSO) $(ZOMBIEO) $(SIGNSO) $(NOHACKSO) $(NPCTESTO) $(BOOKO) $(IMAGEO) $(TRAPO) $(CANNONO) $(WARO)
+MODULESSRC := airlayer.c book.c cannon.c doors.c heartbeat.c\
+ipc.c irc.c nohacks.c npctest.c portal.c signs.c spleef.c trap.c tnt.c war.c wireworld.c zombies.c
+
+MODULESOBJ := $(MODULESSRC:.c=.o)
+MODULESO := $(MODULESSRC:.c=.so)
+
+all: $(LIBO) $(MCCO) $(SETRANKO) $(BANIPO) $(IMAGEO) $(MODULESO)
 
 clean:
-	rm -f *.d $(LIBOBJ) $(MCCOBJ) $(LIBO) $(MCCO) $(SPLEEFOBJ) $(SPLEEFO) $(WWOBJ) $(WWO) $(TNTOBJ) $(TNTO) $(HBOBJ) $(HBO) $(IRCOBJ) $(IRCO) $(ALOBJ) $(ALO) $(IPCOBJ) $(IPCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(PORTALOBJ) $(PORTALO) $(DOORSOBJ) $(DOORSO) $(ZOMBIEOBJ) $(ZOMBIEO) $(SIGNSO) $(SIGNSOBJ) $(NOHACKSO) $(NOHACKSOBJ) $(NPCTESTO) $(NPCTESTOBJ) $(BOOKO) $(BOOKOBJ) $(IMAGEO) $(IMAGEOBJ) $(TRAPO) $(TRAPOBJ) $(CANNONO) $(CANNONOBJ) $(WARO) $(WAROBJ)
+	rm -f *.d $(LIBOBJ) $(LIBO) $(MCCOBJ) $(MCCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(IMAGEOBJ) $(IMAGEO) $(MODULESOBJ) $(MODULESO)
 
-SOURCES = $(LIBSRC) $(MCCSRC) $(SPLEEFSRC) $(WWSRC) $(TNTSRC) $(HBSRC) $(IRCSRC) $(ALSRC) $(IPCSRC) $(SETRANKSRC) $(BANIPSRC) $(PORTALSRC) $(DOORSSRC) $(ZOMBIESRC) $(SIGNSSRC) $(NOHACKSRC) $(NPCTESTSRC) $(BOOKSRC) $(IMAGESRC) $(TRAPSRC) $(CANNONSRC) $(WARSRC)
+SOURCES = $(LIBSRC) $(MCCSRC) $(SETRANKSRC) $(BANIPSRC)  $(IMAGESRC)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
 
-$(HBO): $(HBOBJ)
-	$(CC) -shared -fPIC -Wl,-soname,$(HBO) -o $(HBO) $(HBOBJ)
+(MODULESO): $(MODULESOBJ) $(LIBO)
 
-$(IPCO): $(IPCOBJ)
-	$(CC) -shared -fPIC -Wl,-soname,$(IPCO) -o $(IPCO) $(IPCOBJ)
-
-$(IRCO): $(IRCOBJ)
-	$(CC) -shared -fPIC -Wl,-soname,$(IRCO) -o $(IRCO) $(IRCOBJ)
-
-$(WWO): $(WWOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(WWO) $(WWOBJ) -o $@
-
-$(SPLEEFO): $(SPLEEFOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(SPLEEFO) $(SPLEEFOBJ) -o $@
-
-$(TNTO): $(TNTOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(TNTO) $(TNTOBJ) -o $@
-
-$(ALO): $(ALOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(ALO) $(ALOBJ) -o $@
-
-$(PORTALO): $(PORTALOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(PORTALO) $(PORTALOBJ) -o $@
-
-$(SIGNSO): $(SIGNSOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(SIGNSO) $(SIGNSOBJ) -o $@
-
-$(ZOMBIEO): $(ZOMBIEOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(ZOMBIEO) $(ZOMBIEOBJ) -o $@
-
-$(NOHACKSO): $(NOHACKSOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(NOHACKSO) $(NOHACKSOBJ) -o $@
-
-$(NPCTESTO): $(NPCTESTOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(NPCTESTO) $(NPCTESTOBJ) -o $@
-
-$(DOORSO): $(DOORSOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(DOORSO) $(DOORSOBJ) -o $@
-
-$(BOOKO): $(BOOKOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(BOOKO) $(BOOKOBJ) -o $@
-
-$(TRAPO): $(TRAPOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(TRAPO) $(TRAPOBJ) -o $@
-
-$(CANNONO): $(CANNONOBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(CANNONO) $(CANNONOBJ) -o $@
-
-$(WARO): $(WAROBJ) $(LIBO)
-	$(CC) -shared -fPIC -Wl,-soname,$(WARO) $(WAROBJ) -o $@
+%.so: %.o
+	$(CC) -shared -fPIC -Wl,-soname,$@ -o $@
 
 $(IMAGEO): $(IMAGEOBJ) $(LIBO)
 	$(CC) $(LDFLAGS) -shared -fPIC -Wl,-soname,$(IMAGEO) $(IMAGEOBJ) $(PNGLDFLAGS) -o $@
@@ -194,7 +86,7 @@ $(SETRANKO): $(SETRANKOBJ) $(LIBO)
 $(BANIPO): $(BANIPOBJ) $(LIBO)
 	$(CC) $(LDFLAGS) $(BANIPOBJ) -L. -lmcc -o $@
 
-.c.o:
+%.o: %.c
 	$(CC) -c -fPIC $(CFLAGS) $< -o $@
 
 %.d: %.c
