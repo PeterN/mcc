@@ -376,11 +376,26 @@ void net_run(void)
 		}
 		if (c->close && !c->sending_level)
 		{
-			net_close_real(c);
-			client_list_del_index(&s_clients, i);
-			/* Restart :/ */
-			i = -1;
-			clients = s_clients.used;
+			if (pthread_mutex_trylock(&s_client_list_mutex))
+			{
+				if (c->inuse > 0)
+				{
+					printf("Can't unload yet\n");
+					pthread_mutex_unlock(&s_client_list_mutex);
+					continue;
+				}
+				else
+				{
+					c->inuse = -1;
+					pthread_mutex_unlock(&s_client_list_mutex);
+
+					net_close_real(c);
+					client_list_del_index(&s_clients, i);
+					/* Restart :/ */
+					i = -1;
+					clients = s_clients.used;
+				}
+			}
 		}
 	}
 
