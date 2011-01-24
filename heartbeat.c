@@ -131,7 +131,7 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 
 	h->fd = -1;
 
-	timer_set_interval(h->timer, success ? 60000 : 15000);
+	timer_set_interval(h->timer, success ? 45000 : 15000);
 }
 
 static void heartbeat_timeout(void *arg)
@@ -199,7 +199,7 @@ void module_init(void **arg)
 	struct heartbeat_t *h = malloc(sizeof *h);
 	h->fd = -1;
 	h->heartbeat_resolved = false;
-	h->timer = register_timer("heartbeat", 60000, &heartbeat_start, h, false);
+	h->timer = register_timer("heartbeat", 45000, &heartbeat_start, h, false);
 
 	*arg = h;
 }
