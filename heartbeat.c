@@ -208,6 +208,10 @@ void module_deinit(void *arg)
 	}
 
 	deregister_timer(h->timer);
+	if (h->timeout_timer != NULL)
+	{
+		deregister_timer(h->timeout_timer);
+	}
 
 	free(h);
 }
