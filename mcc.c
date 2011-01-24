@@ -66,12 +66,14 @@ static void generate_salt(void *arg)
 	static const char saltchars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 	char salt[20];
-	int len = (rand() % 5) + 12;
+	//int len = (rand() % 5) + 12;
+	int len = 19;
 
 	int i;
 	for (i = 0; i < len; i++)
 	{
-		salt[i] = saltchars[rand() % (sizeof saltchars - 1)];
+		//salt[i] = saltchars[rand() % (sizeof saltchars - 1)];
+		salt[i] = '0' + (rand() % 10);
 	}
 	salt[i] = '\0';
 
