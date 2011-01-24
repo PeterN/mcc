@@ -72,7 +72,7 @@ $(LIBO): $(LIBOBJ)
 (MODULESO): $(MODULESOBJ) $(LIBO)
 
 %.so: %.o
-	$(CC) -shared -fPIC -Wl,-soname,$@ -o $@
+	$(CC) -shared -fPIC -Wl,-soname,$@ $< -o $@
 
 $(IMAGEO): $(IMAGEOBJ) $(LIBO)
 	$(CC) $(LDFLAGS) -shared -fPIC -Wl,-soname,$(IMAGEO) $(IMAGEOBJ) $(PNGLDFLAGS) -o $@
