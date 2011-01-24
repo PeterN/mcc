@@ -550,13 +550,6 @@ void physics_stair(struct level_t *l, unsigned index, const struct block_t *bloc
 	}
 }
 
-enum blocktype_t convert_parquet(struct level_t *level, unsigned index, const struct block_t *block)
-{
-	int16_t x, y, z;
-	level_get_xyz(level, index, &x, &y, &z);
-	return (x + y + z) % 2 ? TRUNK : WOOD;
-}
-
 void blocktype_init(void)
 {
 	FILE *f = fopen("blocks.txt", "r");
@@ -629,7 +622,6 @@ void blocktype_init(void)
 	register_blocktype(OBSIDIAN, "obsidian", RANK_GUEST, NULL, NULL, NULL, NULL, false, false, false);
 
 	register_blocktype(BLOCK_INVALID, "single_stair", RANK_GUEST, &convert_single_stair, NULL, NULL, NULL, false, false, false);
-	register_blocktype(BLOCK_INVALID, "parquet", RANK_GUEST, &convert_parquet, NULL, NULL, NULL, false, false, false);
 
 	register_blocktype(BLOCK_INVALID, "active_sponge", RANK_ADMIN, &convert_active_sponge, NULL, NULL, NULL, false, false, false);
 }
