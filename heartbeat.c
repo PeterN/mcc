@@ -38,9 +38,16 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 			static const char host[] = "www.minecraft.net";
 			char postdata[1024];
 			snprintf(postdata, sizeof postdata,
-						"port=%u&users=%u&max=%u&name=%s&public=%s&version=7&salt=%s\r\n",
+						"port=%d&users=%d&max=%d&name=%s&admin-slot=false&public=%s&version=7&salt=%s\r\n",
 						g_server.port, g_server.players, g_server.max_players,
 						g_server.name, g_server.public ? "true" : "false", g_server.salt);
+
+			/* Strip out spaces */
+			char *p;
+			for (p = postdata; *p != '\0'; p++)
+			{
+				if (*p == ' ') *p = '+';
+			}
 
 			char request[2048];
 			snprintf(request, sizeof request,
