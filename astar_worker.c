@@ -21,8 +21,19 @@ static void astar_worker(void *arg)
 {
 	struct astar_job *job = arg;
 
-	struct point *path = as_find(job->level, &job->a, &job->b);
-	job->callback(job->level, path, job->data);
+	if (job->callback != NULL)
+	{
+		struct point *path = as_find(job->level, &job->a, &job->b);
+		if (job->callback != NULL)
+		{
+			job->callback(job->level, path, job->data);
+		}
+		else
+		{
+			free(path);
+		}
+	}
+
 	level_inuse(job->level, false);
 
 	free(job);
@@ -38,14 +49,14 @@ void astar_worker_deinit(void)
 	worker_deinit(&s_astar_worker);
 }
 
-void astar_queue(struct level_t *level, const struct point *a, const struct point *b, astar_callback callback, void *data)
+void *astar_queue(struct level_t *level, const struct point *a, const struct point *b, astar_callback callback, void *data)
 {
 	assert(level != NULL);
 	assert(a != NULL);
 	assert(b != NULL);
 	assert(callback != NULL);
 
-	if (!level_inuse(level, true)) return;
+	if (!level_inuse(level, true)) return NULL;
 
 	struct astar_job *job = malloc(sizeof *job);
 	job->level = level;
@@ -55,5 +66,11 @@ void astar_queue(struct level_t *level, const struct point *a, const struct poin
 	job->data = data;
 
 	worker_queue(&s_astar_worker, job);
+	return job;
 }
 
+void astar_cancel(void *data)
+{
+	struct astar_job *job = data;
+	if (job != NULL) job->callback = NULL;
+}
