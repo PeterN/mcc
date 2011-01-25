@@ -68,19 +68,19 @@ static char *prettytime(char *buf, const char *endp, int time, int acc)
 	char *bufp = buf;
 	if (days > 0)
 	{
-		bufp += snprintf(bufp, endp - bufp, "%d day%s ", days, days > 1 ? "s" : "");
+		bufp += snprintf(bufp, endp - bufp, "%d day%s ", days, days == 1 ? "" : "s");
 	}
 	if (hours > 0 || (days > 0 && acc))
 	{
-		bufp += snprintf(bufp, endp - bufp, "%d hour%s ", hours, hours > 1 ? "s" : "");
+		bufp += snprintf(bufp, endp - bufp, "%d hour%s ", hours, hours == 1 ? "" : "s");
 		if (days > 0 && !acc) return bufp;
 	}
 	if (minutes > 0 || ((hours > 0 || days > 0) && acc))
 	{
-		bufp += snprintf(bufp, endp - bufp, "%d minute%s ", minutes, minutes > 1 ? "s" : "");
+		bufp += snprintf(bufp, endp - bufp, "%d minute%s ", minutes, minutes == 1 ? "" : "s");
 		if (hours > 0 && !acc) return bufp;
 	}
-	bufp += snprintf(bufp, endp - bufp, "%d second%s ", seconds, seconds > 1 ? "s" : "");
+	bufp += snprintf(bufp, endp - bufp, "%d second%s ", seconds, seconds == 1 ? "" : "s");
 	return bufp;
 }
 

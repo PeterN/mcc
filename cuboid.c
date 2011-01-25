@@ -116,7 +116,7 @@ void cuboid_process(void)
 						if (c->client != NULL && client_is_valid(c->client))
 						{
 							char buf[64];
-							snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed", c->count);
+							snprintf(buf, sizeof buf, TAG_YELLOW "%d block%s changed", c->count, c->count == 1 ? "" : "s");
 							client_notify(c->client, buf);
 						}
 
