@@ -33,6 +33,7 @@ struct npctemp
 	float hs, vs;       /* Horizontal / vertical speed */
 	bool iw;            /* In-water? */
 	bool pf;            /* Pathfinding? */
+	void *pfjob;
 };
 
 struct npcinfo
@@ -107,6 +108,8 @@ void npc_deinit(struct level_t *l, struct npcdata *nd)
 		{
 			npc_del(nd->t[i].npc);
 		}
+
+		if (nd->t[i].pf) astar_cancel(nd->t[i].pfjob);
 
 		free(nd->t[i].path);
 	}
@@ -246,6 +249,7 @@ static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
 		free(oldpath);
 	}
 
+	ni->pfjob = NULL;
 	ni->pf = false;
 	free(temp);
 }
@@ -385,8 +389,8 @@ static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *
 	temp->arg = arg;
 	temp->i = i;
 
-	astar_queue(l, &a, &b, &npc_astar_cb, temp);
-	ni->pf = true;
+	ni->pfjob = astar_queue(l, &a, &b, &npc_astar_cb, temp);
+	ni->pf = (ni->pfjob != NULL);
 }
 
 static inline float min(float a, float b)
@@ -620,6 +624,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 			nd->n[i].stareid = 0;
 			nd->t[i].npc = NULL;
 			nd->t[i].path = NULL;
+			if (nd->t[i].pf) astar_cancel(nd->t[i].pfjob);
 			l->changed = true;
 		}
 		else
@@ -754,6 +759,7 @@ static bool npc_handle_chat(struct level_t *l, struct client_t *c, char *data, s
 				nd->n[i].stareid = 0;
 				nd->t[i].npc = NULL;
 				nd->t[i].path = NULL;
+				if (nd->t[i].pf) astar_cancel(nd->t[i].pfjob);
 			}
 		}
 		snprintf(buf, sizeof buf, TAG_YELLOW "NPCs wiped");
