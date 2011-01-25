@@ -131,7 +131,10 @@ static inline bool level_valid_xyz(const struct level_t *level, int x, int y, in
 
 static inline enum blocktype_t level_get_blocktype(const struct level_t *level, int x, int y, int z)
 {
-	if (y >= level->y) return AIR;
+	if (y >= level->y) {
+		if (!level_valid_xyz(level, x, 0, z)) return ADMINIUM;
+		return AIR;
+	}
 	if (!level_valid_xyz(level, x, y, z)) return ADMINIUM;
 	return level->blocks[level_get_index(level, x, y, z)].type;
 }
