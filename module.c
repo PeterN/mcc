@@ -28,9 +28,17 @@ void module_load(const char *name)
 	m->init_func = dlsym(m->handle, "module_init");
 	m->deinit_func = dlsym(m->handle, "module_deinit");
 
-	module_list_add(&s_modules, m);
-
-	module_init(m);
+	if (m->init_func == NULL || m->deinit_func == NULL)
+	{
+		LOG("Could not find module_init and/or module_deinit entry point(s)\n");
+		dlclose(m->handle);
+		free(m);
+	}
+	else
+	{
+		module_list_add(&s_modules, m);
+		module_init(m);
+	}
 }
 
 void module_unload(struct module_t *m)
