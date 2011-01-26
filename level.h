@@ -163,7 +163,6 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 void level_addupdate_with_owner(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata, unsigned owner);
-void level_addupdate_override(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 
 void level_process_physics(bool can_init);
 void level_process_updates(bool can_init);
