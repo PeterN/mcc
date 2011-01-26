@@ -1813,7 +1813,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 	if (limit)
 	{
 		int n = g_server.cuboid_max;
-		for (; level->updates_iter < level->updates.used; level->updates_iter++)
+		for (; level->updates_iter < level->updates.used && n > 0; level->updates_iter++, n--)
 		{
 			struct block_update_t *bu = &level->updates.items[level->updates_iter];
 
@@ -1830,28 +1830,21 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 					client_add_packet(c, packet_send_set_block(x, y, z, bu->newtype));
 				}
 			}
-
-			/* Max changes */
-			n--;
-			if (n == 0) {
-				level->updates_runtime += gettime() - s;
-				return;
-			}
 		}
 
-		/* Max iterations, or 40 ms */
-		//if (gettime() - s > 40) return;
+		level->updates_runtime += gettime() - s;
+
+		/* Did updates complete? */
+		if (level->updates_iter < level->updates.used) return;
+
+		if (level->updates_runtime > 50)
+		{
+			LOG("Updates ran in %dms (%zu blocks)\n", level->updates_runtime, level->updates.used);
+		}
+
+		level->updates_runtime_last = level->updates_runtime;
+		level->updates_count_last = level->updates.used;
 	}
-
-	level->updates_runtime += gettime() - s;
-
-	if (level->updates_runtime > 50)
-	{
-		LOG("Updates ran in %dms (%zu blocks)\n", level->updates_runtime, level->updates.used);
-	}
-
-	level->updates_runtime_last = level->updates_runtime;
-	level->updates_count_last = level->updates.used;
 
 	//LOG("Hmm (%lu / %lu blocks)\n", level->physics.used, level->physics2.used);
 
