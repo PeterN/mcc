@@ -361,13 +361,12 @@ static void net_packetrecv(struct client_t *c)
 
 void net_run(void)
 {
-	size_t clients = s_clients.used;
 	unsigned i;
 	int n;
 	fd_set read_fd, write_fd;
 	struct timeval tv;
 
-	for (i = 0; i < clients; i++)
+	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
 		if (!c->close && c->packet_send_count > 6000)
@@ -391,9 +390,9 @@ void net_run(void)
 
 					net_close_real(c);
 					client_list_del_index(&s_clients, i);
-					/* Restart :/ */
-					i = -1;
-					clients = s_clients.used;
+
+					/* Item at end of list replaces this one, so process this again. */
+					i--;
 				}
 			}
 		}
@@ -414,7 +413,7 @@ void net_run(void)
 	}
 
 	/* Add clients */
-	for (i = 0; i < clients; i++)
+	for (i = 0; i < s_clients.used; i++)
 	{
 		FD_SET(s_clients.items[i]->sock, &read_fd);
 		FD_SET(s_clients.items[i]->sock, &write_fd);
@@ -491,7 +490,7 @@ void net_run(void)
 		}
 	}
 
-	for (i = 0; i < clients; i++)
+	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
 		if (c->close) continue;

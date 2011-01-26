@@ -122,7 +122,8 @@ void cuboid_process(void)
 
 						level_inuse(c->level, false);
 						cuboid_list_del_index(&s_cuboids, i);
-						return;
+						i--;
+						break;
 					}
 				}
 			}
@@ -140,7 +141,7 @@ void cuboid_remove_for_level(struct level_t *l)
 			level_inuse(l, false);
 			cuboid_list_del_index(&s_cuboids, i);
 			/* Need to restart list */
-			i = -1;
+			i--;
 		}
 	}
 }
