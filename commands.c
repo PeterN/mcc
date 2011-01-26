@@ -2504,6 +2504,62 @@ CMD(tp)
 	return false;
 }
 
+static const char help_u[] =
+"/u <user>\n"
+"Removes blocks placed by <user> from the level.";
+
+CMD(u)
+{
+	if (params < 2) return true;
+
+	struct player_t *p;
+
+	p = player_get_by_name(param[1], true);
+	struct level_t *l = c->player->level;
+	int globalid;
+
+	if (p != NULL)
+	{
+		if (c->player->rank != RANK_ADMIN && p->rank >= RANK_OP)
+		{
+			client_notify(c, "Can't undo op or admin");
+			return false;
+		}
+
+		globalid = p->globalid;
+	}
+	else
+	{
+		enum rank_t rank = playerdb_get_rank(param[1]);
+		if (c->player->rank != RANK_ADMIN && rank >= RANK_OP)
+		{
+			client_notify(c, "Can't undo op or admin");
+			return false;
+		}
+
+		globalid = playerdb_get_globalid(param[1], false, NULL);
+		if (globalid == -1)
+		{
+			client_notify(c, "Unknown username.");
+			return false;
+		}
+	}
+
+	if (l == NULL) return false;
+
+	if (l->undo == NULL) l->undo = undodb_init(l->name);
+	if (l->undo != NULL)
+	{
+		undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
+	}
+
+	level_user_undo(l, globalid, c);
+
+	return false;
+}
+
+
+
 static const char help_unbanip[] =
 "/unbanip <ip>\n"
 "Unban an IP address.";
@@ -2824,6 +2880,7 @@ static const struct command s_builtin_commands[] = {
 	{ "summon", RANK_OP, &cmd_summon, help_summon },
 	{ "time", RANK_GUEST, &cmd_time, help_time },
 	{ "tp", RANK_BUILDER, &cmd_tp, help_tp },
+	{ "u", RANK_MOD, &cmd_u, help_u },
 	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
