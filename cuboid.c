@@ -113,7 +113,7 @@ void cuboid_process(void)
 							level_inuse(c->srclevel, false);
 						}
 
-						if (c->client != NULL && client_is_valid(c->client))
+						if (c->count > 0 && c->client != NULL && client_is_valid(c->client))
 						{
 							char buf[64];
 							snprintf(buf, sizeof buf, TAG_YELLOW "%d block%s changed", c->count, c->count == 1 ? "" : "s");
