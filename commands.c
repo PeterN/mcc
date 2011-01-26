@@ -1071,7 +1071,7 @@ CMD(instant)
 	return false;
 }
 
-static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg);
+static bool undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg);
 
 static const char help_kbu[] =
 "/kbu <user> [<message>]\n"
@@ -1131,7 +1131,12 @@ CMD(kbu)
 	if (l->undo == NULL) l->undo = undodb_init(l->name);
 	if (l->undo != NULL)
 	{
-		undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
+		int count = undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
+		if (count > 0)
+		{
+			snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed by undo", count);
+			client_notify(c, buf);
+		}
 	}
 
 	level_user_undo(l, globalid, c);
@@ -2550,7 +2555,13 @@ CMD(u)
 	if (l->undo == NULL) l->undo = undodb_init(l->name);
 	if (l->undo != NULL)
 	{
-		undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
+		int count = undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
+		if (count > 0)
+		{
+			char buf[64];
+			snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed by undo", count);
+			client_notify(c, buf);
+		}
 	}
 
 	level_user_undo(l, globalid, c);
@@ -2574,48 +2585,38 @@ CMD(unbanip)
 	return false;
 }
 
-static void undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
+static bool undo_show(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
 {
 	struct client_t *client = arg;
 	struct level_t *l = client->player->level;
 
-	if (x >= l->x || y >= l->y || z >= l->z) return;
+	if (x >= l->x || y >= l->y || z >= l->z) return false;
 	unsigned index = level_get_index(l, x, y, z);
 	struct block_t *b = &l->blocks[index];
 
-	if (b->type != newtype) return;
+	if (b->type != newtype) return false;
 	struct block_t backup = *b;
 	b->type = oldtype;
 	b->data = olddata;
 	client_add_packet(client, packet_send_set_block(x, y, z, convert(l, index, b)));
 	*b = backup;
+
+	return true;
 }
 
-static void undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
+static bool undo_real(int16_t x, int16_t y, int16_t z, int oldtype, int olddata, int newtype, void *arg)
 {
 	struct client_t *client = arg;
 	struct level_t *l = client->player->level;
 
-	if (x >= l->x || y >= l->y || z >= l->z) return;
+	if (x >= l->x || y >= l->y || z >= l->z) return false;
 	unsigned index = level_get_index(l, x, y, z);
-	struct block_t *b = &l->blocks[index];
+	const struct block_t *b = &l->blocks[index];
 
-	if (b->type != newtype) return;
-	b->type = oldtype;
-	b->data = olddata;
+	if (b->type != newtype) return false;
+	level_addupdate_with_owner(l, index, oldtype, olddata, 0);
 
-	unsigned i;
-	for (i = 0; i < s_clients.used; i++)
-	{
-		struct client_t *c = s_clients.items[i];
-		if (c->player == NULL) continue;
-		if (c->player->level == l)
-		{
-			client_add_packet(c, packet_send_set_block(x, y, z, convert(l, index, b)));
-		}
-	}
-
-	l->changed = true;
+	return true;
 }
 
 static const char help_undo[] =
@@ -2679,7 +2680,14 @@ CMD(undo)
 	//client_add_packet(client, packet_send_set_block(x, y, z, pt));
 	int limit = strtol(param[3], NULL, 10);
 
-	undodb_undo_player(l->undo, globalid, limit, params == 4 ? &undo_show : &undo_real, c);
+	int count = undodb_undo_player(l->undo, globalid, limit, params == 4 ? &undo_show : &undo_real, c);
+	if (count > 0)
+	{
+		char buf[64];
+		snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed by undo", count);
+		client_notify(c, buf);
+	}
+
 	return false;
 
 	//player_undo(c, param[1], param[2], param[3]);

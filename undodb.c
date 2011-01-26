@@ -154,14 +154,15 @@ void undodb_query_player(struct undodb_t *u, int playerid, query_func_t func, vo
 	}
 }
 
-void undodb_undo_player(struct undodb_t *u, int playerid, int limit, undo_func_t func, void *arg)
+int undodb_undo_player(struct undodb_t *u, int playerid, int limit, undo_func_t func, void *arg)
 {
-	if (u == NULL) return;
+	if (u == NULL) return 0;
 
 	sqlite3_reset(u->query3_stmt);
 	sqlite3_bind_int(u->query3_stmt, 1, playerid);
 	sqlite3_bind_int(u->query3_stmt, 2, limit);
 
+	int count = 0;
 	int res;
 	while ((res = sqlite3_step(u->query3_stmt)) == SQLITE_ROW)
 	{
@@ -172,6 +173,8 @@ void undodb_undo_player(struct undodb_t *u, int playerid, int limit, undo_func_t
 		int olddata = sqlite3_column_int(u->query3_stmt, 4);
 		int newtype = sqlite3_column_int(u->query3_stmt, 5);
 
-		func(x, y, z, oldtype, olddata, newtype, arg);
+		count += func(x, y, z, oldtype, olddata, newtype, arg);
 	}
+
+	return count;
 }
