@@ -400,11 +400,19 @@ static void PNGAPI png_my_warning(png_structp png_ptr, png_const_charp message)
 
 void level_render_png(const struct level_t *level, int rot, bool iso, const char *path)
 {
+	char levelname[256];
 	char filename[256];
 	png_structp png_ptr;
 	png_infop info_ptr;
 
-	snprintf(filename, sizeof filename, "%s/%s-%s.png", path, iso ? "iso" : "flat", level->name);
+	strncpy(levelname, level->name, sizeof levelname);
+	char *p;
+	for (p = levelname; *p != '\0'; p++)
+	{
+		if (*p == '/') *p = '_';
+	}
+
+	snprintf(filename, sizeof filename, "%s/%s-%s.png", path, iso ? "iso" : "flat", levelname);
 	lcase(filename);
 
 	FILE *f = fopen(filename, "wb");
