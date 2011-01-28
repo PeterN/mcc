@@ -827,13 +827,13 @@ static void *level_load_thread_abort(struct level_t *level, const char *reason)
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
-		LOG("client %u: player %p\n", i, c->player);
-		if (c->player == NULL) continue;
-		LOG("level %p, new_level %p\n", level, c->player->new_level);
+		if (c == NULL || c->player == NULL) continue;
+
 		if (c->player->new_level == level)
 		{
 			c->player->new_level = c->player->level;
 			c->waiting_for_level = false;
+
 			LOG("Aborted level change for %s\n", c->player->username);
 
 			client_notify(c, "Level change aborted...");
