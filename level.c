@@ -1839,7 +1839,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 		/* Did updates complete? */
 		if (level->updates_iter < level->updates.used) return;
 
-		if (level->updates_runtime > 50)
+		if (level->updates_runtime > 40)
 		{
 			LOG("Updates on %s ran in %dms (%zu blocks)\n", level->name, level->updates_runtime, level->updates.used);
 		}
