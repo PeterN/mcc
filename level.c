@@ -1738,6 +1738,7 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 {
 	/* Don't run physics if updates are being done */
 	if (level->physics_done == 1) return;
+	if (level->physics.used == 0 && level->physics2.used == 0) return;
 
 	if (level->physics_iter == 0)
 	{
@@ -1796,6 +1797,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 	/* Don't run updates until physics are complete */
 	if (level->physics_done == 0) return;
 	if (level->physics_pause) return;
+	if (level->updates.used == 0) return;
 
 	//LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
 
