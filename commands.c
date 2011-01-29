@@ -2267,6 +2267,7 @@ CMD(setposinterval)
 	if (interval < 40) interval = 40;
 
 	g_server.pos_interval = interval;
+	timer_set_interval_by_name("positions", interval);
 
 	char buf[64];
 	snprintf(buf, sizeof buf, "Player position update interval set to %d ms", g_server.pos_interval);
