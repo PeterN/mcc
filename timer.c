@@ -82,3 +82,17 @@ void timer_set_interval(struct timer_t *t, unsigned interval)
 	t->next_trigger += (interval - t->interval);
 	t->interval = interval;
 }
+
+void timer_set_interval_by_name(const char *name, unsigned interval)
+{
+	unsigned i;
+	for (i = 0; i < s_timers.used; i++)
+	{
+		struct timer_t *t = s_timers.items[i];
+		if (strcmp(t->name, name) == 0)
+		{
+			timer_set_interval(t, interval);
+			return;
+		}
+	}
+}

@@ -64,12 +64,12 @@ all: $(LIBO) $(MCCO) $(SETRANKO) $(BANIPO) $(IMAGEO) $(MODULESO)
 clean:
 	rm -f *.d $(LIBOBJ) $(LIBO) $(MCCOBJ) $(MCCO) $(SETRANKOBJ) $(SETRANKO) $(BANIPOBJ) $(BANIPO) $(IMAGEOBJ) $(IMAGEO) $(MODULESOBJ) $(MODULESO)
 
-SOURCES = $(LIBSRC) $(MCCSRC) $(SETRANKSRC) $(BANIPSRC)  $(IMAGESRC)
+SOURCES = $(LIBSRC) $(MCCSRC) $(SETRANKSRC) $(BANIPSRC) $(IMAGESRC) $(MODULESSRC)
 
 $(LIBO): $(LIBOBJ)
 	$(CC) -shared -fPIC -Wl,-soname,libmcc.so -o $(LIBO) $(LIBOBJ)
 
-(MODULESO): $(MODULESOBJ) $(LIBO)
+$(MODULESO): $(MODULESOBJ) $(LIBO)
 
 %.so: %.o
 	$(CC) -shared -fPIC -Wl,-soname,$@ $< -o $@

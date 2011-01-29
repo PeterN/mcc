@@ -827,13 +827,13 @@ static void *level_load_thread_abort(struct level_t *level, const char *reason)
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *c = s_clients.items[i];
-		LOG("client %u: player %p\n", i, c->player);
-		if (c->player == NULL) continue;
-		LOG("level %p, new_level %p\n", level, c->player->new_level);
+		if (c == NULL || c->player == NULL) continue;
+
 		if (c->player->new_level == level)
 		{
 			c->player->new_level = c->player->level;
 			c->waiting_for_level = false;
+
 			LOG("Aborted level change for %s\n", c->player->username);
 
 			client_notify(c, "Level change aborted...");
@@ -1738,6 +1738,7 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 {
 	/* Don't run physics if updates are being done */
 	if (level->physics_done == 1) return;
+	if (level->physics.used == 0 && level->physics2.used == 0) return;
 
 	if (level->physics_iter == 0)
 	{
@@ -1781,7 +1782,7 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 	/* Log if physics took too long */
 	if (level->physics_runtime > 40)
 	{
-		LOG("Physics ran in %dms (%zu blocks)\n", level->physics_runtime, level->physics2.used);
+		LOG("Physics on %s ran in %dms (%zu blocks)\n", level->name, level->physics_runtime, level->physics2.used);
 	}
 
 	level->physics_runtime_last = level->physics_runtime;
@@ -1796,6 +1797,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 	/* Don't run updates until physics are complete */
 	if (level->physics_done == 0) return;
 	if (level->physics_pause) return;
+	if (level->updates.used == 0) return;
 
 	//LOG("%lu block updates, iterator at %d\n", level->updates.used, level->updates_iter);
 
@@ -1837,9 +1839,9 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 		/* Did updates complete? */
 		if (level->updates_iter < level->updates.used) return;
 
-		if (level->updates_runtime > 50)
+		if (level->updates_runtime > 40)
 		{
-			LOG("Updates ran in %dms (%zu blocks)\n", level->updates_runtime, level->updates.used);
+			LOG("Updates on %s ran in %dms (%zu blocks)\n", level->name, level->updates_runtime, level->updates.used);
 		}
 
 		level->updates_runtime_last = level->updates_runtime;

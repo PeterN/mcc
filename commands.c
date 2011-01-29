@@ -2255,18 +2255,17 @@ CMD(setplayermax)
 
 static const char help_setposinterval[] =
 "/setposinterval <interval>\n"
-"Set player position update interval in ms. Minimum is 40ms.";
+"Set player position update interval in ms. Minimum is 10ms.";
 
 CMD(setposinterval)
 {
 	if (params != 2) return true;
 
 	int interval = atoi(param[1]);
-	interval /= 40;
-	interval *= 40;
-	if (interval < 40) interval = 40;
+	if (interval < 10) interval = 10;
 
 	g_server.pos_interval = interval;
+	timer_set_interval_by_name("positions", interval);
 
 	char buf[64];
 	snprintf(buf, sizeof buf, "Player position update interval set to %d ms", g_server.pos_interval);

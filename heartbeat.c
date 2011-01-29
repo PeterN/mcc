@@ -76,9 +76,9 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 		{
 			if (!can_read) return;
 
-			char buf[2048];
+			char buf[2049];
 
-			int res = recv(fd, buf, sizeof buf, 0);
+			int res = recv(fd, buf, sizeof buf - 1, 0);
 			if (res == -1)
 			{
 				if (errno != EWOULDBLOCK && errno != EAGAIN)
@@ -96,6 +96,9 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 				success = true;
 				break;
 			}
+
+			/* Terminate data */
+			buf[res] = '\0';
 
 			char *b = strstr(buf, "\r\n\r\n");
 			if (b != NULL)

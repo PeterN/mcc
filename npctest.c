@@ -233,27 +233,6 @@ static void npc_find_nearest(struct level_t *l, int i, struct npcdata *nd, int f
 	}
 }
 
-static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
-{
-	struct pftemp *temp = data;
-	struct level_hook_data_t *arg = temp->arg;
-	struct npcdata *nd = arg->data;
-	struct npctemp *ni = &nd->t[temp->i];
-
-	if (path != NULL)
-	{
-		void *oldpath = ni->path;
-		ni->path = path;
-		ni->step = 0;
-		nd->n[temp->i].stareid = 0;
-		free(oldpath);
-	}
-
-	ni->pfjob = NULL;
-	ni->pf = false;
-	free(temp);
-}
-
 static const struct position_t *npc_getpos(struct level_t *l, int nearest)
 {
 	nearest -= 1;
@@ -324,6 +303,30 @@ static bool npc_iswalkable(const struct level_t *l, float ax, float ay, float az
 	return true;
 }
 
+static void npc_astar_cb(struct level_t *l, struct point *path, void *data)
+{
+	struct pftemp *temp = data;
+	struct level_hook_data_t *arg = temp->arg;
+	struct npcdata *nd = arg->data;
+	struct npctemp *ni = &nd->t[temp->i];
+
+	if (path != NULL)
+	{
+		void *oldpath = ni->path;
+		ni->path = path;
+		ni->step = 1;
+		nd->n[temp->i].stareid = 0;
+		free(oldpath);
+
+		/* Optimise start of path? */
+		while (npc_iswalkable(l, ni->sx, ni->sy, ni->sz, ni->path[ni->step].x + 0.5, ni->path[ni->step].y + 0.5f, ni->path[ni->step].z + 0.5f)) ni->step++;
+		ni->step--;
+	}
+
+	ni->pfjob = NULL;
+	ni->pf = false;
+	free(temp);
+}
 
 static void npc_replacepath(struct level_t *l, int i, struct level_hook_data_t *arg)
 {

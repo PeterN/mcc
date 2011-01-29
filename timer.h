@@ -10,5 +10,6 @@ void deregister_timer(struct timer_t *handle);
 void process_timers(unsigned tick);
 
 void timer_set_interval(struct timer_t *t, unsigned interval);
+void timer_set_interval_by_name(const char *name, unsigned interval);
 
 #endif /* TIMER_H */

@@ -86,6 +86,19 @@ static void generate_salt(void *arg)
 	config_set_string("salt", salt);
 }
 
+static void update_positions(void *arg)
+{
+	player_send_positions(gettime() / 1000);
+	npc_send_positions();
+}
+
+static void update_cputime(void *arg)
+{
+	clock_t c = clock();
+	g_server.cpu_time = ((double) (c - g_server.cpu_start)) / CLOCKS_PER_SEC * 100.0;
+	g_server.cpu_start = c;
+}
+
 #define TICK_INTERVAL 40
 #define MS_TO_TICKS(x) ((x) / TICK_INTERVAL)
 
@@ -139,6 +152,8 @@ int main(int argc, char **argv)
 	register_timer("save levels", 120000, &level_save_all, NULL, true);
 	register_timer("unload levels", 20000, &level_unload_empty, NULL, true);
 	register_timer("salt", 15 * 60 * 1000, &generate_salt, NULL, false);
+	register_timer("positions", g_server.pos_interval, &update_positions, NULL, true);
+	register_timer("cputime", 1000, &update_cputime, NULL, true);
 
 	if (!level_load("main", NULL))
 	{
@@ -170,6 +185,8 @@ int main(int argc, char **argv)
 
 		net_run();
 
+		process_timers(cur_ticks);
+
 		cur_ticks = gettime();
 		if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
 		{
@@ -177,24 +194,10 @@ int main(int argc, char **argv)
 
 			tick++;
 
-			if ((tick % MS_TO_TICKS(1000)) == 0)
-			{
-				clock_t c = clock();
-				g_server.cpu_time = ((double) (c - g_server.cpu_start)) / CLOCKS_PER_SEC * 100.0;
-				g_server.cpu_start = c;
-			}
-
-			process_timers(cur_ticks);
-
 			level_process_physics((tick % MS_TO_TICKS(80)) == 0);
 			level_process_updates(true);
 
 			cuboid_process();
-			if ((tick % MS_TO_TICKS(g_server.pos_interval)) == 0)
-			{
-				player_send_positions(cur_ticks / 1000);
-				npc_send_positions();
-			}
 		}
 
 		usleep(50);
