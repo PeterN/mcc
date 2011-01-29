@@ -1781,7 +1781,7 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 	/* Log if physics took too long */
 	if (level->physics_runtime > 40)
 	{
-		LOG("Physics ran in %dms (%zu blocks)\n", level->physics_runtime, level->physics2.used);
+		LOG("Physics on %s ran in %dms (%zu blocks)\n", level->name, level->physics_runtime, level->physics2.used);
 	}
 
 	level->physics_runtime_last = level->physics_runtime;
@@ -1839,7 +1839,7 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 
 		if (level->updates_runtime > 50)
 		{
-			LOG("Updates ran in %dms (%zu blocks)\n", level->updates_runtime, level->updates.used);
+			LOG("Updates on %s ran in %dms (%zu blocks)\n", level->name, level->updates_runtime, level->updates.used);
 		}
 
 		level->updates_runtime_last = level->updates_runtime;
