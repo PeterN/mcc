@@ -185,14 +185,14 @@ int main(int argc, char **argv)
 
 		net_run();
 
+		process_timers(cur_ticks);
+
 		cur_ticks = gettime();
 		if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
 		{
 			next_tick = cur_ticks + TICK_INTERVAL;
 
 			tick++;
-
-			process_timers(cur_ticks);
 
 			level_process_physics((tick % MS_TO_TICKS(80)) == 0);
 			level_process_updates(true);
