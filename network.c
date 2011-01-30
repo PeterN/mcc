@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <pthread.h>
 #include "client.h"
 #include "level.h"
 #include "packet.h"
@@ -23,6 +24,7 @@ static inline bool socket_t_compare(const struct socket_t *a, const struct socke
 
 LIST(socket, struct socket_t, socket_t_compare)
 static struct socket_list_t s_sockets;
+static pthread_mutex_t s_sockets_mutex;
 
 void register_socket(int fd, socket_func_t socket_func, void *arg)
 {
@@ -31,7 +33,9 @@ void register_socket(int fd, socket_func_t socket_func, void *arg)
 	s.socket_func = socket_func;
 	s.arg = arg;
 
+	pthread_mutex_lock(&s_sockets_mutex);
 	socket_list_add(&s_sockets, s);
+	pthread_mutex_unlock(&s_sockets_mutex);
 }
 
 void deregister_socket(int fd)

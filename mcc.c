@@ -10,6 +10,7 @@
 #include "astar_worker.h"
 #include "module.h"
 #include "network.h"
+#include "network_worker.h"
 #include "player.h"
 #include "playerdb.h"
 #include "client.h"
@@ -24,6 +25,7 @@ void mcc_exit(void)
 
 	level_worker_deinit();
 	astar_worker_deinit();
+	network_worker_deinit();
 
 	unsigned i;
 	for (i = 0; i < s_levels.used; i++)
@@ -131,6 +133,7 @@ int main(int argc, char **argv)
 
 	level_worker_init();
 	astar_worker_init();
+	network_worker_init();
 
 	commands_init();
 

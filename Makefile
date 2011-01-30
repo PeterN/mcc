@@ -25,6 +25,7 @@ LIBSRC += level_worker.c
 LIBSRC += md5.c
 LIBSRC += module.c
 LIBSRC += network.c
+LIBSRC += network_worker.c
 LIBSRC += npc.c
 LIBSRC += packet.c
 LIBSRC += perlin.c
