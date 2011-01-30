@@ -1458,7 +1458,9 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 	}
 
-	if (click && client->player->mode == MODE_INFO)
+	enum blocktype_t nt = (click && !ingame) ? client->player->bindings[t] : t;
+
+	if ((click && client->player->mode == MODE_INFO) || nt == -1)
 	{
 		char buf[64];
 		snprintf(buf, sizeof buf, "%s%s at %dx%dx%d placed by %s",
@@ -1476,7 +1478,6 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	}
 
 	bool can_build = level_user_can_build(level, client->player);
-	enum blocktype_t nt = (click && !ingame) ? client->player->bindings[t] : t;
 
 	if (click && can_build && !ingame)
 	{

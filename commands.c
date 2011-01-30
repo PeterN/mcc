@@ -302,25 +302,47 @@ CMD(bind)
 
 		case 3:
 			i = blocktype_get_by_name(param[1]);
-			j = blocktype_get_by_name(param[2]);
-			if ((i == ADMINIUM || j == ADMINIUM) && c->player->rank < RANK_OP)
-			{
-				client_notify(c, "You do not have permission to place adminium.");
-				return false;
-			}
 
-			if (i == BLOCK_INVALID)
+			if (*param[2] == '/' && c->player->rank >= RANK_ADV_BUILDER)
 			{
-				snprintf(buf, sizeof buf, "Unknown blocktype %s", param[1]);
-			}
-			else if (j == BLOCK_INVALID)
-			{
-				snprintf(buf, sizeof buf, "Unknown blocktype %s", param[2]);
+				if (i == ADMINIUM && c->player->rank < RANK_OP)
+				{
+					snprintf(buf, sizeof buf, "You do not have permission to place adminium.");
+				}
+				else if (i == BLOCK_INVALID)
+				{
+					snprintf(buf, sizeof buf, "Unknown blocktype %s", param[1]);
+				}
+				else if (strcasecmp(param[2], "/info") == 0)
+				{
+					c->player->bindings[i] = -1;
+					snprintf(buf, sizeof buf, "Bound %s to /info", blocktype_get_name(i));
+				}
+				else
+				{
+					snprintf(buf, sizeof buf, "Unknown command bind %s", param[2]);
+				}
 			}
 			else
 			{
-				c->player->bindings[i] = j;
-				snprintf(buf, sizeof buf, "Bound %s to %s", blocktype_get_name(i), blocktype_get_name(j));
+				j = blocktype_get_by_name(param[2]);
+				if ((i == ADMINIUM || j == ADMINIUM) && c->player->rank < RANK_OP)
+				{
+					snprintf(buf, sizeof buf, "You do not have permission to place adminium.");
+				}
+				else if (i == BLOCK_INVALID)
+				{
+					snprintf(buf, sizeof buf, "Unknown blocktype %s", param[1]);
+				}
+				else if (j == BLOCK_INVALID)
+				{
+					snprintf(buf, sizeof buf, "Unknown blocktype %s", param[2]);
+				}
+				else
+				{
+					c->player->bindings[i] = j;
+					snprintf(buf, sizeof buf, "Bound %s to %s", blocktype_get_name(i), blocktype_get_name(j));
+				}
 			}
 
 			client_notify(c, buf);
