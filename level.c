@@ -1871,7 +1871,7 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 
 	enum blocktype_t pt2 = convert(level, index, b);
 
-	if (pt1 != pt2)
+	if (pt1 != pt2 && !level->instant)
 	{
 		struct block_update_t bu;
 		bu.index = index;
@@ -1896,7 +1896,7 @@ void level_addupdate_with_owner(struct level_t *level, unsigned index, enum bloc
 
 	enum blocktype_t pt2 = convert(level, index, b);
 
-	if (pt1 != pt2)
+	if (pt1 != pt2 && !level->instant)
 	{
 		struct block_update_t bu;
 		bu.index = index;
