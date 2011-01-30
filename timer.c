@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <string.h>
+#include <pthread.h>
 #include "list.h"
 #include "timer.h"
 #include "mcc.h"
@@ -22,6 +23,7 @@ static inline bool timer_t_compare(struct timer_t **a, struct timer_t **b)
 
 LIST(timer, struct timer_t *, timer_t_compare)
 static struct timer_list_t s_timers;
+static pthread_mutex_t s_timers_mutex;
 
 struct timer_t *register_timer(const char *name, unsigned interval, timer_func_t timer_func, void *arg, bool wait)
 {
@@ -34,7 +36,9 @@ struct timer_t *register_timer(const char *name, unsigned interval, timer_func_t
 	/* Make timer run on next tick */
 	t->next_trigger = gettime() + (wait ? t->interval : 0);
 
+	pthread_mutex_lock(&s_timers_mutex);
 	timer_list_add(&s_timers, t);
+	pthread_mutex_unlock(&s_timers_mutex);
 
 	LOG("Registered %s timer with %u ms interval\n", name, interval);
 

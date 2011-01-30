@@ -2,10 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <unistd.h>
 #include <errno.h>
 #include "colour.h"
@@ -14,6 +11,7 @@
 #include "hook.h"
 #include "mcc.h"
 #include "network.h"
+#include "network_worker.h"
 #include "timer.h"
 
 struct irc_packet_t
@@ -35,9 +33,7 @@ struct irc_t
 	int fd;
 	struct timer_t *timer;
 
-	struct sockaddr_in irc_addr;
 	int irc_stage;
-	bool irc_resolved;
 	struct irc_packet_t *queue;
 	struct irc_packet_t **queue_end;
 
@@ -348,6 +344,24 @@ static void irc_run(int fd, bool can_write, bool can_read, void *arg)
 	}
 }
 
+static void irc_connected(int fd, void *arg)
+{
+	struct irc_t *s = arg;
+
+	if (fd != -1)
+	{
+		register_socket(fd, &irc_run, s);
+
+		s->fd = fd;
+		s->irc_stage = 0;
+		s->queue = NULL;
+		s->queue_end = &s->queue;
+		s->read_pos = s->read_buf;
+
+		register_hook(HOOK_CHAT, &irc_message, s);
+	}
+}
+
 static void irc_start(void *arg)
 {
 	struct irc_t *s = arg;
@@ -355,42 +369,7 @@ static void irc_start(void *arg)
 	/* Already connected? */
 	if (s->fd != -1) return;
 
-	if (!s->irc_resolved)
-	{
-		if (!resolve(s->settings.hostname, s->settings.port, &s->irc_addr))
-		{
-			LOG("[irc] Unable to resolve IRC server\n");
-			return;
-		}
-		s->irc_resolved = true;
-	}
-
-	int fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd < 0)
-	{
-		LOG("[irc] socket: %s\n", strerror(errno));
-		return;
-	}
-
-	net_set_nonblock(fd);
-
-	if (connect(fd, (struct sockaddr *)&s->irc_addr, sizeof s->irc_addr) < 0)
-	{
-		if (errno != EINPROGRESS) {
-			LOG("[irc] connect: %s\n", strerror(errno));
-			return;
-		}
-	}
-
-	register_socket(fd, &irc_run, s);
-
-	s->fd = fd;
-	s->irc_stage = 0;
-	s->queue = NULL;
-	s->queue_end = &s->queue;
-	s->read_pos = s->read_buf;
-
-	register_hook(HOOK_CHAT, &irc_message, s);
+	network_connect(s->settings.hostname, s->settings.port, &irc_connected, s);
 }
 
 void module_init(void **arg)

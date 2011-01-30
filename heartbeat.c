@@ -2,14 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <sys/types.h>
 #include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <unistd.h>
 #include <errno.h>
 #include "mcc.h"
 #include "network.h"
+#include "network_worker.h"
 #include "timer.h"
 
 struct heartbeat_t
@@ -18,9 +16,7 @@ struct heartbeat_t
 	struct timer_t *timer;
 	struct timer_t *timeout_timer;
 
-	struct sockaddr_in heartbeat_addr;
 	int heartbeat_stage;
-	bool heartbeat_resolved;
 };
 
 static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
@@ -156,52 +152,40 @@ static void heartbeat_timeout(void *arg)
 	h->timeout_timer = NULL;
 }
 
+static void heartbeat_connected(int fd, void *arg)
+{
+	struct heartbeat_t *h = arg;
+
+	if (fd == -1)
+	{
+		timer_set_interval(h->timer, 15000);
+	}
+	else
+	{
+		timer_set_interval(h->timer, 45000);
+
+		h->fd = fd;
+
+		register_socket(h->fd, &heartbeat_run, h);
+
+		h->heartbeat_stage = 0;
+		h->timeout_timer = register_timer("heartbeat_timeout", 10000, &heartbeat_timeout, h, true);
+	}
+}
+
 static void heartbeat_start(void *arg)
 {
 	struct heartbeat_t *h = arg;
 
 	if (h->fd != -1) return;
 
-	if (!h->heartbeat_resolved)
-	{
-		if (!resolve("www.minecraft.net", 80, &h->heartbeat_addr))
-		{
-			LOG("Unable to resolve heartbeat server\n");
-			return;
-		}
-		h->heartbeat_resolved = true;
-	}
-
-	h->fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (h->fd < 0)
-	{
-		LOG("[heartbeat] socket: %s\n", strerror(errno));
-		return;
-	}
-
-	net_set_nonblock(h->fd);
-
-	if (connect(h->fd, (struct sockaddr *)&h->heartbeat_addr, sizeof h->heartbeat_addr) < 0)
-	{
-		if (errno != EINPROGRESS) {
-			LOG("[heartbeat] connect: %s\n", strerror(errno));
-			h->fd = -1;
-			return;
-		}
-	}
-
-	register_socket(h->fd, &heartbeat_run, h);
-
-	h->heartbeat_stage = 0;
-
-	h->timeout_timer = register_timer("heartbeat_timeout", 10000, &heartbeat_timeout, h, true);
+	network_connect("www.minecraft.net", 80, &heartbeat_connected, h);
 }
 
 void module_init(void **arg)
 {
 	struct heartbeat_t *h = malloc(sizeof *h);
 	h->fd = -1;
-	h->heartbeat_resolved = false;
 	h->timer = register_timer("heartbeat", 45000, &heartbeat_start, h, false);
 
 	*arg = h;
