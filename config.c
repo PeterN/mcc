@@ -25,6 +25,8 @@ static void config_free(void)
 	struct configitem *prev;
 	struct configitem *curr = s_config.head;
 
+	s_config.head = NULL;
+
 	while (curr != NULL)
 	{
 		prev = curr;
@@ -120,6 +122,7 @@ void config_init(const char *filename)
 void config_deinit(void)
 {
 	config_write();
+	config_free();
 }
 
 void config_set_int(const char *setting, int value)
