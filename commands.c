@@ -649,14 +649,24 @@ CMD(filter)
 
 	if (params == 2)
 	{
-		int filter = playerdb_get_globalid(param[1], false, NULL);
-		if (filter == -1)
+		const struct player_t *p = player_get_by_name(param[1], true);
+		int globalid;
+
+		if (p != NULL)
 		{
-			client_notify(c, "User does not exist");
-			return false;
+			globalid = p->globalid;
+		}
+		else
+		{
+			globalid = playerdb_get_globalid(param[1], false, NULL);
+			if (globalid == -1)
+			{
+				client_notify(c, "User does not exist");
+				return false;
+			}
 		}
 
-		c->player->filter = filter;
+		c->player->filter = globalid;
 	}
 	else
 	{
