@@ -33,13 +33,20 @@ struct player_t *player_get_by_name(const char *username, bool partial)
 	if (partial)
 	{
 		int n = strlen(username);
+		int c = 0;
+		struct player_t *match = NULL;
+
 		for (i = 0; i < s_players.used; i++)
 		{
-			if (strncasecmp(s_players.items[i]->username, username, n) == 0)
+			struct player_t *p = s_players.items[i];
+			if (!p->client->hidden && strncasecmp(p->username, username, n) == 0)
 			{
-				return s_players.items[i];
+				c++;
+				match = p;
 			}
 		}
+
+		if (c == 1) return match;
 	}
 
 	return NULL;
