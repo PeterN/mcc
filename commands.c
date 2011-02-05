@@ -1643,16 +1643,6 @@ CMD(newlvl)
 	return false;
 }
 
-static const char help_opglass[] =
-"/opglass\n"
-"OpGlass not supported. Use /fixed with glass instead.";
-
-CMD(opglass)
-{
-	client_notify(c, "OpGlass not supported. Use /fixed with glass instead.");
-	return false;
-}
-
 static const char help_paint[] =
 "/paint\n"
 "Toggle paint mode. When enabled, any removed block will instead "
@@ -2891,7 +2881,6 @@ static const struct command s_builtin_commands[] = {
 	{ "modules", RANK_ADMIN, &cmd_modules, help_modules },
 	{ "motd", RANK_BANNED, &cmd_motd, help_motd },
 	{ "newlvl", RANK_OP, &cmd_newlvl, help_newlvl },
-	{ "opglass", RANK_OP, &cmd_opglass, help_opglass },
 	{ "paint", RANK_BUILDER, &cmd_paint, help_paint },
 	{ "perbuild", RANK_GUEST, &cmd_perbuild, help_perbuild },
 	{ "perown", RANK_GUEST, &cmd_perown, help_perown },
