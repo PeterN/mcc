@@ -51,6 +51,9 @@ void client_process(struct client_t *c, char *message);
 void client_send_spawn(struct client_t *c, bool hiding);
 void client_send_despawn(struct client_t *c, bool hiding);
 
+void client_spawn_players(struct client_t *c);
+void client_despawn_players(struct client_t *c);
+
 void client_notify(struct client_t *c, const char *message);
 void client_notify_file(struct client_t *c, const char *filename);
 

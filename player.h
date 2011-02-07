@@ -40,13 +40,15 @@ struct player_t
 {
 	unsigned globalid;
 	unsigned levelid;
-	char colourusername[128];
 	char *username;
-	char alias[128];
+	char colourusername[67];
+	char gameusername[67];
+	char gamealias[67];
 	enum rank_t rank;
 	enum mode_t mode;
 	uint8_t flags;
 	uint8_t teleport;
+	uint8_t namemode;
 	unsigned last_active;
 
 	char afk[64];
@@ -94,6 +96,17 @@ enum colour_t rank_get_colour(enum rank_t rank);
 static inline void player_toggle_mode(struct player_t *player, enum mode_t mode)
 {
 	player->mode = (player->mode == mode) ? MODE_NORMAL : mode;
+}
+
+static inline const char *playername(const struct player_t *p, uint8_t mode)
+{
+	switch (mode)
+	{
+		default:
+		case 0: if (*p->gamealias)   return p->gamealias;
+		case 1: if (*p->gameusername) return p->gameusername;
+		case 2: return p->colourusername;
+	}
 }
 
 void player_send_positions(unsigned cur_tick);

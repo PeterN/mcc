@@ -303,13 +303,7 @@ bool level_send(struct client_t *c)
 		}
 
 		/* Despawn users for this user */
-		for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-		{
-			if (oldlevel->clients[i] != NULL && !oldlevel->clients[i]->hidden && !oldlevel->clients[i]->sending_level)
-			{
-				client_add_packet(c, packet_send_despawn_player(i));
-			}
-		}
+		client_despawn_players(c);
 
 		for (i = 0; i < MAX_NPCS_PER_LEVEL; i++)
 		{
@@ -367,15 +361,9 @@ bool level_send(struct client_t *c)
 		c->player->hook_data = NULL;
 	}
 
-	client_add_packet(c, packet_send_spawn_player(0xFF, c->player->alias, &c->player->pos));
+	client_add_packet(c, packet_send_spawn_player(0xFF, c->player->username, &c->player->pos));
 
-	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
-	{
-		if (newlevel->clients[i] != NULL && newlevel->clients[i] != c && !newlevel->clients[i]->hidden && !newlevel->clients[i]->sending_level)
-		{
-			client_add_packet(c, packet_send_spawn_player(i, newlevel->clients[i]->player->alias, &newlevel->clients[i]->player->pos));
-		}
-	}
+	client_spawn_players(c);
 
 	for (i = 0; i < MAX_NPCS_PER_LEVEL; i++)
 	{

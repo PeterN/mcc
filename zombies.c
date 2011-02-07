@@ -34,12 +34,12 @@ struct zombies_t
 
 static bool is_zombie(const struct player_t *p)
 {
-	return p->alias[1] == 'c';
+	return p->gamealias[1] == 'c';
 }
 
 static bool is_mod(const struct player_t *p)
 {
-	return p->alias[1] == 'e';
+	return p->gamealias[1] == 'e';
 }
 
 static void zombie_start(struct level_t *l, struct zombies_t *arg)

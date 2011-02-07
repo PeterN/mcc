@@ -271,7 +271,7 @@ void client_process(struct client_t *c, char *message)
 //				break;
 
 			case '\'':
-				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message + 1);
+				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", playername(c->player, 1), message + 1);
 				break;
 
 			default:
@@ -284,7 +284,7 @@ void client_process(struct client_t *c, char *message)
 				}
 
 				if (client_botcheck(c, message)) return;
-				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", c->player->colourusername, message);
+				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", playername(c->player, 1), message);
 				break;
 		}
 
@@ -304,9 +304,10 @@ void client_send_spawn(struct client_t *c, bool hiding)
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (level->clients[i] != NULL && level->clients[i] != c && !level->clients[i]->sending_level)
+		struct client_t *c2 = level->clients[i];
+		if (c2 != NULL && c2 != c && !c2->sending_level)
 		{
-			client_add_packet(level->clients[i], packet_send_spawn_player(c->player->levelid, c->player->alias, &c->player->pos));
+			client_add_packet(c2, packet_send_spawn_player(c->player->levelid, playername(c->player, c2->player->namemode), &c->player->pos));
 			//printf("Told %s (%d) about %s joining %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
 		}
 	}
@@ -320,10 +321,43 @@ void client_send_despawn(struct client_t *c, bool hiding)
 	unsigned i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		if (level->clients[i] != NULL && level->clients[i] != c && !level->clients[i]->sending_level)
+		struct client_t *c2 = level->clients[i];
+		if (c2 != NULL && c2 != c && !c2->sending_level)
 		{
-			client_add_packet(level->clients[i], packet_send_despawn_player(c->player->levelid));
+			client_add_packet(c2, packet_send_despawn_player(c->player->levelid));
 			//printf("Told %s (%d) about %s leaving %s\n", level->clients[i]->player->username, i, c->player->username, level->name);
+		}
+	}
+}
+
+void client_spawn_players(struct client_t *c)
+{
+	if (c->player == NULL || c->player->level == NULL) return;
+	struct level_t *l = c->player->level;
+
+	unsigned i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		struct client_t *c2 = l->clients[i];
+		if (c2 != NULL && c2 != c && !c2->hidden && !c2->sending_level)
+		{
+			client_add_packet(c, packet_send_spawn_player(c2->player->levelid, playername(c2->player, c->player->namemode), &c2->player->pos));
+		}
+	}
+}
+
+void client_despawn_players(struct client_t *c)
+{
+	if (c->player == NULL || c->player->level == NULL) return;
+	struct level_t *l = c->player->level;
+
+	unsigned i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		struct client_t *c2 = l->clients[i];
+		if (c2 != NULL && c2 != c && !c2->hidden && !c2->sending_level)
+		{
+			client_add_packet(c, packet_send_despawn_player(c2->player->levelid));
 		}
 	}
 }

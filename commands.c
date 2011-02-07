@@ -192,6 +192,34 @@ CMD(afk)
 	return false;
 }
 
+static const char help_aka[] =
+"/aka\n"
+"Toggle real names";
+
+CMD(aka)
+{
+	if (params != 1) return true;
+
+	c->player->namemode++;
+	if (c->player->namemode > (c->player->rank >= RANK_MOD) ? 2 : 1) c->player->namemode = 0;
+
+	char buf[64];
+
+	switch (c->player->namemode)
+	{
+		default:
+		case 0: snprintf(buf, sizeof buf, TAG_YELLOW "Aliases selected"); break;
+		case 1: snprintf(buf, sizeof buf, TAG_YELLOW "Usernames selected"); break;
+		case 2: snprintf(buf, sizeof buf, TAG_YELLOW "Rank+usernames selected"); break;
+	}
+	client_notify(c, buf);
+
+	client_despawn_players(c);
+	client_spawn_players(c);
+
+	return false;
+}
+
 static const char help_ban[] =
 "/ban <user> [<message>]\n"
 "Ban user";
@@ -735,7 +763,7 @@ CMD(follow)
 		snprintf(buf, sizeof buf, "Stopped following %s", c->player->following->username);
 		client_notify(c, buf);
 
-		client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->alias, &c->player->following->pos));
+		client_add_packet(c, packet_send_spawn_player(c->player->following->levelid, c->player->following->colourusername, &c->player->following->pos));
 
 		c->player->following = NULL;
 		return false;
@@ -2344,13 +2372,8 @@ CMD(setrank)
 	playerdb_set_rank(name, newrank, c->player->username);
 	if (p != NULL)
 	{
-		bool setalias = strcmp(p->colourusername, p->alias) == 0;
 		p->rank = newrank;
 		sprintf(p->colourusername, "&%x%s", rank_get_colour(p->rank), p->username);
-		if (setalias)
-		{
-			strcpy(p->alias, p->colourusername);
-		}
 
 		if (oldrank >= RANK_OP)
 		{
@@ -2844,6 +2867,7 @@ static const struct command s_builtin_commands[] = {
 	{ "activewater", RANK_ADV_BUILDER, &cmd_activewater, help_activewater },
 	{ "adminrules", RANK_GUEST, &cmd_adminrules, help_adminrules },
 	{ "afk", RANK_GUEST, &cmd_afk, help_afk },
+	{ "aka", RANK_GUEST, &cmd_aka, help_aka },
 	{ "al", RANK_ADV_BUILDER, &cmd_activelava, help_activelava },
 	{ "aw", RANK_ADV_BUILDER, &cmd_activewater, help_activewater },
 	{ "ban", RANK_OP, &cmd_ban, help_ban },

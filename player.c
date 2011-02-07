@@ -56,10 +56,15 @@ void player_set_alias(struct player_t *p, const char *alias, bool send_spawn)
 {
 	if (alias == NULL)
 	{
-		alias = p->colourusername;
+		*p->gamealias = '\0';
+		*p->gameusername = '\0';
 	}
-
-	snprintf(p->alias, sizeof p->alias, "%s", alias);
+	else
+	{
+		snprintf(p->gamealias, sizeof p->gamealias, "%s", alias);
+		snprintf(p->gameusername, sizeof p->gameusername, "%s", alias);
+		p->gameusername[1] = p->gamealias[1];
+	}
 
 	if (p->client != NULL && !p->client->hidden && send_spawn)
 	{
