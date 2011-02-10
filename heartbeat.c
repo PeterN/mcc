@@ -148,8 +148,11 @@ static void heartbeat_timeout(void *arg)
 		timer_set_interval(h->timer, 15000);
 	}
 
-	deregister_timer(h->timeout_timer);
-	h->timeout_timer = NULL;
+	if (h->timeout_timer != NULL)
+	{
+		deregister_timer(h->timeout_timer);
+		h->timeout_timer = NULL;
+	}
 }
 
 static void heartbeat_connected(int fd, void *arg)
