@@ -201,7 +201,7 @@ CMD(aka)
 	if (params != 1) return true;
 
 	c->player->namemode++;
-	if (c->player->namemode > (c->player->rank >= RANK_MOD) ? 2 : 1) c->player->namemode = 0;
+	if (c->player->namemode > ((c->player->rank >= RANK_MOD) ? 2 : 1)) c->player->namemode = 0;
 
 	char buf[64];
 
