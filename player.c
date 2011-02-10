@@ -56,13 +56,13 @@ void player_set_alias(struct player_t *p, const char *alias, bool send_spawn)
 {
 	if (alias == NULL)
 	{
-		*p->gamealias = '\0';
-		*p->gameusername = '\0';
+		strncpy(p->gamealias, p->colourusername, sizeof p->gamealias);
+		strncpy(p->gameusername, p->colourusername, sizeof p->gameusername);
 	}
 	else
 	{
-		snprintf(p->gamealias, sizeof p->gamealias, "%s", alias);
-		snprintf(p->gameusername, sizeof p->gameusername, "%s", alias);
+		strncpy(p->gamealias, alias, sizeof p->gamealias);
+		strncpy(p->gameusername, p->colourusername, sizeof p->gameusername);
 		p->gameusername[1] = p->gamealias[1];
 	}
 
