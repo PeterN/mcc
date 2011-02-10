@@ -283,7 +283,7 @@ void client_process(struct client_t *c, char *message)
 					return;
 				}
 
-				if (client_botcheck(c, message)) return;
+				if (c->player->rank < RANK_BUILDER && client_botcheck(c, message)) return;
 				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", playername(c->player, 1), message);
 				break;
 		}
