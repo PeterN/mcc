@@ -305,7 +305,7 @@ CMD(bind)
 		case 1:
 			for (i = 0; i < BLOCK_END; i++)
 			{
-				if (c->player->bindings[i] < 0)
+				if ((int)c->player->bindings[i] < 0)
 				{
 					snprintf(buf, sizeof buf, "%s bound to /info", blocktype_get_name(i));
 					client_notify(c, buf);
