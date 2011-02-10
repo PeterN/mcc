@@ -1420,14 +1420,14 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		return;
 	}
 
-	if (t >= BLOCK_END)
-	{
-		net_close(client, "Anti-grief: tried to place invalid block");
-		return;
-	}
-
 	if (click)
 	{
+		if (t >= BLOCK_END)
+		{
+			net_close(client, "Anti-grief: tried to place invalid block");
+			return;
+		}
+
 		/* Check block distcance */
 		int distance = abs(client->player->pos.x / 32 - x);
 		distance += abs(client->player->pos.y / 32 - y);
