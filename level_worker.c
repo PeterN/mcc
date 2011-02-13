@@ -39,10 +39,10 @@ void send_worker(void *data)
 
 void level_worker_init(void)
 {
-	worker_init(&s_level_workers.save, "save", 30000, &save_worker);
-	worker_init(&s_level_workers.load, "load", 30000, &load_worker);
-	worker_init(&s_level_workers.make, "make", 30000, &make_worker);
-	worker_init(&s_level_workers.send, "send", 30000, &send_worker);
+	worker_init(&s_level_workers.save, "save", 30000, 10, &save_worker);
+	worker_init(&s_level_workers.load, "load", 30000, 1, &load_worker);
+	worker_init(&s_level_workers.make, "make", 30000, 10, &make_worker);
+	worker_init(&s_level_workers.send, "send", 30000, 1, &send_worker);
 }
 
 void level_worker_deinit(void)

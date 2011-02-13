@@ -16,7 +16,9 @@ void *worker_thread(void *arg)
 	bool timeout = false;
 	int jobs = 0;
 
-	LOG("Queue worker %s thread started\n", worker->name);
+	nice(worker->nice);
+
+	LOG("Queue worker %s thread started with nice %d\n", worker->name, worker->nice);
 
 	while (true)
 	{
@@ -57,7 +59,7 @@ void *worker_thread(void *arg)
 	return NULL;
 }
 
-void worker_init(struct worker *worker, const char *name, unsigned timeout, worker_callback callback)
+void worker_init(struct worker *worker, const char *name, unsigned timeout, int nice, worker_callback callback)
 {
 	memset(worker, 0, sizeof *worker);
 
@@ -65,6 +67,7 @@ void worker_init(struct worker *worker, const char *name, unsigned timeout, work
 	worker->thread_valid = false;
 	worker->thread_timeout = false;
 	worker->timeout = timeout;
+	worker->nice = nice;
 
 	worker->queue = queue_new();
 	worker->callback = callback;

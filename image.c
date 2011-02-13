@@ -72,7 +72,7 @@ void module_init(void **data)
 	{
 		s_image_path = ".";
 	}
-	worker_init(&s_image_worker, "image", 30000, &image_worker);
+	worker_init(&s_image_worker, "image", 30000, 20, &image_worker);
 	register_command("image", RANK_OP, &cmd_image, help_image);
 	register_command("imagepath", RANK_ADMIN, &cmd_imagepath, help_imagepath);
 }

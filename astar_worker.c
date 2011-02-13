@@ -41,7 +41,7 @@ static void astar_worker(void *arg)
 
 void astar_worker_init(void)
 {
-	worker_init(&s_astar_worker, "astar", 30000, astar_worker);
+	worker_init(&s_astar_worker, "astar", 30000, 5, astar_worker);
 }
 
 void astar_worker_deinit(void)

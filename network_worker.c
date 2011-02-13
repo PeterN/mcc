@@ -63,7 +63,7 @@ static void network_worker(void *arg)
 
 void network_worker_init(void)
 {
-	worker_init(&s_network_worker, "network", 60000, network_worker);
+	worker_init(&s_network_worker, "network", 60000, 1, network_worker);
 }
 
 void network_worker_deinit(void)
