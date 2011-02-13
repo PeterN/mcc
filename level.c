@@ -2196,6 +2196,8 @@ void *physics_thread(void *arg)
 {
 	LOG("Physics thread initialised\n");
 
+	nice(10);
+
 	static const unsigned TICK_INTERVAL = 40;
 	unsigned cur_ticks = gettime();
 	unsigned next_tick = cur_ticks + TICK_INTERVAL;
