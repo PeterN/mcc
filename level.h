@@ -187,4 +187,7 @@ void level_user_undo(struct level_t *level, unsigned globalid, struct client_t *
 
 bool level_inuse(struct level_t *level, bool inuse);
 
+void physics_init(void);
+void physics_deinit(void);
+
 #endif /* LEVEL_H */

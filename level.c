@@ -1912,16 +1912,25 @@ void level_process_physics(bool can_init)
 		struct level_t *level = s_levels.items[i];
 		if (level == NULL) continue;
 
+		if (!level_inuse(level, true)) continue;
+
 		/* Don't run physics for empty levels, else it will never unload */
-		if (level_is_empty(level)) continue;
+		if (level_is_empty(level)) {
+			level_inuse(level, false);
+			continue;
+		}
 
 		/* Test if another thread is accessing... */
-		if (pthread_mutex_trylock(&level->mutex) != 0) continue;
+		if (pthread_mutex_trylock(&level->mutex) != 0) {
+			level_inuse(level, false);
+			continue;
+		}
 		pthread_mutex_unlock(&level->mutex);
 
 		level_run_physics(level, can_init, true);
 
 		call_level_hook(EVENT_TICK, level, NULL, NULL);
+		level_inuse(level, false);
 	}
 }
 
@@ -1933,14 +1942,23 @@ void level_process_updates(bool can_init)
 		struct level_t *level = s_levels.items[i];
 		if (level == NULL) continue;
 
+		if (!level_inuse(level, true)) continue;
+
 		/* Don't run physics for empty levels, else it will never unload */
-		if (level_is_empty(level)) continue;
+		if (level_is_empty(level)) {
+			level_inuse(level, false);
+			continue;
+		}
 
 		/* Test if another thread is accessing... */
-		if (pthread_mutex_trylock(&level->mutex) != 0) continue;
+		if (pthread_mutex_trylock(&level->mutex) != 0) {
+			level_inuse(level, false);
+			continue;
+		}
 		pthread_mutex_unlock(&level->mutex);
 
 		level_run_updates(level, can_init, !level->instant);
+		level_inuse(level, false);
 	}
 }
 
@@ -2169,4 +2187,49 @@ bool level_inuse(struct level_t *level, bool inuse)
 	pthread_mutex_unlock(&level->inuse_mutex);
 
 	return true;
+}
+
+static pthread_t s_physics_thread;
+static bool s_physics_exit;
+
+void *physics_thread(void *arg)
+{
+	LOG("Physics thread initialised\n");
+
+	static const unsigned TICK_INTERVAL = 40;
+	unsigned cur_ticks = gettime();
+	unsigned next_tick = cur_ticks + TICK_INTERVAL;
+	int i = 0;
+
+	while (!s_physics_exit)
+	{
+		unsigned prev_cur_ticks = cur_ticks;
+		cur_ticks = gettime();
+		if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
+		{
+			next_tick = cur_ticks + TICK_INTERVAL;
+			i = (i + 1) % 2;
+
+			cuboid_process();
+			level_process_physics(i);
+			level_process_updates(true);
+		}
+		usleep(1000);
+	}
+
+	LOG("Physics thread deinitialised\n");
+
+	return NULL;
+}
+
+void physics_init(void)
+{
+	s_physics_exit = false;
+	pthread_create(&s_physics_thread, NULL, &physics_thread, NULL);
+}
+
+void physics_deinit(void)
+{
+	s_physics_exit = true;
+	pthread_join(s_physics_thread, NULL);
 }

@@ -21,6 +21,7 @@ struct server_t g_server;
 
 void mcc_exit(void)
 {
+	physics_deinit();
 	level_save_all(NULL);
 
 	level_worker_deinit();
@@ -101,13 +102,8 @@ static void update_cputime(void *arg)
 	g_server.cpu_start = c;
 }
 
-#define TICK_INTERVAL 40
-#define MS_TO_TICKS(x) ((x) / TICK_INTERVAL)
-
 int main(int argc, char **argv)
 {
-	int tick = 0;
-
 	srand(getpid() + time(NULL));
 
 	g_server.logfile = fopen("log.txt", "a");
@@ -178,31 +174,12 @@ int main(int argc, char **argv)
 	}
 
 	net_init(g_server.port);
-
-	unsigned cur_ticks = gettime();
-	unsigned next_tick = cur_ticks + TICK_INTERVAL;
+	physics_init();
 
 	while (!g_server.exit)
 	{
-		unsigned prev_cur_ticks = cur_ticks;
-
 		net_run();
-
-		process_timers(cur_ticks);
-
-		cur_ticks = gettime();
-		if (cur_ticks >= next_tick || cur_ticks < prev_cur_ticks)
-		{
-			next_tick = cur_ticks + TICK_INTERVAL;
-
-			tick++;
-
-			level_process_physics((tick % MS_TO_TICKS(80)) == 0);
-			level_process_updates(true);
-
-			cuboid_process();
-		}
-
+		process_timers(gettime());
 		usleep(50);
 	}
 
