@@ -2831,7 +2831,7 @@ CMD(whois)
 
 		if (c->player->rank >= RANK_OP)
 		{
-			bufp += snprintf(bufp, endp - bufp, "  Last IP: %s", playerdb_get_last_ip(globalid));
+			bufp += snprintf(bufp, endp - bufp, "  Last IP: %s", playerdb_get_last_ip(globalid, 0));
 		}
 		client_notify(c, buf);
 	}

@@ -91,7 +91,7 @@ struct player_t *player_add(const char *username, struct client_t *c, bool *newu
 
 	if (p->rank > RANK_BUILDER)
 	{
-		const char *last_ip = playerdb_get_last_ip(globalid);
+		const char *last_ip = playerdb_get_last_ip(globalid, 1);
 		if (last_ip != NULL && strcmp(c->ip, last_ip) == 0)
 		{
 			*identified = 2;

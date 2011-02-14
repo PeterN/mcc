@@ -102,7 +102,7 @@ void playerdb_init(void)
 		return;
 	}
 
-	res = sqlite3_prepare_v2(s_db, "SELECT last_ip FROM players WHERE id = ? AND identified = 1", -1, &s_get_last_ip_stmt, NULL);
+	res = sqlite3_prepare_v2(s_db, "SELECT last_ip FROM players WHERE id = ? AND identified >= ?", -1, &s_get_last_ip_stmt, NULL);
 	if (res != SQLITE_OK)
 	{
 		LOG("Can't prepare statement: %s\n", sqlite3_errmsg(s_db));
@@ -325,11 +325,17 @@ void playerdb_set_password(const char *username, const char *password)
 	sqlite3_reset(s_set_password_stmt);
 }
 
-const char *playerdb_get_last_ip(int globalid)
+const char *playerdb_get_last_ip(int globalid, int identified)
 {
 	static char buf[64];
 	int res;
 	if (sqlite3_bind_int(s_get_last_ip_stmt, 1, globalid) != SQLITE_OK)
+	{
+		LOG("[playerdb_get_last_ip] Can't bind int: %s\n", sqlite3_errmsg(s_db));
+		sqlite3_reset(s_get_last_ip_stmt);
+		return "unknown";
+	}
+	if (sqlite3_bind_int(s_get_last_ip_stmt, 2, identified) != SQLITE_OK)
 	{
 		LOG("[playerdb_get_last_ip] Can't bind int: %s\n", sqlite3_errmsg(s_db));
 		sqlite3_reset(s_get_last_ip_stmt);
