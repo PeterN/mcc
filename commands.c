@@ -273,13 +273,17 @@ CMD(banip)
 
 	playerdb_ban_ip(param[1]);
 
+	char buf[64];
+	snprintf(buf, sizeof buf, TAG_AQUA "IP %s banned by %s", param[1], c->player->username);
+	net_notify_ops(buf);
+
 	unsigned i;
 	for (i = 0; i < s_clients.used; i++)
 	{
 		struct client_t *client = s_clients.items[i];
 		if (strcmp(client->ip, param[1]) == 0)
 		{
-			net_close(client, "Banned");
+			net_close(client, "IP banned");
 		}
 	}
 
@@ -1193,6 +1197,9 @@ CMD(kbu)
 
 	if (l == NULL) return false;
 
+	snprintf(buf, sizeof buf, TAG_AQUA "%s kbu'd by %s", name, c->player->username);
+	net_notify_ops(buf);
+
 	if (l->undo == NULL) l->undo = undodb_init(l->name);
 	if (l->undo != NULL)
 	{
@@ -1226,6 +1233,9 @@ CMD(kick)
 		client_notify(c, buf);
 		return false;
 	}
+
+	snprintf(buf, sizeof buf, TAG_AQUA "%s kicked by %s", p->username, c->player->username);
+	net_notify_ops(buf);
 
 	if (params == 2)
 	{
@@ -1270,6 +1280,9 @@ CMD(kickban)
 		client_notify(c, buf);
 		return false;
 	}
+
+	snprintf(buf, sizeof buf, TAG_AQUA "%s kickbanned by %s", p->username, c->player->username);
+	net_notify_ops(buf);
 
 	if (params == 2)
 	{
@@ -2391,8 +2404,15 @@ CMD(setrank)
 	}
 
 	char buf[64];
-	snprintf(buf, sizeof buf, "Rank set to %s for %s", rank_get_name(newrank), name);
-	net_notify_all(buf);
+
+	snprintf(buf, sizeof buf, TAG_AQUA "Rank set to %s for %s", rank_get_name(newrank), name);
+	net_notify_ops(buf);
+
+	if (p != NULL)
+	{
+		snprintf(buf, sizeof buf, TAG_YELLOW "%s %s to %s", name, newrank > oldrank ? "promoted" : "demoted", rank_get_name(newrank));
+		net_notify_all(buf);
+	}
 
 	return false;
 }
