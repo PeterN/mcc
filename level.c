@@ -390,10 +390,9 @@ bool level_send(struct client_t *c)
 extern void level_gen_mcsharp(struct level_t *level, const char *type);
 void level_prerun(struct level_t *l);
 
-void *level_gen_thread(void *arg)
+void *level_gen_thread(struct level_t *level, const char *type)
 {
 	int i;
-	struct level_t *level = arg;
 
 	pthread_mutex_lock(&level->mutex);
 
@@ -408,9 +407,9 @@ void *level_gen_thread(void *arg)
 
 	memset(level->blocks, 0, sizeof *level->blocks * mx * my * mz);
 
-	if (!strcmp(level->type, "flat") || !strcmp(level->type, "adminium"))
+	if (!strcmp(type, "flat") || !strcmp(type, "adminium"))
 	{
-		bool adminium = !strcmp(level->type, "adminium");
+		bool adminium = !strcmp(type, "adminium");
 
 		int h = my / 2;
 
@@ -427,7 +426,7 @@ void *level_gen_thread(void *arg)
 			}
 		}
 	}
-	else if (!strcmp(level->type, "pixel"))
+	else if (!strcmp(type, "pixel"))
 	{
 		block.type = WHITE;
 
@@ -449,7 +448,7 @@ void *level_gen_thread(void *arg)
 			}
 		}
 	}
-	else if (!strcmp(level->type, "old"))
+	else if (!strcmp(type, "old"))
 	{
 		struct faultgen_t *fg = faultgen_init(mx, mz);
 		if (fg == NULL)
@@ -483,8 +482,11 @@ void *level_gen_thread(void *arg)
 /*		float *cmh = malloc((mx + 1) * (mz + 1) * sizeof *cmh);
 		float *cmd = malloc((mx + 1) * (mz + 1) * sizeof *cmd);*/
 
-//		level_gen_heightmap(hm, mx, mz, level->type - 2);
+//		level_gen_heightmap(hm, mx, mz, type - 2);
 		//level_smooth_slopes(hm, mx, mz, my);
+
+		int height_range = my / 2;
+		int sea_height = my / 2;
 
 		LOG("levelgen: creating ground\n");
 
@@ -503,19 +505,19 @@ void *level_gen_thread(void *arg)
 		{
 			for (x = 0; x < mx; x++)
 			{
-				int h = (hm1[x + z * dmx] - avg * 0.5) * level->height_range + my / 2;
+				int h = (hm1[x + z * dmx] - avg * 0.5) * height_range + my / 2;
 				float hm2p = hm2[x + z * dmx];
 				int rh = 5;
 				if (hm2p < 0.25) rh = hm2p * 20 - 2;
 
 				for (y = 0; y < h && y < my; y++)
 				{
-					block.type = (y < h - rh) ? ROCK : (y < h - 1) ? DIRT : (y <= level->sea_height) ? SAND : GRASS;
+					block.type = (y < h - rh) ? ROCK : (y < h - 1) ? DIRT : (y <= sea_height) ? SAND : GRASS;
 					level_set_block(level, &block, level_get_index(level, x, y, z));
 				}
 
 				block.type = WATER;
-				for (; y < level->sea_height && y < my; y++)
+				for (; y < sea_height && y < my; y++)
 				{
 					level_set_block(level, &block, level_get_index(level, x, y, z));
 				}
@@ -526,8 +528,8 @@ void *level_gen_thread(void *arg)
 /*
 		for (i = 0; i < 16; i++)
 		{
-			level_gen_heightmap(cmh, mx, mz, level->type - 2);
-			level_gen_heightmap(cmd, mx, mz, level->type - 2);
+			level_gen_heightmap(cmh, mx, mz, type - 2);
+			level_gen_heightmap(cmd, mx, mz, type - 2);
 
 			int base = cmd[0] * my;
 
@@ -642,7 +644,7 @@ void *level_gen_thread(void *arg)
 	}
 	else
 	{
-		level_gen_mcsharp(level, level->type);
+		level_gen_mcsharp(level, type);
 	}
 
 	LOG("levelgen: setting spawn\n");
@@ -716,9 +718,6 @@ void *level_gen_thread(void *arg)
 
 	LOG("levelgen: complete\n");
 
-	free(level->type);
-	level->type = NULL;
-
 	level->changed = true;
 
 	snprintf(buf, sizeof buf, "Created level '%s'\n", level->name);
@@ -759,11 +758,7 @@ void level_gen(struct level_t *level, const char *type, int height_range, int se
 
 	if (!level_inuse(level, true)) return;
 
-	level->type = strdup(type);
-	level->height_range = height_range;
-	level->sea_height = sea_height;
-
-	level_make_queue(level);
+	level_make_queue(level, type);
 }
 
 void level_unload(struct level_t *level)

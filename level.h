@@ -95,10 +95,6 @@ struct level_t
 
 	struct undodb_t *undo;
 
-	char *type;
-	int height_range;
-	int sea_height;
-
 	uint8_t changed:1;
 	uint8_t instant:1;
 	uint8_t physics_pause:1;

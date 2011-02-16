@@ -10,6 +10,12 @@ struct {
 	struct worker send;
 } s_level_workers;
 
+struct level_make_job
+{
+	struct level_t *level;
+	char *type;
+};
+
 void save_worker(void *data)
 {
 	level_save_thread(data);
@@ -22,7 +28,10 @@ void load_worker(void *data)
 
 void make_worker(void *data)
 {
-	level_gen_thread(data);
+	struct level_make_job *job = data;
+	level_gen_thread(job->level, job->type);
+	free(job->type);
+	free(job);
 }
 
 void send_worker(void *data)
@@ -63,9 +72,13 @@ void level_load_queue(struct level_t *level)
 	worker_queue(&s_level_workers.load, level);
 }
 
-void level_make_queue(struct level_t *level)
+void level_make_queue(struct level_t *level, const char *type)
 {
-	worker_queue(&s_level_workers.make, level);
+	struct level_make_job *job = malloc(sizeof *job);
+	job->level = level;
+	job->type  = strdup(type);
+
+	worker_queue(&s_level_workers.make, job);
 }
 
 void level_send_queue(struct client_t *client)
