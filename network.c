@@ -532,4 +532,6 @@ void net_notify_ops(const char *message)
 		if (c->player == NULL || c->player->rank < RANK_OP) continue;
 		client_notify(c, message);
 	}
+
+	LOG("[OPS] %s\n", message);
 }
