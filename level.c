@@ -1011,7 +1011,14 @@ void *level_load_thread(void *arg)
 			{
 				gzread(gz, l->level_hook[i].name, sizeof l->level_hook[i].name);
 				gzread(gz, &l->level_hook[i].data.size, sizeof l->level_hook[i].data.size);
-				l->level_hook[i].data.data = malloc(l->level_hook[i].data.size);
+				if (l->level_hook[i].data.size == 0)
+				{
+					l->level_hook[i].data.data = NULL;
+				}
+				else
+				{
+					l->level_hook[i].data.data = malloc(l->level_hook[i].data.size);
+				}
 				gzread(gz, l->level_hook[i].data.data, l->level_hook[i].data.size);
 
 				if (*l->level_hook[i].name != '\0')
