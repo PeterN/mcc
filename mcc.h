@@ -21,6 +21,9 @@ struct server_t
 	double cpu_time;
 	int pos_interval;
 	int cuboid_max;
+	int usleep;
+	int physics_usleep;
+	int worker_usleep;
 
 	FILE *logfile;
 };

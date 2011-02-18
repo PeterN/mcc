@@ -2230,7 +2230,7 @@ void *physics_thread(void *arg)
 			level_process_physics(i);
 			level_process_updates(true);
 		}
-		usleep(1000);
+		usleep(g_server.physics_usleep);
 	}
 
 	LOG("Physics thread deinitialised\n");

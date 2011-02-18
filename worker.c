@@ -44,7 +44,7 @@ void *worker_thread(void *arg)
 		}
 
 		/* Should wait on a signal really! */
-		usleep(10000);
+		usleep(g_server.worker_usleep);
 	}
 
 	if (timeout)

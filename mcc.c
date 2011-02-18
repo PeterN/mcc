@@ -127,6 +127,10 @@ int main(int argc, char **argv)
 		config_get_string("salt", &g_server.salt);
 	}
 
+	if (!config_get_int("usleep", &g_server.usleep)) g_server.usleep = 50;
+	if (!config_get_int("physics_usleep", &g_server.physics_usleep)) g_server.physics_usleep = 1000;
+	if (!config_get_int("worker_usleep", &g_server.worker_usleep)) g_server.worker_usleep = 10000;
+
 	level_worker_init();
 	astar_worker_init();
 	network_worker_init();
@@ -180,7 +184,7 @@ int main(int argc, char **argv)
 	{
 		net_run();
 		process_timers(gettime());
-		usleep(50);
+		usleep(g_server.usleep);
 	}
 
 	mcc_exit();
