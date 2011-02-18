@@ -1428,6 +1428,20 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 			return;
 		}
 
+		switch (t)
+		{
+			case AIR:
+			case GRASS:
+			case ADMINIUM:
+			case WATER:
+			case WATERSTILL:
+			case LAVA:
+			case LAVASTILL:
+			case STAIRCASEFULL:
+				net_close(client, "Anti-grief: tried to place unplaceable block");
+				return;
+		}
+
 		/* Check block distcance */
 		int distance = abs(client->player->pos.x / 32 - x);
 		distance += abs(client->player->pos.y / 32 - y);
