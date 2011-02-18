@@ -10,6 +10,7 @@
 #include "mcc.h"
 #include "network.h"
 
+static const char s_human_name[] = TAG_SILVER "Human";
 static const char s_zombie_name[] = TAG_RED "Undead_zombie";
 static const char s_mod_name[] = TAG_YELLOW "Moderator";
 static const int s_interval = 25 * 30;
@@ -87,7 +88,7 @@ static void zombie_start(struct level_t *l, struct zombies_t *arg)
 			if (i != zombie)
 			{
 				player_teleport(l->clients[i]->player, &l->spawn, true);
-				player_set_alias(l->clients[i]->player, NULL, true);
+				player_set_alias(l->clients[i]->player, s_human_name, true);
 
 				arg->temp->timer[i] = 0;
 			}
