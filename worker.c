@@ -3,6 +3,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/syscall.h>
 #include "queue.h"
 #include "worker.h"
 #include "mcc.h"
@@ -15,10 +16,11 @@ void *worker_thread(void *arg)
 	unsigned last = gettime();
 	bool timeout = false;
 	int jobs = 0;
+	pid_t tid = (pid_t)syscall(SYS_gettid);
 
 	nice(worker->nice);
 
-	LOG("Queue worker %s thread started with nice %d\n", worker->name, worker->nice);
+	LOG("Queue worker %s thread (%u) started with nice %d\n", worker->name, tid, worker->nice);
 
 	while (true)
 	{
@@ -49,11 +51,11 @@ void *worker_thread(void *arg)
 
 	if (timeout)
 	{
-		LOG("Queue worker %s thread exiting after %d jobs due to timeout\n", worker->name, jobs);
+		LOG("Queue worker %s thread (%u) exiting after %d jobs due to timeout\n", worker->name, tid, jobs);
 	}
 	else
 	{
-		LOG("Queue worker %s thread exiting after %d jobs\n", worker->name, jobs);
+		LOG("Queue worker %s thread (%u) exiting after %d jobs\n", worker->name, tid, jobs);
 	}
 
 	return NULL;
