@@ -721,8 +721,7 @@ void *level_gen_thread(struct level_t *level, const char *type)
 
 	level->changed = true;
 
-	snprintf(buf, sizeof buf, "Created level '%s'\n", level->name);
-	LOG(buf);
+	snprintf(buf, sizeof buf, "Created level '%s'", level->name);
 	net_notify_ops(buf);
 
 	pthread_mutex_unlock(&level->mutex);
