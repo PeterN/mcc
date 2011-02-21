@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <zlib.h>
@@ -2216,7 +2217,9 @@ static bool s_physics_exit;
 
 void *physics_thread(void *arg)
 {
-	LOG("Physics thread initialised\n");
+	pid_t tid = (pid_t)syscall(SYS_gettid);
+
+	LOG("Physics thread (%u) initialised\n", tid);
 
 	nice(10);
 
@@ -2241,7 +2244,7 @@ void *physics_thread(void *arg)
 		usleep(g_server.physics_usleep);
 	}
 
-	LOG("Physics thread deinitialised\n");
+	LOG("Physics thread (%u) deinitialised\n", tid);
 
 	return NULL;
 }
