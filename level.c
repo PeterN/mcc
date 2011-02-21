@@ -40,6 +40,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 		memset(level, 0, sizeof *level);
 		pthread_mutex_init(&level->mutex, NULL);
 		pthread_mutex_init(&level->inuse_mutex, NULL);
+		pthread_mutex_init(&level->hook_mutex, NULL);
 	}
 
 	if (name != NULL)
@@ -1070,6 +1071,7 @@ bool level_load(const char *name, struct level_t **levelp)
 	memset(level, 0, sizeof *level);
 	pthread_mutex_init(&level->mutex, NULL);
 	pthread_mutex_init(&level->inuse_mutex, NULL);
+	pthread_mutex_init(&level->hook_mutex, NULL);
 
 	level_list_add(&s_levels, level);
 	if (levelp != NULL) *levelp = level;
@@ -2116,6 +2118,8 @@ bool level_hook_attach(struct level_t *l, const char *name)
 		return false;
 	}
 
+	pthread_mutex_lock(&l->hook_mutex);
+
 	strcpy(l->level_hook[n].name, s_level_hooks.items[m].name);
 	l->level_hook[n].func = s_level_hooks.items[m].level_hook_func;
 
@@ -2124,6 +2128,9 @@ bool level_hook_attach(struct level_t *l, const char *name)
 	level_notify_all(l, buf);
 
 	l->level_hook[n].func(EVENT_INIT, l, NULL, NULL, &l->level_hook[n].data);
+
+	pthread_mutex_unlock(&l->hook_mutex);
+
 	return true;
 }
 
@@ -2134,6 +2141,8 @@ bool level_hook_detach(struct level_t *l, const char *name)
 	{
 		if (strcasecmp(l->level_hook[i].name, name) == 0 && l->level_hook[i].func != NULL)
 		{
+			pthread_mutex_lock(&l->hook_mutex);
+
 			l->level_hook[i].func(EVENT_DEINIT, l, NULL, NULL, &l->level_hook[i].data);
 
 			char buf[128];
@@ -2141,6 +2150,9 @@ bool level_hook_detach(struct level_t *l, const char *name)
 			level_notify_all(l, buf);
 
 			l->level_hook[i].func = NULL;
+
+			pthread_mutex_unlock(&l->hook_mutex);
+
 			return true;
 		}
 	}
@@ -2155,6 +2167,8 @@ bool level_hook_delete(struct level_t *l, const char *name)
 	{
 		if (strcasecmp(l->level_hook[i].name, name) == 0)
 		{
+			pthread_mutex_lock(&l->hook_mutex);
+
 			if (l->level_hook[i].func != NULL)
 			{
 				l->level_hook[i].func(EVENT_DEINIT, l, NULL, NULL, &l->level_hook[i].data);
@@ -2170,6 +2184,9 @@ bool level_hook_delete(struct level_t *l, const char *name)
 			free(l->level_hook[i].data.data);
 			l->level_hook[i].data.data = NULL;
 			l->level_hook[i].data.size = 0;
+
+			pthread_mutex_unlock(&l->hook_mutex);
+
 			return true;
 		}
 	}
@@ -2181,15 +2198,20 @@ bool call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data
 {
 	if (l == NULL) return false;
 
+	pthread_mutex_lock(&l->hook_mutex);
+
 	unsigned i;
 	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
 	{
 		if (l->level_hook[i].func == NULL) continue;
 		if (l->level_hook[i].func(hook, l, c, data, &l->level_hook[i].data))
 		{
+			pthread_mutex_unlock(&l->hook_mutex);
 			return true;
 		}
 	}
+
+	pthread_mutex_unlock(&l->hook_mutex);
 
 	return false;
 }
