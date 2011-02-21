@@ -1092,11 +1092,11 @@ void *level_save_thread(void *arg)
 
 	call_level_hook(EVENT_SAVE, l, NULL, NULL);
 
-	char filename[256];
-	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
-	lcase(filename);
+	char filenametmp[256];
+	snprintf(filenametmp, sizeof filenametmp, "levels/%s.mcl.tmp", l->name);
+	lcase(filenametmp);
 
-	gzFile gz = gzopen(filename, "wb");
+	gzFile gz = gzopen(filenametmp, "wb");
 	if (gz == NULL)
 	{
 		pthread_mutex_unlock(&l->mutex);
@@ -1162,6 +1162,12 @@ void *level_save_thread(void *arg)
 	lcase(backup);
 
 	pthread_mutex_unlock(&l->mutex);
+
+	char filename[256];
+	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
+	lcase(filename);
+
+	rename(filenametmp, filename);
 
 	level_inuse(l, false);
 
