@@ -5,7 +5,7 @@
 
 struct client_t;
 
-typedef void(*socket_func_t)(int fd, bool can_read, bool can_write, void *arg);
+typedef void(*socket_func_t)(int fd, bool can_write, bool can_read, void *arg);
 
 struct socket_t
 {
