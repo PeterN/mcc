@@ -1257,13 +1257,21 @@ void level_save_all(void *arg)
 static bool level_is_empty(const struct level_t *l)
 {
 	unsigned i;
+
+	pthread_mutex_lock(&s_client_list_mutex);
+
 	for (i = 0; i < s_clients.used; i++)
 	{
 		const struct client_t *c = s_clients.items[i];
 		if (c->player == NULL) continue;
-		if (c->player->level == l || c->player->new_level == l) return false;
+		if (c->player->level == l || c->player->new_level == l)
+		{
+			pthread_mutex_unlock(&s_client_list_mutex);
+			return false;
+		}
 	}
 
+	pthread_mutex_unlock(&s_client_list_mutex);
 	return true;
 }
 

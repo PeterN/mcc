@@ -79,7 +79,7 @@ void cuboid_process(void)
 						for (j = 0; j < s_clients.used; j++)
 						{
 							struct client_t *client = s_clients.items[j];
-							if (client->player == NULL) continue;
+							if (client == NULL || client->player == NULL) continue;
 							if (client->player->level == c->level)
 							{
 								client_add_packet(client, packet_send_set_block(c->cx, c->cy, c->cz, pt2));
