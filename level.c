@@ -40,6 +40,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 		memset(level, 0, sizeof *level);
 		pthread_mutex_init(&level->mutex, NULL);
 		pthread_mutex_init(&level->inuse_mutex, NULL);
+		pthread_mutex_init(&level->hook_mutex, NULL);
 	}
 
 	if (name != NULL)
@@ -1069,6 +1070,7 @@ bool level_load(const char *name, struct level_t **levelp)
 	memset(level, 0, sizeof *level);
 	pthread_mutex_init(&level->mutex, NULL);
 	pthread_mutex_init(&level->inuse_mutex, NULL);
+	pthread_mutex_init(&level->hook_mutex, NULL);
 
 	level_list_add(&s_levels, level);
 	if (levelp != NULL) *levelp = level;
@@ -1092,11 +1094,11 @@ void *level_save_thread(void *arg)
 
 	call_level_hook(EVENT_SAVE, l, NULL, NULL);
 
-	char filename[256];
-	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
-	lcase(filename);
+	char filenametmp[256];
+	snprintf(filenametmp, sizeof filenametmp, "levels/%s.mcl.tmp", l->name);
+	lcase(filenametmp);
 
-	gzFile gz = gzopen(filename, "wb");
+	gzFile gz = gzopen(filenametmp, "wb");
 	if (gz == NULL)
 	{
 		pthread_mutex_unlock(&l->mutex);
@@ -1162,6 +1164,12 @@ void *level_save_thread(void *arg)
 	lcase(backup);
 
 	pthread_mutex_unlock(&l->mutex);
+
+	char filename[256];
+	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
+	lcase(filename);
+
+	rename(filenametmp, filename);
 
 	level_inuse(l, false);
 
@@ -1248,13 +1256,21 @@ void level_save_all(void *arg)
 static bool level_is_empty(const struct level_t *l)
 {
 	unsigned i;
+
+	pthread_mutex_lock(&s_client_list_mutex);
+
 	for (i = 0; i < s_clients.used; i++)
 	{
 		const struct client_t *c = s_clients.items[i];
 		if (c->player == NULL) continue;
-		if (c->player->level == l || c->player->new_level == l) return false;
+		if (c->player->level == l || c->player->new_level == l)
+		{
+			pthread_mutex_unlock(&s_client_list_mutex);
+			return false;
+		}
 	}
 
+	pthread_mutex_unlock(&s_client_list_mutex);
 	return true;
 }
 
@@ -2109,6 +2125,8 @@ bool level_hook_attach(struct level_t *l, const char *name)
 		return false;
 	}
 
+	pthread_mutex_lock(&l->hook_mutex);
+
 	strcpy(l->level_hook[n].name, s_level_hooks.items[m].name);
 	l->level_hook[n].func = s_level_hooks.items[m].level_hook_func;
 
@@ -2117,6 +2135,9 @@ bool level_hook_attach(struct level_t *l, const char *name)
 	level_notify_all(l, buf);
 
 	l->level_hook[n].func(EVENT_INIT, l, NULL, NULL, &l->level_hook[n].data);
+
+	pthread_mutex_unlock(&l->hook_mutex);
+
 	return true;
 }
 
@@ -2127,6 +2148,8 @@ bool level_hook_detach(struct level_t *l, const char *name)
 	{
 		if (strcasecmp(l->level_hook[i].name, name) == 0 && l->level_hook[i].func != NULL)
 		{
+			pthread_mutex_lock(&l->hook_mutex);
+
 			l->level_hook[i].func(EVENT_DEINIT, l, NULL, NULL, &l->level_hook[i].data);
 
 			char buf[128];
@@ -2134,6 +2157,9 @@ bool level_hook_detach(struct level_t *l, const char *name)
 			level_notify_all(l, buf);
 
 			l->level_hook[i].func = NULL;
+
+			pthread_mutex_unlock(&l->hook_mutex);
+
 			return true;
 		}
 	}
@@ -2148,6 +2174,8 @@ bool level_hook_delete(struct level_t *l, const char *name)
 	{
 		if (strcasecmp(l->level_hook[i].name, name) == 0)
 		{
+			pthread_mutex_lock(&l->hook_mutex);
+
 			if (l->level_hook[i].func != NULL)
 			{
 				l->level_hook[i].func(EVENT_DEINIT, l, NULL, NULL, &l->level_hook[i].data);
@@ -2163,6 +2191,9 @@ bool level_hook_delete(struct level_t *l, const char *name)
 			free(l->level_hook[i].data.data);
 			l->level_hook[i].data.data = NULL;
 			l->level_hook[i].data.size = 0;
+
+			pthread_mutex_unlock(&l->hook_mutex);
+
 			return true;
 		}
 	}
@@ -2174,15 +2205,20 @@ bool call_level_hook(int hook, struct level_t *l, struct client_t *c, void *data
 {
 	if (l == NULL) return false;
 
+	pthread_mutex_lock(&l->hook_mutex);
+
 	unsigned i;
 	for (i = 0; i < MAX_HOOKS_PER_LEVEL; i++)
 	{
 		if (l->level_hook[i].func == NULL) continue;
 		if (l->level_hook[i].func(hook, l, c, data, &l->level_hook[i].data))
 		{
+			pthread_mutex_unlock(&l->hook_mutex);
 			return true;
 		}
 	}
+
+	pthread_mutex_unlock(&l->hook_mutex);
 
 	return false;
 }

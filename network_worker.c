@@ -6,6 +6,7 @@
 #include <errno.h>
 #include "network.h"
 #include "network_worker.h"
+#include "socket.h"
 #include "worker.h"
 #include "mcc.h"
 
@@ -43,7 +44,7 @@ static void network_worker(void *arg)
 			}
 			else
 			{
-				net_set_nonblock(fd);
+				socket_set_nonblock(fd);
 				if (connect(fd, (struct sockaddr *)&addr, sizeof addr) < 0)
 				{
 					if (errno != EINPROGRESS)

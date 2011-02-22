@@ -8,6 +8,7 @@
 #include "mcc.h"
 #include "network.h"
 #include "network_worker.h"
+#include "socket.h"
 #include "timer.h"
 
 struct heartbeat_t
@@ -170,6 +171,8 @@ static void heartbeat_connected(int fd, void *arg)
 		h->fd = fd;
 
 		register_socket(h->fd, &heartbeat_run, h);
+
+		socket_flag_write(h->fd);
 
 		h->heartbeat_stage = 0;
 		h->timeout_timer = register_timer("heartbeat_timeout", 10000, &heartbeat_timeout, h, true);

@@ -8,6 +8,7 @@
 #include "packet.h"
 #include "level.h"
 #include "network.h"
+#include "socket.h"
 #include "mcc.h"
 
 struct client_list_t s_clients;
@@ -40,6 +41,11 @@ void client_add_packet(struct client_t *c, struct packet_t *p)
 	pthread_mutex_lock(&c->packet_send_mutex);
 	*c->packet_send_end = p;
 	c->packet_send_end = &p->next;
+
+	if (c->packet_send_count == 0)
+	{
+		socket_flag_write(c->sock);
+	}
 
 	c->packet_send_count++;
 	pthread_mutex_unlock(&c->packet_send_mutex);

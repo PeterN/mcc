@@ -106,6 +106,7 @@ struct level_t
 
 	int inuse;
 	pthread_mutex_t inuse_mutex;
+	pthread_mutex_t hook_mutex;
 };
 
 bool level_t_compare(struct level_t **a, struct level_t **b);
