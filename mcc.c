@@ -14,6 +14,7 @@
 #include "player.h"
 #include "playerdb.h"
 #include "client.h"
+#include "socket.h"
 #include "timer.h"
 #include "gettime.h"
 
@@ -21,6 +22,8 @@ struct server_t g_server;
 
 void mcc_exit(void)
 {
+	net_deinit();
+
 	physics_deinit();
 	level_save_all(NULL);
 
@@ -183,6 +186,7 @@ int main(int argc, char **argv)
 	while (!g_server.exit)
 	{
 		net_run();
+		socket_run();
 		process_timers(gettime());
 		usleep(g_server.usleep);
 	}

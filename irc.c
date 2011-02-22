@@ -12,6 +12,7 @@
 #include "mcc.h"
 #include "network.h"
 #include "network_worker.h"
+#include "socket.h"
 #include "timer.h"
 
 struct irc_packet_t
@@ -50,6 +51,9 @@ static void irc_queue(struct irc_t *s, const char *message)
 	}
 
 	strncpy((*s->queue_end)->message, message, sizeof (*s->queue_end)->message);
+
+	/* First message, flag for writing */
+	if (s->queue_end == &s->queue) socket_flag_write(s->fd);
 
 	s->queue_end = &(*s->queue_end)->next;
 }
@@ -340,6 +344,8 @@ static void irc_run(int fd, bool can_write, bool can_read, void *arg)
 			free(ircp);
 		}
 
+		socket_clear_write(s->fd);
+
 		s->queue_end = &s->queue;
 	}
 }
@@ -357,6 +363,8 @@ static void irc_connected(int fd, void *arg)
 		s->queue = NULL;
 		s->queue_end = &s->queue;
 		s->read_pos = s->read_buf;
+
+		socket_flag_write(s->fd);
 
 		register_hook(HOOK_CHAT, &irc_message, s);
 	}

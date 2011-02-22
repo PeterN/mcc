@@ -32,6 +32,7 @@ LIBSRC += perlin.c
 LIBSRC += player.c
 LIBSRC += playerdb.c
 LIBSRC += queue.c
+LIBSRC += socket.c
 LIBSRC += timer.c
 LIBSRC += undodb.c
 LIBSRC += worker.c
