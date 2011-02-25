@@ -1206,6 +1206,7 @@ CMD(kbu)
 		int count = undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
 		if (count > 0)
 		{
+			l->changed = true;
 			snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed by undo", count);
 			client_notify(c, buf);
 		}
@@ -2627,6 +2628,7 @@ CMD(u)
 		int count = undodb_undo_player(l->undo, globalid, 10000, &undo_real, c);
 		if (count > 0)
 		{
+			l->changed = true;
 			char buf[64];
 			snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed by undo", count);
 			client_notify(c, buf);
@@ -2752,6 +2754,7 @@ CMD(undo)
 	int count = undodb_undo_player(l->undo, globalid, limit, params == 4 ? &undo_show : &undo_real, c);
 	if (count > 0)
 	{
+		l->changed = true;
 		char buf[64];
 		snprintf(buf, sizeof buf, TAG_YELLOW "%d blocks changed by undo", count);
 		client_notify(c, buf);
