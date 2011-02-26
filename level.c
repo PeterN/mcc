@@ -41,6 +41,7 @@ bool level_init(struct level_t *level, int16_t x, int16_t y, int16_t z, const ch
 		pthread_mutex_init(&level->mutex, NULL);
 		pthread_mutex_init(&level->inuse_mutex, NULL);
 		pthread_mutex_init(&level->hook_mutex, NULL);
+		pthread_mutex_init(&level->physics_mutex, NULL);
 	}
 
 	if (name != NULL)
@@ -1071,6 +1072,7 @@ bool level_load(const char *name, struct level_t **levelp)
 	pthread_mutex_init(&level->mutex, NULL);
 	pthread_mutex_init(&level->inuse_mutex, NULL);
 	pthread_mutex_init(&level->hook_mutex, NULL);
+	pthread_mutex_init(&level->physics_mutex, NULL);
 
 	level_list_add(&s_levels, level);
 	if (levelp != NULL) *levelp = level;
@@ -1699,11 +1701,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 
 		if (oldphysics != b->physics)
 		{
-			if (oldphysics) physics_list_del_item(&level->physics, index);
-			if (b->physics) {
-				physics_list_add(&level->physics, index);
-				//level_addupdate(level, index, BLOCK_INVALID, 0);
-			}
+			physics_list_update(level, index, b->physics);
 		}
 
 		level->changed = true;
@@ -1767,6 +1765,8 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 		//LOG("Starting physics run with %lu blocks\n", level->physics.used)
 		level->physics_runtime = 0;
 
+		pthread_mutex_lock(&level->physics_mutex);
+
 		/* Swap physics list */
 		unsigned *p = level->physics2.items;
 		level->physics2.items = level->physics.items;
@@ -1779,6 +1779,8 @@ static void level_run_physics(struct level_t *level, bool can_init, bool limit)
 		u = level->physics2.size;
 		level->physics2.size = level->physics.size;
 		level->physics.size = u;
+
+		pthread_mutex_unlock(&level->physics_mutex);
 	}
 
 	//LOG("Done %d out of %lu\n", level->physics_iter, level->physics2.used);
@@ -1881,12 +1883,13 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 	struct block_t *b = &level->blocks[index];
 
 	enum blocktype_t pt1 = convert(level, index, b);
+	bool physics = b->physics;
 
 	b->type = newtype;
 	b->data = newdata;
 	b->physics = blocktype_has_physics(b->type);
 
-	if (b->physics) physics_list_add(&level->physics, index);
+	if (physics != b->physics) physics_list_update(level, index, b->physics);
 
 	enum blocktype_t pt2 = convert(level, index, b);
 
@@ -1905,13 +1908,14 @@ void level_addupdate_with_owner(struct level_t *level, unsigned index, enum bloc
 	struct block_t *b = &level->blocks[index];
 
 	enum blocktype_t pt1 = convert(level, index, b);
+	bool physics = b->physics;
 
 	b->type = newtype;
 	b->data = newdata;
 	b->owner = owner;
 	b->physics = blocktype_has_physics(b->type);
 
-	if (b->physics) physics_list_add(&level->physics, index);
+	if (physics != b->physics) physics_list_update(level, index, b->physics);
 
 	enum blocktype_t pt2 = convert(level, index, b);
 
@@ -2288,4 +2292,22 @@ void physics_deinit(void)
 {
 	s_physics_exit = true;
 	pthread_join(s_physics_thread, NULL);
+}
+
+void physics_list_update(struct level_t *level, unsigned index, int state)
+{
+	pthread_mutex_lock(&level->physics_mutex);
+	if (state)
+	{
+		physics_list_add(&level->physics, index);
+		if (level->physics.used > level->x * level->y * level->z)
+		{
+			LOG("ERROR: physics list on %s larger than level size\n", level->name);
+		}
+	}
+	else
+	{
+		physics_list_del_item(&level->physics, index);
+	}
+	pthread_mutex_unlock(&level->physics_mutex);
 }

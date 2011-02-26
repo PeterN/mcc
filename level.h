@@ -107,6 +107,7 @@ struct level_t
 	int inuse;
 	pthread_mutex_t inuse_mutex;
 	pthread_mutex_t hook_mutex;
+	pthread_mutex_t physics_mutex;
 };
 
 bool level_t_compare(struct level_t **a, struct level_t **b);
@@ -186,5 +187,7 @@ bool level_inuse(struct level_t *level, bool inuse);
 
 void physics_init(void);
 void physics_deinit(void);
+
+void physics_list_update(struct level_t *level, unsigned index, int state);
 
 #endif /* LEVEL_H */

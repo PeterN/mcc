@@ -113,8 +113,9 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 		{
 			s_block.type = AIR;
 			s_block.owner = cg->c[i].owner;
+			s_block.physics = 1;
 			level_change_block_force(l, &s_block, cg->c[i].loc);
-			physics_list_add(&l->physics, cg->c[i].loc);
+			physics_list_update(l, cg->c[i].loc, 1);
 		}
 
 		if (hit)
@@ -128,8 +129,10 @@ static void cannons_handle_tick(struct level_t *l, struct client_t *c, void *dat
 		{
 			s_block.type = s_cannon_ball;
 			s_block.owner = 0;
+			s_block.physics = 0;
 			delete(l, loc, &l->blocks[loc]);
 			level_change_block_force(l, &s_block, loc);
+			physics_list_update(l, loc, 0);
 			cg->c[i].loc = loc;
 			cg->c[i].origin = -1;
 		}

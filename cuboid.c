@@ -67,8 +67,7 @@ void cuboid_process(void)
 
 					if (oldphysics != b->physics)
 					{
-						if (oldphysics) physics_list_del_item(&c->level->physics, index);
-						if (b->physics) physics_list_add(&c->level->physics, index);
+						physics_list_update(c->level, index, b->physics);
 					}
 
 					enum blocktype_t pt2 = convert(c->level, index, b);
