@@ -1883,13 +1883,12 @@ void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t new
 	struct block_t *b = &level->blocks[index];
 
 	enum blocktype_t pt1 = convert(level, index, b);
-	bool physics = b->physics;
 
 	b->type = newtype;
 	b->data = newdata;
 	b->physics = blocktype_has_physics(b->type);
 
-	if (physics != b->physics) physics_list_update(level, index, b->physics);
+	if (b->physics) physics_list_update(level, index, b->physics);
 
 	enum blocktype_t pt2 = convert(level, index, b);
 
@@ -1908,14 +1907,13 @@ void level_addupdate_with_owner(struct level_t *level, unsigned index, enum bloc
 	struct block_t *b = &level->blocks[index];
 
 	enum blocktype_t pt1 = convert(level, index, b);
-	bool physics = b->physics;
 
 	b->type = newtype;
 	b->data = newdata;
 	b->owner = owner;
 	b->physics = blocktype_has_physics(b->type);
 
-	if (physics != b->physics) physics_list_update(level, index, b->physics);
+	if (b->physics) physics_list_update(level, index, b->physics);
 
 	enum blocktype_t pt2 = convert(level, index, b);
 
