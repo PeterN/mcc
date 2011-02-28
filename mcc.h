@@ -23,7 +23,6 @@ struct server_t
 	int cuboid_max;
 	int usleep;
 	int physics_usleep;
-	int worker_usleep;
 
 	FILE *logfile;
 };

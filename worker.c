@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <errno.h>
 #include "queue.h"
 #include "worker.h"
 #include "mcc.h"
@@ -13,7 +14,6 @@ void *worker_thread(void *arg)
 {
 	struct worker *worker = arg;
 
-	unsigned last = gettime();
 	bool timeout = false;
 	int jobs = 0;
 	pid_t tid = (pid_t)syscall(SYS_gettid);
@@ -24,6 +24,21 @@ void *worker_thread(void *arg)
 
 	while (true)
 	{
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_sec += worker->timeout;
+
+		int s = sem_timedwait(&worker->sem, &ts);
+		if (s == -1)
+		{
+			if (errno == ETIMEDOUT) {
+				timeout = true;
+				break;
+			}
+			LOG("Queue worker %s thread (%u): %s\n", worker->name, tid, strerror(errno));
+			break;
+		}
+
 		void *data;
 		if (queue_consume(worker->queue, &data))
 		{
@@ -31,22 +46,8 @@ void *worker_thread(void *arg)
 			if (data == NULL) break;
 
 			worker->callback(data);
-
-			last = gettime();
 			jobs++;
 		}
-		else if (worker->timeout != 0)
-		{
-			if (gettime() - last > worker->timeout)
-			{
-				timeout = true;
-				worker->thread_timeout = true;
-				break;
-			}
-		}
-
-		/* Should wait on a signal really! */
-		usleep(g_server.worker_usleep);
 	}
 
 	if (timeout)
@@ -68,11 +69,12 @@ void worker_init(struct worker *worker, const char *name, unsigned timeout, int 
 	strncpy(worker->name, name, sizeof worker->name);
 	worker->thread_valid = false;
 	worker->thread_timeout = false;
-	worker->timeout = timeout;
+	worker->timeout = timeout / 1000;
 	worker->nice = nice;
 
 	worker->queue = queue_new();
 	worker->callback = callback;
+	sem_init(&worker->sem, 0, 0);
 
 	LOG("Queue worker %s initialised\n", worker->name);
 }
@@ -81,7 +83,14 @@ void worker_deinit(struct worker *worker)
 {
 	if (worker->thread_valid)
 	{
-		if (!worker->thread_timeout) queue_produce(worker->queue, NULL);
+		if (!worker->thread_timeout)
+		{
+			if (queue_produce(worker->queue, NULL))
+			{
+				sem_post(&worker->sem);
+			}
+		}
+
 		pthread_join(worker->thread, NULL);
 	}
 
@@ -104,7 +113,11 @@ void worker_queue(struct worker *worker, void *data)
 		worker->thread_valid = (pthread_create(&worker->thread, NULL, &worker_thread, worker) == 0);
 	}
 
-	if (!queue_produce(worker->queue, data))
+	if (queue_produce(worker->queue, data))
+	{
+		sem_post(&worker->sem);
+	}
+	else
 	{
 		LOG("Queue worker %s unable to queue\n", worker->name);
 	}

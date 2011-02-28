@@ -2,6 +2,7 @@
 #define WORKER_H
 
 #include <pthread.h>
+#include <semaphore.h>
 
 typedef void(*worker_callback)(void *arg);
 
@@ -16,6 +17,7 @@ struct worker
 	struct queue_t *queue;
 	pthread_t thread;
 	worker_callback callback;
+	sem_t sem;
 };
 
 void worker_init(struct worker *worker, const char *name, unsigned timeout, int nice, worker_callback callback);
