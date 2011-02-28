@@ -31,6 +31,7 @@ void *worker_thread(void *arg)
 		int s = sem_timedwait(&worker->sem, &ts);
 		if (s == -1)
 		{
+			worker->thread_timeout = true;
 			if (errno == ETIMEDOUT) {
 				timeout = true;
 				break;
