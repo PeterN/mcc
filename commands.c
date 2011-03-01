@@ -2821,6 +2821,63 @@ CMD(water)
 	return false;
 }
 
+static const char help_who[] =
+"/w [<level>]\n"
+"Display list of users on the current level, or the level specified.";
+
+CMD(who)
+{
+	if (params > 2) return true;
+
+	char buf[64];
+	char *bufp = buf;
+	char *endp = buf + sizeof buf;
+
+	struct level_t *l;
+	if (params == 1)
+	{
+		l = c->player->level;
+	}
+	else
+	{
+		if (!level_get_by_name(param[1], &l))
+		{
+			client_notify(c, TAG_YELLOW "Level does not exist");
+			return false;
+		}
+	}
+
+	int names = -1;
+	int i;
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		struct client_t *c = l->clients[i];
+		if (c == NULL || c->hidden) continue;
+		names++;
+	}
+
+	bufp += snprintf(bufp, bufp - endp, TAG_YELLOW "Players on %s: ", l->name);
+	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+	{
+		struct client_t *c = l->clients[i];
+		if (c == NULL || c->hidden) continue;
+
+		bool last = i == names;
+
+		const char *name = playername(c->player, 2);
+		if (strlen(name) + (last ? 0 : 1) >= endp - bufp)
+		{
+			client_notify(c, buf);
+			bufp = buf;
+		}
+
+		bufp += snprintf(bufp, bufp - endp, "%s%s", name, last ? "" : TAG_WHITE ", ");
+	}
+	client_notify(c, buf);
+
+	return false;
+}
+
 static const char help_whois[] =
 "/whois <user>\n"
 "Display information about the specified <user>.";
@@ -2964,7 +3021,9 @@ static const struct command s_builtin_commands[] = {
 	{ "unbanip", RANK_OP, &cmd_unbanip, help_unbanip },
 	{ "undo", RANK_OP, &cmd_undo, help_undo },
 	{ "uptime", RANK_GUEST, &cmd_uptime, help_uptime },
+	{ "w", RANK_GUEST, &cmd_who, help_who },
 	{ "water", RANK_GUEST, &cmd_water, help_water },
+	{ "who", RANK_GUEST, &cmd_who, help_who },
 	{ "whois", RANK_GUEST, &cmd_whois, help_whois },
 	{ "z", RANK_ADV_BUILDER, &cmd_cuboid, help_cuboid },
 	{ NULL, -1, NULL, NULL },
