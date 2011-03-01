@@ -8,6 +8,14 @@ struct client_t;
 
 typedef bool(*command_func)(struct client_t *c, int params, const char **param);
 
+struct command
+{
+	const char *command;
+	enum rank_t rank;
+	command_func func;
+	const char *help;
+};
+
 void register_command(const char *command, enum rank_t rank, command_func func, const char *help);
 void deregister_command(const char *command);
 
