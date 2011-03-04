@@ -211,6 +211,17 @@ bool client_botcheck(struct client_t *c, char *message)
 	return false;
 }
 
+/* In place trim of string. */
+static char *trim(char *text)
+{
+	char *s = text;
+	char *e = text + strlen(text) - 1;
+	while (*s == ' ') s++;
+	while (*e == ' ' && e > s) e--;
+	e[1] = '\0';
+	return s;
+}
+
 void client_process(struct client_t *c, char *message)
 {
 	/* Max length of username + message is 64 + 64 */
@@ -249,12 +260,13 @@ void client_process(struct client_t *c, char *message)
 		{
 			case '@': // Private message
 			{
+				message = trim(message + 1);
 				size_t l = strcspn(message, " ");
 				if (l != strlen(message))
 				{
 					message[l] = '\0';
 					snprintf(buf, sizeof buf, "(%s:" TAG_WHITE " %s)", c->player->colourusername, message + l + 1);
-					if (!client_notify_by_username(message + 1, buf))
+					if (!client_notify_by_username(message, buf))
 					{
 						client_notify(c, "User is offline");
 					}
@@ -267,9 +279,15 @@ void client_process(struct client_t *c, char *message)
 			}
 
 			case '!':
-				snprintf(buf, sizeof buf, "! %s:" TAG_WHITE " %s", c->player->colourusername, message + 1);
-				call_hook(HOOK_CHAT, buf);
-				net_notify_all(buf);
+				message = trim(message + 1);
+				if (strlen(message) == 0) {
+					client_notify(c, TAG_YELLOW "No message to send");
+					return;
+				} else {
+					snprintf(buf, sizeof buf, "! %s:" TAG_WHITE " %s", c->player->colourusername, message);
+					call_hook(HOOK_CHAT, buf);
+					net_notify_all(buf);
+				}
 				return;
 
 //			case ';':
@@ -277,20 +295,32 @@ void client_process(struct client_t *c, char *message)
 //				break;
 
 			case '\'':
-				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", playername(c->player, 1), message + 1);
+				message = trim(message + 1);
+				if (strlen(message) == 0) {
+					client_notify(c, TAG_YELLOW "No message to send");
+					return;
+				} else {
+					snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", playername(c->player, 1), message);
+				}
 				break;
 
 			default:
-				if (HasBit(c->player->flags, FLAG_GLOBAL))
-				{
-					snprintf(buf, sizeof buf, "! %s:" TAG_WHITE " %s", c->player->colourusername, message);
-					call_hook(HOOK_CHAT, buf);
-					net_notify_all(buf);
+				message = trim(message);
+				if (strlen(message) == 0) {
+					client_notify(c, TAG_YELLOW "No message to send");
 					return;
-				}
+				} else {
+					if (HasBit(c->player->flags, FLAG_GLOBAL))
+					{
+						snprintf(buf, sizeof buf, "! %s:" TAG_WHITE " %s", c->player->colourusername, message);
+						call_hook(HOOK_CHAT, buf);
+						net_notify_all(buf);
+						return;
+					}
 
-				if (c->player->rank < RANK_BUILDER && client_botcheck(c, message)) return;
-				snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", playername(c->player, 1), message);
+					if (c->player->rank < RANK_BUILDER && client_botcheck(c, message)) return;
+					snprintf(buf, sizeof buf, "%s:" TAG_WHITE " %s", playername(c->player, 1), message);
+				}
 				break;
 		}
 
