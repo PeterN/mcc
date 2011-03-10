@@ -781,11 +781,11 @@ void level_unload(struct level_t *level)
 	{
 		char filename[256];
 		snprintf(filename, sizeof filename, "levels/%s.mcl", level->name);
-		lcase(filename);
+		hash_filename(filename, filename, sizeof filename);
 		unlink(filename);
 
 		snprintf(filename, sizeof filename, "undo/%s.db", level->name);
-		lcase(filename);
+		hash_filename(filename, filename, sizeof filename);
 		unlink(filename);
 
 		LOG("Level '%s' deleted\n", level->name);
@@ -839,9 +839,9 @@ void *level_load_thread(void *arg)
 	char name[64];
 	strncpy(name, l->name, sizeof name);
 
-	char filename[64];
+	char filename[256];
 	snprintf(filename, sizeof filename, "levels/%s.%s", name, l->convert ? "lvl" : "mcl");
-	lcase(filename);
+	hash_filename(filename, filename, sizeof filename);
 
 	gz = gzopen(filename, "rb");
 	if (gz == NULL) return level_load_thread_abort(l, "gzopen failed");
@@ -1050,15 +1050,15 @@ void *level_load_thread(void *arg)
 bool level_load(const char *name, struct level_t **levelp)
 {
 	bool convert = false;
-	char filename[64];
+	char filename[256];
 	snprintf(filename, sizeof filename, "levels/%s.mcl", name);
-	lcase(filename);
+	hash_filename(filename, filename, sizeof filename);
 
 	FILE *f = fopen(filename, "rb");
 	if (f == NULL)
 	{
 		snprintf(filename, sizeof filename, "levels/%s.lvl", name);
-		lcase(filename);
+		hash_filename(filename, filename, sizeof filename);
 
 		f = fopen(filename, "rb");
 		if (f == NULL) return false;
@@ -1098,7 +1098,14 @@ void *level_save_thread(void *arg)
 
 	char filenametmp[256];
 	snprintf(filenametmp, sizeof filenametmp, "levels/%s.mcl.tmp", l->name);
-	lcase(filenametmp);
+	hash_filename(filenametmp, filenametmp, sizeof filenametmp);
+
+	if (make_path(filenametmp))
+	{
+		pthread_mutex_unlock(&l->mutex);
+		level_inuse(l, false);
+		return NULL;
+	}
 
 	gzFile gz = gzopen(filenametmp, "wb");
 	if (gz == NULL)
@@ -1163,13 +1170,15 @@ void *level_save_thread(void *arg)
 
 	char backup[256];
 	snprintf(backup, sizeof backup, "levels/backups/%s-%lld.mcl", l->name, (long long int)time(NULL));
-	lcase(backup);
+	hash_filename(backup, backup, sizeof backup);
+
+	make_path(backup);
 
 	pthread_mutex_unlock(&l->mutex);
 
 	char filename[256];
 	snprintf(filename, sizeof filename, "levels/%s.mcl", l->name);
-	lcase(filename);
+	hash_filename(filename, filename, sizeof filename);
 
 	rename(filenametmp, filename);
 

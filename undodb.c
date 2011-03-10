@@ -22,7 +22,9 @@ struct undodb_t *undodb_init(const char *name)
 
 	char buf[256];
 	snprintf(buf, sizeof buf, "undo/%s.db", name);
-	lcase(buf);
+	hash_filename(buf, buf, sizeof buf);
+
+	if (make_path(buf)) return NULL;
 
 	int res;
 	res = sqlite3_open(buf, &u.db);
