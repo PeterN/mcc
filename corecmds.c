@@ -514,7 +514,7 @@ CMD(dellvl)
 
 static int dir_filename_filter(const struct dirent *d)
 {
-	return d->d_type == DT_DIR && d->d_name[0] != '.' && strstr(d->d_name, "backups") == NULL;
+	return d->d_type == DT_DIR && d->d_name[0] != '.' && d->d_name[0] != '_' && strstr(d->d_name, "backups") == NULL;
 }
 
 static const char help_dirs[] =
