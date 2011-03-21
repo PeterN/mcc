@@ -24,7 +24,7 @@ bool resolve(const char *hostname, int port, struct sockaddr_in *addr)
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family   = AF_INET;
-	hints.ai_flags= AI_ADDRCONFIG;
+	hints.ai_flags    = AI_ADDRCONFIG;
 	hints.ai_socktype = SOCK_STREAM;
 
 	char port_name[6];
@@ -60,10 +60,17 @@ bool getip(const struct sockaddr *addr, size_t addr_len, char *ip, size_t ip_len
 	{
 		LOG("getnameinfo: %s\n", strerror(errno));
 	}
+        else
+        {
+                /* Remove IPv4 embedding prefix */
+                if (!strncmp(ip, "::ffff:", 7)) {
+                        memmove(ip, ip + 7, strlen(ip) - 6);
+                }
+        }
 	return res == 0;
 }
 
-static struct sockaddr_in serv_addr;
+static struct sockaddr_in6 serv_addr;
 
 static void net_close_real(struct client_t *c)
 {
@@ -371,16 +378,16 @@ static int s_listenfd;
 
 void net_init(int port)
 {
-	s_listenfd = socket(AF_INET, SOCK_STREAM, 0);
+	s_listenfd = socket(AF_INET6, SOCK_STREAM, 0);
 	if (s_listenfd < 0)
 	{
 		LOG("socket: %s\n", strerror(errno));
 		return;
 	}
 
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serv_addr.sin_port = htons(port);
+	serv_addr.sin6_family = AF_INET6;
+	serv_addr.sin6_addr = in6addr_any;
+	serv_addr.sin6_port = htons(port);
 
 	int on = 1;
 	if (setsockopt(s_listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on) == -1)

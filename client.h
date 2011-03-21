@@ -21,7 +21,7 @@ struct client_t
 	bool hidden;
 
 	struct sockaddr_storage sin;
-	char ip[16];
+	char ip[INET6_ADDRSTRLEN];
 	char *close_reason;
 
 	struct packet_t *packet_recv;
