@@ -1217,23 +1217,72 @@ CMD(lava)
 
 static int level_filename_filter(const struct dirent *d)
 {
-	if (strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL)
-	{
-		return strstr(d->d_name, "_home") == NULL;
-	}
-	return 0;
+        if (d->d_type == DT_DIR) {
+                return *d->d_name != '_' && *d->d_name != '.';
+        }
+        if (strstr(d->d_name, ".mcl") != NULL || strstr(d->d_name, ".lvl") != NULL) {
+                return strstr(d->d_name, "_home") == NULL;
+        }
+        return 0;
 }
 
 static const char help_levels[] =
 "/levels [<dir>]\n"
 "List all levels known by the server.";
 
+static void scanpath(struct client_t *c, char *buf, char **bufpp, char *endp, const char *path, const char *internal_path)
+{
+        struct dirent **namelist;
+        int n, i;
+
+        n = scandir(path, &namelist, &level_filename_filter, alphasort);
+        if (n <= 0) return;
+
+        for (i = 0; i < n; i++) {
+                const struct dirent *d = namelist[i];
+                if (d->d_type == DT_DIR) {
+                        char newpath[256];
+                        snprintf(newpath, sizeof newpath, "%s/%s", path, d->d_name);
+                        scanpath(c, buf, bufpp, endp, newpath, internal_path);
+                } else {
+                        /* Chop name off at extension */
+                        char *ext = strrchr(d->d_name, '.');
+                        if (ext != NULL) *ext = '\0';
+
+                        /* Check if level is loaded */
+                        bool loaded;
+                        if (internal_path) {
+                                char fullname[256];
+                                snprintf(fullname, sizeof fullname, "%s/%s", internal_path, d->d_name);
+                                loaded = level_is_loaded(fullname);
+                        } else {
+                                loaded = level_is_loaded(d->d_name);
+                        }
+
+                        char buf2[64];
+                        snprintf(buf2, sizeof buf2, "%s%s%s, ", loaded ? TAG_GREEN : "", d->d_name, loaded ? TAG_WHITE : "");
+
+                        size_t len = strlen(buf2);
+                        if (*bufpp + len >= endp)
+                        {
+                                client_notify(c, buf);
+                                *bufpp = buf;
+                        }
+
+                        strcpy(*bufpp, buf2);
+                        *bufpp += len;
+                }
+
+                free(namelist[i]);
+        }
+
+        free(namelist);
+}
+
 CMD(levels)
 {
 	char buf[64];
 	char *bufp;
-	struct dirent **namelist;
-	int n, i;
 
 	if (params > 2) return true;
 
@@ -1248,66 +1297,21 @@ CMD(levels)
 			return true;
 		}
 
-		snprintf(path, sizeof path, "levels/%s", param[1]);
+		snprintf(path, sizeof path, "levels/%s/_", param[1]);
 		lcase(path);
 	}
 	else
 	{
-		strcpy(path, "levels");
+		strcpy(path, "levels/_");
 	}
 
-	n = scandir(path, &namelist, &level_filename_filter, alphasort);
-	if (n <= 0)
-	{
-		client_notify(c, "Unable to get list of levels");
-		return false;
-	}
+        scanpath(c, buf, &bufp, buf + sizeof buf, path, params == 2 ? param[1] : NULL);
 
-	for (i = 0; i < n; i++)
-	{
-		/* Chop name off at extension */
-		char *ext = strrchr(namelist[i]->d_name, '.');
-		if (ext != NULL) *ext = '\0';
+        /* Remove final comma */
+        char *crop = buf + strlen(buf) - 2;
+        if (crop[0] == ',' && crop[1] == ' ') *crop = '\0';
 
-		if (i == 0 || strcmp(namelist[i - 1]->d_name, namelist[i]->d_name) != 0)
-		{
-			bool loaded;
-
-			if (params == 2)
-			{
-				char fullname[192];
-				snprintf(fullname, sizeof fullname, "%s/%s", param[1], namelist[i]->d_name);
-				loaded = level_is_loaded(fullname);
-			}
-			else
-			{
-				loaded = level_is_loaded(namelist[i]->d_name);
-			}
-
-			char buf2[64];
-			snprintf(buf2, sizeof buf2, "%s%s%s%s", loaded ? TAG_GREEN : "", namelist[i]->d_name, (loaded && i < n - 1) ? TAG_WHITE : "", (i < n - 1) ? ", " : "");
-
-			size_t len = strlen(buf2);
-			if (len >= sizeof buf - (bufp - buf))
-			{
-				client_notify(c, buf);
-				memset(buf, 0, sizeof buf);
-				bufp = buf;
-			}
-
-			strcpy(bufp, buf2);
-			bufp += len;
-		}
-		if (i > 0)
-		{
-			free(namelist[i - 1]);
-		}
-	}
-
-	free(namelist[i - 1]);
-	free(namelist);
-
-	client_notify(c, buf);
+        client_notify(c, buf);
 
 	return false;
 }
