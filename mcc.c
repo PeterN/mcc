@@ -71,9 +71,9 @@ static void generate_salt(void *arg)
 	/* Generate salt */
 	static const char saltchars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-	char salt[20];
+	char salt[17];
 	//int len = (rand() % 5) + 12;
-	int len = 19;
+	int len = 16;
 
 	int i;
 	for (i = 0; i < len; i++)
