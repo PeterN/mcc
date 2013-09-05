@@ -2687,15 +2687,17 @@ CMD(who)
 	}
 
 	bufp += snprintf(bufp, endp - bufp, TAG_YELLOW "Players on %s: ", l->name);
-	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
+
+	int j;
+	for (i = 0, j = 0; i < MAX_CLIENTS_PER_LEVEL; i++, j++)
 	{
-		struct client_t *c = l->clients[i];
-		if (c == NULL || c->hidden) continue;
+		struct client_t *c2 = l->clients[i];
+		if (c2 == NULL || c2->hidden) continue;
 
-		bool last = i == names;
+		bool last = j == names;
 
-		const char *name = playername(c->player, 2);
-		if (strlen(name) + (last ? 0 : 3) >= endp - bufp)
+		const char *name = playername(c2->player, 2);
+		if (strlen(name) + (last ? 0 : 3) >= endp - bufp - 1)
 		{
 			client_notify(c, buf);
 			bufp = buf;
