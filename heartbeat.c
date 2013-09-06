@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "mcc.h"
+#include "config.h"
 #include "network.h"
 #include "network_worker.h"
 #include "socket.h"
@@ -18,6 +19,12 @@ struct heartbeat_t
 	struct timer_t *timeout_timer;
 
 	int heartbeat_stage;
+
+	struct {
+		char *hostname;
+		char *path;
+		int interval;
+	} settings;
 };
 
 static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
@@ -31,8 +38,6 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 		{
 			if (!can_write) return;
 
-			static const char url[] = "/heartbeat.jsp";
-			static const char host[] = "www.minecraft.net";
 			char postdata[1024];
 			snprintf(postdata, sizeof postdata,
 						"port=%d&users=%d&max=%d&name=%s&admin-slot=false&public=%s&version=7&salt=%s\r\n",
@@ -48,7 +53,7 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 
 			char request[2048];
 			snprintf(request, sizeof request,
-						"POST %s HTTP/1.0\r\n"
+						"POST /%s HTTP/1.0\r\n"
 						"Host: %s\r\n"
 						//"Accept: */*\r\n"
 						//"Connection: close"
@@ -56,7 +61,7 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 						"Content-Length: %llu\r\n"
 						"Content-Type: application/x-www-form-urlencoded\r\n\r\n"
 						"%s",
-						url, host, (long long unsigned)strlen(postdata), postdata);
+						h->settings.path, h->settings.hostname, (long long unsigned)strlen(postdata), postdata);
 
 			int res = send(fd, request, strlen(request), MSG_NOSIGNAL);
 			if (res == -1)
@@ -131,7 +136,7 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 
 	h->fd = -1;
 
-	timer_set_interval(h->timer, success ? 45000 : 15000);
+	timer_set_interval(h->timer, success ? h->settings.interval * 1000 : 15000);
 }
 
 static void heartbeat_timeout(void *arg)
@@ -166,7 +171,7 @@ static void heartbeat_connected(int fd, void *arg)
 	}
 	else
 	{
-		timer_set_interval(h->timer, 45000);
+		timer_set_interval(h->timer, h->settings.interval * 1000);
 
 		h->fd = fd;
 
@@ -185,16 +190,51 @@ static void heartbeat_start(void *arg)
 
 	if (h->fd != -1) return;
 
-	network_connect("www.minecraft.net", 80, &heartbeat_connected, h);
+	network_connect(h->settings.hostname, 80, &heartbeat_connected, h);
 }
 
 void module_init(void **arg)
 {
 	struct heartbeat_t *h = malloc(sizeof *h);
-	h->fd = -1;
-	h->timer = register_timer("heartbeat", 45000, &heartbeat_start, h, false);
 
+	memset(h, 0, sizeof *h);
 	*arg = h;
+
+	char *url;
+	if (!config_get_string("heartbeat.url", &url))
+	{
+		url = "http://minecraft.net/heartbeat.jsp";
+	}
+
+	if (strstr(url, "http://") != url)
+	{
+		LOG("[heartbeat] unsupported URL scheme\n");
+		goto badinit;
+	}
+
+	h->settings.hostname = strdup(url + 7); // Skip http:// part of string
+	h->settings.path = strchr(h->settings.hostname, '/');
+	if (h->settings.path == NULL)
+	{
+		LOG("[heartbeat] invalid URL\n");
+		free(h->settings.hostname);
+		goto badinit;
+	}
+	*h->settings.path++ = '\0';
+
+	if (!config_get_int("heartbeat.interval", &h->settings.interval))
+	{
+		h->settings.interval = 45;
+	}
+
+	h->fd = -1;
+	h->timer = register_timer("heartbeat", h->settings.interval * 1000, &heartbeat_start, h, false);
+
+	return;
+
+badinit:
+	free(h);
+	*arg = NULL;
 }
 
 void module_deinit(void *arg)
@@ -213,5 +253,8 @@ void module_deinit(void *arg)
 		deregister_timer(h->timeout_timer);
 	}
 
+	free(h->settings.hostname);
+	/* h->settings.url is part of h->settings.hostname and should not
+	 * be freed. */
 	free(h);
 }
