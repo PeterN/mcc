@@ -40,7 +40,7 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 
 			char postdata[1024];
 			snprintf(postdata, sizeof postdata,
-						"port=%d&users=%d&max=%d&name=%s&admin-slot=false&public=%s&version=7&salt=%s\r\n",
+						"port=%d&users=%d&max=%d&name=%s&admin-slot=false&public=%s&version=7&salt=%s",
 						g_server.port, g_server.players, g_server.max_players,
 						g_server.name, g_server.public ? "true" : "false", g_server.salt);
 
