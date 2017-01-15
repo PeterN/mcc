@@ -5,3 +5,15 @@ portal.so
 zombies.so
 signs.so
 nohacks.so
+wireworld.so
+tnt.so
+spleef.so
+doors.so
+airlayer.so
+npctest.so
+book.so
+image.so
+trap.so
+cannon.so
+decoration.so
+8ball.so
