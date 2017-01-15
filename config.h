@@ -4,6 +4,8 @@
 void config_init(const char *filename);
 void config_deinit(void);
 
+void config_write(void);
+
 void config_set_string(const char *setting, const char *value);
 void config_set_int(const char *setting, int value);
 

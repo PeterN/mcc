@@ -97,7 +97,7 @@ static void config_rehash(void)
 	fclose(f);
 }
 
-static void config_write(void)
+void config_write(void)
 {
 	FILE *f = fopen(s_config.filename, "w");
 	if (f == NULL) return;

@@ -69,17 +69,15 @@ static void sighandler(int sig)
 static void generate_salt(void *arg)
 {
 	/* Generate salt */
-	static const char saltchars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static const char saltchars[] = "0123456789abcdef";
 
-	char salt[17];
-	//int len = (rand() % 5) + 12;
-	int len = 16;
+	char salt[33];
+	int len = 32;
 
 	int i;
 	for (i = 0; i < len; i++)
 	{
-		//salt[i] = saltchars[rand() % (sizeof saltchars - 1)];
-		salt[i] = '0' + (rand() % 10);
+		salt[i] = saltchars[rand() % (sizeof saltchars - 1)];
 	}
 	salt[i] = '\0';
 
@@ -90,6 +88,7 @@ static void generate_salt(void *arg)
 	}
 
 	config_set_string("salt", salt);
+	config_write();
 }
 
 static void update_positions(void *arg)
