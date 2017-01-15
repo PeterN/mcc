@@ -152,6 +152,8 @@ void socket_run(void)
 	for (i = 0; i < n; i++)
 	{
 		struct socket_t *s = events[i].data.ptr;
+		if (s == NULL) continue;
+
 		s->socket_func(s->fd, !!(events[i].events & EPOLLOUT), !!(events[i].events & EPOLLIN), s->arg);
 	}
 }
@@ -190,6 +192,8 @@ void socket_run(void)
 	for (i = 0; i < s_sockets.used; i++)
 	{
 		struct socket_t *s = s_sockets.items[i];
+		if (s == NULL) continue;
+
 		int fd = s->fd;
 		bool can_write = FD_ISSET(fd, &write_fd);
 		bool can_read  = FD_ISSET(fd, &read_fd);
