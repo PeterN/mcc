@@ -2681,11 +2681,12 @@ CMD(who)
 	int i;
 	for (i = 0; i < MAX_CLIENTS_PER_LEVEL; i++)
 	{
-		struct client_t *c = l->clients[i];
-		if (c == NULL || c->hidden) continue;
+		struct client_t *c2 = l->clients[i];
+		if (c2 == NULL || c2->hidden) continue;
 		names++;
 	}
 
+	int j = 0;
 	bufp += snprintf(bufp, endp - bufp, TAG_YELLOW "Players on %s: ", l->name);
 
 	int j;
@@ -2695,6 +2696,7 @@ CMD(who)
 		if (c2 == NULL || c2->hidden) continue;
 
 		bool last = j == names;
+		j++;
 
 		const char *name = playername(c2->player, 2);
 		if (strlen(name) + (last ? 0 : 3) >= endp - bufp - 1)
