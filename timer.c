@@ -40,7 +40,7 @@ struct timer_t *register_timer(const char *name, unsigned interval, timer_func_t
 	timer_list_add(&s_timers, t);
 	pthread_mutex_unlock(&s_timers_mutex);
 
-	LOG("Registered %s timer with %u ms interval\n", name, interval);
+//	LOG("Registered %s timer with %u ms interval\n", name, interval);
 
 	return t;
 }
@@ -49,7 +49,7 @@ void deregister_timer(struct timer_t *t)
 {
 	timer_list_del_item(&s_timers, t);
 
-	LOG("Deregistered %s timer\n", t->name);
+//	LOG("Deregistered %s timer\n", t->name);
 
 	free(t->name);
 	free(t);

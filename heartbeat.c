@@ -111,11 +111,11 @@ static void heartbeat_run(int fd, bool can_write, bool can_read, void *arg)
 				{
 					*c = '\0';
 				}
-				LOG("[heartbeat] %s\n", b);
+//				LOG("[heartbeat] %s\n", b);
 			}
 			else
 			{
-				LOG("[heartbeat] %s\n", buf);
+//				LOG("[heartbeat] %s\n", buf);
 			}
 			return;
 		}
