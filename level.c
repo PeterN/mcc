@@ -1453,7 +1453,9 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	{
 		if (t >= BLOCK_END)
 		{
-			net_close(client, "Anti-grief: tried to place invalid block");
+//			net_close(client, "Anti-grief: tried to place invalid block");
+			client_notify(client, "Tried to place invalid block");
+			client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 			return;
 		}
 
@@ -1467,7 +1469,9 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 			case LAVA:
 			case LAVASTILL:
 			case STAIRCASEFULL:
-				net_close(client, "Anti-grief: tried to place unplaceable block");
+//				net_close(client, "Anti-grief: tried to place unplaceable block");
+				client_notify(client, "Tried to place unplaceable block");
+				client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 				return;
 		}
 
@@ -1476,11 +1480,11 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		distance += abs(client->player->pos.y / 32 - y);
 		distance += abs(client->player->pos.z / 32 - z);
 
-		if (distance > 12 && !ingame && !client->player->teleport)
-		{
-			net_close(client, "Anti-grief: built too far away");
-			return;
-		}
+//		if (distance > 12 && !ingame && !client->player->teleport)
+//		{
+//			net_close(client, "Anti-grief: built too far away");
+//			return;
+//		}
 		if (distance > 10)
 		{
 			client_notify(client, "You cannot build that far away");
@@ -1666,7 +1670,9 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 					case WATERSTILL:
 					case LAVA:
 					case LAVASTILL:
-						net_close(client, "Anti-grief: tried to place special block");
+//						net_close(client, "Anti-grief: tried to place special block");
+						client_notify(client, "Tried to place special block");
+						client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
 						return;
 				}
 			}
@@ -2310,6 +2316,8 @@ void physics_list_update(struct level_t *level, unsigned index, int state)
 		if (level->physics.used > level->x * level->y * level->z)
 		{
 			LOG("ERROR: physics list on %s larger than level size\n", level->name);
+			level->physics_pause = true;
+			level_notify_all(level, TAG_RED "RUNAWAY PHYSICS BUG! " TAG_YELLOW "Physics paused");
 		}
 	}
 	else
