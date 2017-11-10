@@ -35,7 +35,6 @@ LIBSRC += queue.c
 LIBSRC += socket.c
 LIBSRC += timer.c
 LIBSRC += undodb.c
-LIBSRC += util.c
 LIBSRC += worker.c
 LIBOBJ := $(LIBSRC:.c=.o)
 LIBO := libmcc.so

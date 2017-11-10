@@ -10,7 +10,4 @@ static inline void lcase(char *buf)
 	}
 }
 
-int make_path(char *filename);
-int hash_filename(const char *filename, char *buf, size_t buflen);
-
 #endif /* UTIL_H */

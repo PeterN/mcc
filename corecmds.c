@@ -409,7 +409,7 @@ CMD(copylvl)
 
 	char filename[256];
 	snprintf(filename, sizeof filename, "undo/%s.db", dst->name);
-	hash_filename(filename, filename, sizeof filename);
+	lcase(filename);
 	unlink(filename);
 
 	level_notify_all(dst, TAG_YELLOW "Started level copy");
@@ -2014,7 +2014,7 @@ CMD(resetlvl)
 
 	char filename[256];
 	snprintf(filename, sizeof filename, "undo/%s.db", l->name);
-	hash_filename(filename, filename, sizeof filename);
+	lcase(filename);
 	unlink(filename);
 
 	level_gen(l, t, 0, 0);

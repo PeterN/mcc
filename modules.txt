@@ -1,4 +1,3 @@
-corecmds.so
 heartbeat.so
 irc.so
 portal.so
