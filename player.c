@@ -98,8 +98,8 @@ struct player_t *player_add(const char *username, struct client_t *c, bool *newu
 		}
 		else
 		{
-			p->rank = RANK_BUILDER;
-			*identified = 1;
+			//p->rank = RANK_BUILDER;
+			*identified = 2;
 		}
 	}
 	else
