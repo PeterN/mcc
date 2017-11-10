@@ -2686,7 +2686,6 @@ CMD(who)
 		names++;
 	}
 
-	int j = 0;
 	bufp += snprintf(bufp, endp - bufp, TAG_YELLOW "Players on %s: ", l->name);
 
 	int j;
