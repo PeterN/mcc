@@ -57,7 +57,7 @@ BANIPOBJ := $(BANIPSRC:.c=.o)
 BANIPO := banip
 
 MODULESSRC := 8ball.c airlayer.c book.c cannon.c corecmds.c decoration.c doors.c heartbeat.c\
-ipc.c irc.c nohacks.c npctest.c portal.c signs.c spleef.c trap.c tnt.c war.c wireworld.c zombies.c
+ipc.c irc.c nohacks.c npctest.c portal.c signs.c spleef.c trap.c tnt.c war.c wireworld.c zombies.c log.c
 
 MODULESOBJ := $(MODULESSRC:.c=.o)
 MODULESO := $(MODULESSRC:.c=.so)
