@@ -136,11 +136,11 @@ void physics(struct level_t *level, unsigned index, const struct block_t *block)
 
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 
+	level->blocks[index].physics = false;
 	if (btd->physics_func != NULL)
 	{
 		btd->physics_func(level, index, block);
 	}
-	level->blocks[index].physics = false;
 }
 
 bool light_check(struct level_t *level, unsigned index)
