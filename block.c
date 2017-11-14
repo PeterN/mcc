@@ -107,14 +107,14 @@ enum blocktype_t convert(struct level_t *level, unsigned index, const struct blo
 	return block->type;
 }
 
-int trigger(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+int trigger(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	if (block->type >= s_blocks.used) return TRIG_NONE;
 
 	const struct blocktype_desc_t *btd = &s_blocks.items[block->type];
 	if (btd->trigger_func != NULL)
 	{
-		return btd->trigger_func(l, index, block, c);
+		return btd->trigger_func(l, index, block, c, heldblock);
 	}
 	return TRIG_NONE;
 }
@@ -522,7 +522,7 @@ enum blocktype_t convert_single_stair(struct level_t *level, unsigned index, con
 	return STAIRCASESTEP;
 }
 
-int trigger_double_stair(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+int trigger_double_stair(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	/* Only the block owner can remove a double step */
 	if (c->player->globalid != block->owner) return TRIG_NONE;

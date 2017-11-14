@@ -19,7 +19,7 @@ static enum blocktype_t convert_book(struct level_t *level, unsigned index, cons
 	return BOOKCASE;
 }
 
-static int trigger_book(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_book(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	char filename[20];
 	sprintf(filename, "book%04d.txt", block->data);

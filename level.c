@@ -1638,12 +1638,10 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		}
 	}
 
-	/* Client thinks it has changed to air */
-	if (m == 0) t = AIR;
 	if (click && (!HasBit(client->player->flags, FLAG_PAINT) || ingame))
 	{
 		if (m == 0) {
-			int r = trigger(level, index, b, client);
+			int r = trigger(level, index, b, client, t);
 			if (r != TRIG_NONE)
 			{
 				if (r == TRIG_FILL) client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
@@ -1718,6 +1716,9 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 	be.bt = bt; be.nt = nt; be.data = 0;
 
 	call_level_hook(EVENT_BLOCK, level, client, &be);
+
+	/* Client thinks it has changed to air */
+	if (m == 0) t = AIR;
 
 	if (bt != be.nt)
 	{

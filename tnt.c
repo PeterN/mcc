@@ -19,7 +19,7 @@ static enum blocktype_t convert_active_tnt(struct level_t *level, unsigned index
 	return TNT;
 }
 
-static int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_active_tnt(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	level_addupdate_with_owner(l, index, block->type, ((rand() % 3 + 3) << 8) | 1, c->player->globalid);
 
@@ -196,7 +196,7 @@ static enum blocktype_t convert_fuse(struct level_t *level, unsigned index, cons
 	}
 }
 
-static int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_fuse(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	level_addupdate_with_owner(l, index, block->type, 5, c->player->globalid);
 

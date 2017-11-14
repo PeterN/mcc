@@ -77,7 +77,7 @@ static void trigger_door_sub(struct level_t *l, int16_t x, int16_t y, int16_t z,
 	}
 }
 
-static int trigger_door(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_door(struct level_t *l, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	if (block->data == 0)
 	{

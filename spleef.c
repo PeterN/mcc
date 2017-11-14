@@ -33,7 +33,7 @@ static enum blocktype_t convert_spleef2(struct level_t *level, unsigned index, c
 	}
 }
 
-static int trigger_spleef(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_spleef(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	level_addupdate(level, index, block->type, 1);
 	return TRIG_EMPTY;
@@ -85,7 +85,7 @@ static enum blocktype_t convert_spleeft(struct level_t *level, unsigned index, c
 	return GREEN;
 }
 
-static int trigger_spleeft(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c)
+static int trigger_spleeft(struct level_t *level, unsigned index, const struct block_t *block, struct client_t *c, enum blocktype_t heldblock)
 {
 	int16_t x, y, z;
 	level_get_xyz(level, index, &x, &y, &z);
