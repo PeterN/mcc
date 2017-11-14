@@ -26,6 +26,9 @@
 #include "util.h"
 #include "gettime.h"
 
+#define TAG(a, b, c, d) (((a)<<24)|((b)<<16)|((c)<<8)|(d))
+#define TAG_MCLV TAG('M', 'C', 'L', 'V')
+
 struct level_list_t s_levels;
 
 bool level_t_compare(struct level_t **a, struct level_t **b)
@@ -907,7 +910,7 @@ void *level_load_thread(void *arg)
 	{
 		unsigned header, version;
 		if (gzread(gz, &header, sizeof header) != sizeof version) return level_load_thread_abort(l, "header");
-		if (header != 'MCLV') return level_load_thread_abort(l, "invalid header");
+		if (header != TAG_MCLV) return level_load_thread_abort(l, "invalid header");
 		if (gzread(gz, &version, sizeof version) != sizeof version) return level_load_thread_abort(l, "version");
 
 		if (version < 2)
@@ -1097,7 +1100,7 @@ void *level_save_thread(void *arg)
 
 	LOG("Saving level '%s'\n", l->name);
 
-	unsigned header  = 'MCLV';
+	unsigned header  = TAG_MCLV;
 	unsigned version = 6;
 	gzwrite(gz, &header, sizeof header);
 	gzwrite(gz, &version, sizeof version);

@@ -15,5 +15,6 @@ void playerdb_log_identify(int globalid, int idenfied);
 bool playerdb_check_ban(const char *ip);
 void playerdb_ban_ip(const char *ip);
 void playerdb_unban_ip(const char *ip);
+void playerdb_set_password(const char *username, const char *password);
 
 #endif /* PLAYERDB_H */

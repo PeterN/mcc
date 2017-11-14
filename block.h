@@ -116,6 +116,8 @@ LIST(blocktype_desc, struct blocktype_desc_t, blocktype_desc_t_compare)
 /*bool blocktype_is_phys(enum blocktype_t type);*/
 
 void blocktype_init(void);
+void blocktype_deinit(void);
+
 const char *blocktype_get_name(enum blocktype_t type);
 enum blocktype_t blocktype_get_by_name(const char *name);
 struct block_t block_convert_from_mcs(uint8_t type);

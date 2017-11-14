@@ -150,6 +150,7 @@ bool level_is_loaded(const char *name);
 bool level_get_by_name(const char *name, struct level_t **level);
 bool level_load(const char *name, struct level_t **level);
 void level_save_all(void *arg);
+void level_unload(struct level_t *level);
 void level_unload_empty(void *arg);
 
 int level_get_new_npc_id(struct level_t *level, struct npc *npc);
@@ -161,6 +162,7 @@ void level_change_block_force(struct level_t *level, struct block_t *block, unsi
 
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 void level_addupdate_with_owner(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata, unsigned owner);
+void level_addupdate_force(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata);
 
 void level_process_physics(bool can_init);
 void level_process_updates(bool can_init);
@@ -185,9 +187,17 @@ void level_user_undo(struct level_t *level, unsigned globalid, struct client_t *
 
 bool level_inuse(struct level_t *level, bool inuse);
 
+void level_reset_physics(struct level_t *level);
+void level_reinit_physics(struct level_t *level);
+
 void physics_init(void);
 void physics_deinit(void);
 
 void physics_list_update(struct level_t *level, unsigned index, int state);
+
+void *level_save_thread(void *arg);
+void *level_load_thread(void *arg);
+void *level_gen_thread(struct level_t *level, const char *type);
+void level_hooks_deinit(void);
 
 #endif /* LEVEL_H */

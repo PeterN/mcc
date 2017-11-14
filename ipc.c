@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "mcc.h"
 #include "network.h"
+#include "socket.h"
 
 struct ipc_t
 {

@@ -17,6 +17,7 @@ void deregister_socket(int fd);
 
 void net_init(int port);
 void socket_run(void);
+void socket_deinit(void);
 
 void socket_set_nonblock(int fd);
 

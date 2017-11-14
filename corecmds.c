@@ -20,6 +20,7 @@
 #include "util.h"
 #include "level_worker.h"
 #include "gettime.h"
+#include "timer.h"
 
 static const char s_on[] = TAG_RED "on";
 static const char s_off[] = TAG_GREEN "off";

@@ -113,5 +113,6 @@ void player_send_positions(unsigned cur_tick);
 bool player_check_spam(struct player_t *player);
 
 void player_set_alias(struct player_t *player, const char *alias, bool send_spawn);
+void player_list(struct client_t *c, const struct level_t *l);
 
 #endif /* PLAYER_H */
