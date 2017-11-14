@@ -106,7 +106,7 @@ struct block_t
 	uint16_t unused1:1;
 	uint16_t data:16;
 	uint32_t owner:31;
-	uint32_t unused2:1;
+	uint32_t touched:1;
 };
 
 typedef enum blocktype_t(*convert_func_t)(struct level_t *level, unsigned index, const struct block_t *block);

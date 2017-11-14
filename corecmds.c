@@ -1744,13 +1744,13 @@ CMD(physics)
 		}
 		else if (strcasecmp(param[1], "reset") == 0)
 		{
-			l->physics.used = 0;
-			l->physics2.used = 0;
-			l->updates.used = 0;
-			l->physics_iter = 0;
-			l->updates_iter = 0;
-			l->physics_done = 0;
+			level_reset_physics(l);
 			level_notify_all(l, TAG_YELLOW "Physics reset");
+		}
+		else if (strcasecmp(param[1], "reinit") == 0)
+		{
+			level_reinit_physics(l);
+			level_notify_all(l, TAG_YELLOW "Physics reinited");
 		}
 		return false;
 	}

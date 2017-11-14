@@ -12,7 +12,7 @@ LIST(physics, unsigned, unsigned_compare)
 struct block_update_t
 {
 	unsigned index;
-	enum blocktype_t newtype;
+	struct block_t block;
 };
 
 static inline bool block_update_t_compare(struct block_update_t *a, struct block_update_t *b)

@@ -21,7 +21,7 @@ static int trigger_wire(struct level_t *l, unsigned index, const struct block_t 
 {
 	if (block->data == 0)
 	{
-		level_addupdate(l, index, block->type, 1);
+		level_addupdate_force(l, index, block->type, 1);
 	}
 
 	return TRIG_FILL;

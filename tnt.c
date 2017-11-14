@@ -67,7 +67,7 @@ static void physics_active_tnt(struct level_t *l, unsigned index, const struct b
 				{
 					index = level_get_index(l, bx, by, bz);
 					const enum blocktype_t type = l->blocks[index].type;
-					if (l->blocks[index].fixed || type == ADMINIUM || type == s.explosion || type == s.fire) continue;
+					if (l->blocks[index].fixed || l->blocks[index].touched || type == ADMINIUM || type == s.explosion || type == s.fire) continue;
 
 					if (type == s.active_tnt)
 					{

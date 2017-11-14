@@ -81,22 +81,7 @@ void level_notify_all(struct level_t *level, const char *message)
 
 void level_set_block(struct level_t *level, struct block_t *block, unsigned index)
 {
-/*	bool old_phys = block_has_physics(&level->blocks[index]);
-	bool new_phys = block_has_physics(block);*/
-
 	level->blocks[index] = *block;
-
-/*	if (new_phys != old_phys)
-	{
-		if (new_phys)
-		{
-			physics_list_add(&level->physics, index);
-		}
-		else
-		{
-			physics_list_del_item(&level->physics, index);
-		}
-	}*/
 }
 
 void level_set_block_if(struct level_t *level, struct block_t *block, unsigned index, enum blocktype_t type)
@@ -266,7 +251,7 @@ bool level_send(struct client_t *c)
 	*bufp++ = (length >> 24) & 0xFF;
 	*bufp++ = (length >> 16) & 0xFF;
 	*bufp++ = (length >>  8) & 0xFF;
-	*bufp++ =  length        & 0xFF;
+	*bufp++ =  length	& 0xFF;
 
 	/* Serialize map data */
 	for (x = 0; x < length; x++)
@@ -912,6 +897,7 @@ void *level_load_thread(void *arg)
 		for (i = 0; i < count; i++)
 		{
 			struct block_t *b = &l->blocks[i];
+			b->touched = 0;
 			if (b->type == AIR || b->type == WATER || b->type == LAVA) continue;
 			b->physics = blocktype_has_physics(b->type);
 			if (b->physics) physics_list_add(&l->physics, i);
@@ -1034,6 +1020,7 @@ void *level_load_thread(void *arg)
 		for (i = 0; i < count; i++)
 		{
 			struct block_t *b = &l->blocks[i];
+			b->touched = 0;
 			if (b->physics) physics_list_add(&l->physics, i);
 		}
 	}
@@ -1410,6 +1397,49 @@ void level_user_undo(struct level_t *level, unsigned globalid, struct client_t *
 	cuboid_list_add(&s_cuboids, c);
 }
 
+void level_reset_physics(struct level_t *level)
+{
+	level->physics.used = 0;
+	level->physics2.used = 0;
+	level->updates.used = 0;
+	level->physics_iter = 0;
+	level->updates_iter = 0;
+	level->physics_done = 0;
+
+	unsigned i;
+	unsigned count = level->x * level->y * level->z;
+	for (i = 0; i < count; i++)
+	{
+		struct block_t *b = &level->blocks[i];
+		b->touched = 0;
+		b->physics = 0;
+	}
+}
+
+void level_reinit_physics(struct level_t *level)
+{
+	level->physics.used = 0;
+	level->physics2.used = 0;
+	level->updates.used = 0;
+	level->physics_iter = 0;
+	level->updates_iter = 0;
+	level->physics_done = 0;
+
+/*
+	!!! This crashes !!!
+
+	unsigned i;
+	unsigned count = level->x * level->y * level->z;
+	for (i = 0; i < count; i++)
+	{
+		struct block_t *b = &level->blocks[i];
+		b->touched = 0;
+		b->physics = blocktype_has_physics(b->type);
+		if (b->physics) physics_list_add(&level->physics, i);
+	}
+*/
+}
+
 void level_change_block(struct level_t *level, struct client_t *client, int16_t x, int16_t y, int16_t z, uint8_t m, uint8_t t, bool click)
 {
 	if (client->player == NULL || client->player->rank == RANK_BANNED)
@@ -1703,7 +1733,8 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 		b->data = be.data;
 		b->fixed = ingame ? false : HasBit(client->player->flags, FLAG_PLACE_FIXED);
 		b->owner = !ingame && HasBit(client->player->flags, FLAG_DISOWN) ? 0 : client->player->globalid;
-		b->physics = blocktype_has_physics(nt);
+		b->touched = 0;
+		b->physics = blocktype_has_physics(be.nt);
 
 		if (oldphysics != b->physics)
 		{
@@ -1839,15 +1870,25 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 
 	//LOG("Done %d out of %lu\n", level->updates_iter, level->updates.used);
 
-	if (limit)
+	int n = g_server.cuboid_max;
+	for (; level->updates_iter < level->updates.used && n > 0; level->updates_iter++, n--)
 	{
-		int n = g_server.cuboid_max;
-		for (; level->updates_iter < level->updates.used && n > 0; level->updates_iter++, n--)
-		{
-			struct block_update_t *bu = &level->updates.items[level->updates_iter];
+		struct block_update_t *bu = &level->updates.items[level->updates_iter];
 
-			int16_t x, y, z;
-			level_get_xyz(level, bu->index, &x, &y, &z);
+		int16_t x, y, z;
+		level_get_xyz(level, bu->index, &x, &y, &z);
+
+		struct block_t *b = &level->blocks[bu->index];
+
+		/* Skip if block updated outside of physics */
+		if (!b->touched) continue;
+
+		*b = bu->block;
+
+		if (b->physics) physics_list_update(level, bu->index, b->physics);
+
+		if (limit) {
+			enum blocktype_t nt = convert(level, bu->index, b);
 
 			unsigned j;
 			for (j = 0; j < MAX_CLIENTS_PER_LEVEL; j++)
@@ -1856,24 +1897,24 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 				if (c == NULL || c->player == NULL) continue;
 				if (!c->waiting_for_level && !c->sending_level)
 				{
-					client_add_packet(c, packet_send_set_block(x, y, z, bu->newtype));
+					client_add_packet(c, packet_send_set_block(x, y, z, nt));
 				}
 			}
 		}
-
-		level->updates_runtime += gettime() - s;
-
-		/* Did updates complete? */
-		if (level->updates_iter < level->updates.used) return;
-
-		if (level->updates_runtime > 40)
-		{
-			LOG("Updates on %s ran in %dms (%zu blocks)\n", level->name, level->updates_runtime, level->updates.used);
-		}
-
-		level->updates_runtime_last = level->updates_runtime;
-		level->updates_count_last = level->updates.used;
 	}
+
+	level->updates_runtime += gettime() - s;
+
+	/* Did updates complete? */
+	if (level->updates_iter < level->updates.used) return;
+
+	if (level->updates_runtime > 40)
+	{
+		LOG("Updates on %s ran in %dms (%zu blocks)\n", level->name, level->updates_runtime, level->updates.used);
+	}
+
+	level->updates_runtime_last = level->updates_runtime;
+	level->updates_count_last = level->updates.used;
 
 	//LOG("Hmm (%lu / %lu blocks)\n", level->physics.used, level->physics2.used);
 
@@ -1887,50 +1928,60 @@ static void level_run_updates(struct level_t *level, bool can_init, bool limit)
 void level_addupdate(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
 {
 	struct block_t *b = &level->blocks[index];
+	if (b->touched) return;
 
-	enum blocktype_t pt1 = convert(level, index, b);
+	struct block_update_t bu;
+	bu.index = index;
+	bu.block = *b;
+	bu.block.type = newtype;
+	bu.block.data = newdata;
+	bu.block.physics = blocktype_has_physics(newtype);
 
-	b->type = newtype;
-	b->data = newdata;
-	b->physics = blocktype_has_physics(b->type);
+	b->touched = 1;
 
-	if (b->physics) physics_list_update(level, index, b->physics);
+	block_update_list_add(&level->updates, bu);
+}
 
-	enum blocktype_t pt2 = convert(level, index, b);
-
-	if (pt1 != pt2 && !level->instant)
+void level_addupdate_force(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata)
+{
+	struct block_t *b = &level->blocks[index];
+	if (!b->touched)
 	{
-		struct block_update_t bu;
-		bu.index = index;
-		bu.newtype = pt2;
-
-		block_update_list_add(&level->updates, bu);
+		level_addupdate(level, index, newtype, newdata);
+	}
+	else
+	{
+		unsigned i;
+		for (i = 0; i < level->updates.used; i++)
+		{
+			struct block_update_t *bu = &level->updates.items[i];	
+			if (bu->index != index) continue;
+			
+			bu->block.type = newtype;
+			bu->block.data = newdata;
+			bu->block.physics = blocktype_has_physics(bu->block.type);
+	
+			return;
+		}
 	}
 }
 
 void level_addupdate_with_owner(struct level_t *level, unsigned index, enum blocktype_t newtype, uint16_t newdata, unsigned owner)
 {
 	struct block_t *b = &level->blocks[index];
+	if (b->touched) return;
 
-	enum blocktype_t pt1 = convert(level, index, b);
+	struct block_update_t bu;
+	bu.index = index;
+	bu.block = *b;
+	bu.block.type = newtype;
+	bu.block.data = newdata;
+	bu.block.owner = owner;
+	bu.block.physics = blocktype_has_physics(newtype);
 
-	b->type = newtype;
-	b->data = newdata;
-	b->owner = owner;
-	b->physics = blocktype_has_physics(b->type);
+	b->touched = 1;
 
-	if (b->physics) physics_list_update(level, index, b->physics);
-
-	enum blocktype_t pt2 = convert(level, index, b);
-
-	if (pt1 != pt2 && !level->instant)
-	{
-		struct block_update_t bu;
-		bu.index = index;
-		bu.newtype = pt2;
-
-		block_update_list_add(&level->updates, bu);
-	}
+	block_update_list_add(&level->updates, bu);
 }
 
 void level_prerun(struct level_t *l)
@@ -2274,9 +2325,9 @@ void *physics_thread(void *arg)
 			next_tick = cur_ticks + TICK_INTERVAL;
 			i = (i + 1) % 2;
 
-			cuboid_process();
 			level_process_physics(i);
 			level_process_updates(true);
+			cuboid_process();
 		}
 		usleep(g_server.physics_usleep);
 	}
