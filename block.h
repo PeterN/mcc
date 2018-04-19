@@ -109,7 +109,7 @@ struct blocktype_desc_t
 static inline bool blocktype_desc_t_compare(struct blocktype_desc_t *a, struct blocktype_desc_t *b)
 {
 	/* Compare pointers */
-	return a->name == a->name;
+	return a->name == b->name;
 }
 LIST(blocktype_desc, struct blocktype_desc_t, blocktype_desc_t_compare)
 

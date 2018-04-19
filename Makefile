@@ -1,8 +1,8 @@
 CFLAGS := -Wall -Werror -O3 -g -DINFINITY=HUGE_VAL -D_GNU_SOURCE
 LDFLAGS := -lz -lpthread -lsqlite3 -lrt -ldl -lm
 
-PNGCFLAGS := `pkg-config libpng12 --cflags`
-PNGLDFLAGS := `pkg-config libpng12 --libs`
+PNGCFLAGS := `pkg-config libpng16 --cflags`
+PNGLDFLAGS := `pkg-config libpng16 --libs`
 
 LIBSRC := astar.c
 LIBSRC += astar_worker.c
