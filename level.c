@@ -1483,22 +1483,6 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 			return;
 		}
 
-		switch (t)
-		{
-			case AIR:
-			case GRASS:
-			case ADMINIUM:
-			case WATER:
-			case WATERSTILL:
-			case LAVA:
-			case LAVASTILL:
-			case STAIRCASEFULL:
-//				net_close(client, "Anti-grief: tried to place unplaceable block");
-				client_notify(client, "Tried to place unplaceable block");
-				client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
-				return;
-		}
-
 		/* Check block distcance */
 		int distance = abs(client->player->pos.x / 32 - x);
 		distance += abs(client->player->pos.y / 32 - y);
@@ -1689,9 +1673,7 @@ void level_change_block(struct level_t *level, struct client_t *client, int16_t 
 				{
 					case ADMINIUM:
 					case WATER:
-					case WATERSTILL:
 					case LAVA:
-					case LAVASTILL:
 //						net_close(client, "Anti-grief: tried to place special block");
 						client_notify(client, "Tried to place special block");
 						client_add_packet(client, packet_send_set_block(x, y, z, convert(level, index, b)));
